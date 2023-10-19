@@ -1,0 +1,60 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: false
+AlignConsecutiveBitFields: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Right
+#AlignOperands: true
+AlignOperands: DontAlign
+#AlignTrailingComments: true
+AlignTrailingComments: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+#BreakBeforeBraces: Allman
+IndentCaseLabels: true
+ColumnLimit: 100
+BinPackArguments: false
+BinPackParameters: false
+NamespaceIndentation: All
+AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakTemplateDeclarations: true
+DerivePointerAlignment: true
+PointerBindsToType: true
+PointerAlignment: Left
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+PenaltyBreakAssignment: 0
+PenaltyBreakBeforeFirstcallParameter: 1
+PenaltyBreakComment: 70
+PenaltyBreakFirstLessLess: 60
+PenaltyBreakString: 80
+PeanltyBreakTemplateDeclaration: 5
+PenaltyExcessCharacter: 100
+PenaltyReturnTypeOnItsOwnLine: 8
+IndentPPDirectives: None
+AlwaysBreakAfterReturnType: None
+BraceWrapping:
+  AfterClass:      false
+  AfterControlStatement: MultiLine
+  AfterEnum:       false
+  AfterFunction:   true
+  AfterNamespace:  false
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  BeforeCatch:     false
+  BeforeElse:      false
+  IndentBraces:    false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false

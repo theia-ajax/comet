@@ -1,0 +1,73 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(Windows) Build & Run Debug",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "externalTerminal",
+            "preLaunchTask": "MSVC Build Debug"
+        },
+        {
+            "name": "(Windows) Build & Run Release",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "preLaunchTask": "MSVC Build Release"
+        },
+        {
+            "name": "(Windows) Run Debug",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "externalTerminal",
+        },
+        {
+            "name": "(Windows) Run Release",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": []
+        },
+        {
+            "name": "Run MinGW64 Build",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}.exe",
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "windows": {
+                "MIMode": "lldb",
+                "miDebuggerPath": "C:\\llvm-mingw-20211002-msvcrt-x86_64\\bin\\lldb-mi.exe"
+            }
+        },
+        {
+            "name": "Linux launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "linux": {
+                "MIMode": "gdb",
+                "miDebuggerPath": "/usr/bin/gdb"
+            }
+        }
+    ]
+}

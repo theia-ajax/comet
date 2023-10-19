@@ -1,0 +1,105 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "MSVC Build Debug",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Unrestricted",
+                "-NoProfile",
+                "-File",
+                "build.ps1",
+                "-Target",
+                "${config:game_target}"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "MSVC Build Release",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Unrestricted",
+                "-NoProfile",
+                "-File",
+                "build.ps1",
+                "-Target",
+                "${config:game_target}"
+                "-Configuration",
+                "Release"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "MSVC Clean",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Unrestricted",
+                "-NoProfile",
+                "-File",
+                "build.ps1",
+                "-Target",
+                "${config:game_target}",
+                "-BuildAction",
+                "Clean"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "type": "cppbuild",
+            "label": "mingw64 build",
+            "command": "mingw32-make.exe",
+            "args": [
+                "config=debug_win64",
+                "all"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\bin\\"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Linux Build",
+            "command": "./build.sh",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

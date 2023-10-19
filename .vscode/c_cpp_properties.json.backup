@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "cStandard": "gnu11",
+            "includePath": [
+                "/usr/include",
+                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/include/",
+                "${workspaceFolder}/lib/cimgui/"
+            ]
+        }
+    ],
+    "version": 4
+}
