@@ -165,9 +165,6 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	Projectile* Start = FixedListBegin(GGame.State.Projectiles);
-	Projectile* End = FixedListEnd(GGame.State.Projectiles);
-
 	for (Projectile* Iter = FixedListLast(GGame.State.Projectiles);
 		 Iter >= FixedListBegin(GGame.State.Projectiles);
 		 Iter--)
