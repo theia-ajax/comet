@@ -153,52 +153,61 @@ void config_editor_show_window()
 							igSetNextItemWidth(300.0f);
 
 							switch (property_type) {
-								case _config_property_type_integer: {
-									int32 int_value;
-									try_parse_int(property_buffer, &int_value);
-									if (igInputInt(
-											label_buffer,
-											&int_value,
-											1,
-											10,
-											ImGuiInputTextFlags_EnterReturnsTrue))
+								case _config_property_type_integer:
 									{
-										snprintf(
-											property_buffer, property_buffer_size, "%d", int_value);
-										update_ini_property = true;
+										int32 int_value;
+										try_parse_int(property_buffer, &int_value);
+										if (igInputInt(
+												label_buffer,
+												&int_value,
+												1,
+												10,
+												ImGuiInputTextFlags_EnterReturnsTrue))
+										{
+											snprintf(
+												property_buffer,
+												property_buffer_size,
+												"%d",
+												int_value);
+											update_ini_property = true;
+										}
 									}
-								} break;
-								case _config_property_type_float: {
-									float float_value;
-									try_parse_float(property_buffer, &float_value);
-									if (igInputFloat(
-											label_buffer,
-											&float_value,
-											0.1f,
-											1.0f,
-											"%f",
-											ImGuiInputTextFlags_EnterReturnsTrue))
+									break;
+								case _config_property_type_float:
 									{
-										snprintf(
-											property_buffer,
-											property_buffer_size,
-											"%f",
-											float_value);
-										update_ini_property = true;
+										float float_value;
+										try_parse_float(property_buffer, &float_value);
+										if (igInputFloat(
+												label_buffer,
+												&float_value,
+												0.1f,
+												1.0f,
+												"%f",
+												ImGuiInputTextFlags_EnterReturnsTrue))
+										{
+											snprintf(
+												property_buffer,
+												property_buffer_size,
+												"%f",
+												float_value);
+											update_ini_property = true;
+										}
 									}
-								} break;
-								case _config_property_type_bool: {
-									bool bool_value;
-									try_parse_bool(property_buffer, &bool_value);
-									if (igCheckbox(label_buffer, &bool_value)) {
-										snprintf(
-											property_buffer,
-											property_buffer_size,
-											"%s",
-											toggled_bool_string(property_buffer));
-										update_ini_property = true;
+									break;
+								case _config_property_type_bool:
+									{
+										bool bool_value;
+										try_parse_bool(property_buffer, &bool_value);
+										if (igCheckbox(label_buffer, &bool_value)) {
+											snprintf(
+												property_buffer,
+												property_buffer_size,
+												"%s",
+												toggled_bool_string(property_buffer));
+											update_ini_property = true;
+										}
 									}
-								} break;
+									break;
 								default:
 								case _config_property_type_string:
 									if (igInputText(

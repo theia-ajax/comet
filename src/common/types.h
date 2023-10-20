@@ -57,7 +57,7 @@ typedef double real64;
 	STRUCT(type) * DATA_ARRAY_FUNC_NAME(type, get)(DATA_ARRAY(type) * array, HANDLE(type) handle)
 #define DECLARE_DATA_ARRAY_TRY_GET(type)                                                           \
 	STRUCT(type)                                                                                   \
-		* DATA_ARRAY_FUNC_NAME(type, try_get)(DATA_ARRAY(type) * array, HANDLE(type) handle)
+	*DATA_ARRAY_FUNC_NAME(type, try_get)(DATA_ARRAY(type) * array, HANDLE(type) handle)
 #define DECLARE_DATA_ARRAY_ALLOC(type)                                                             \
 	HANDLE(type) DATA_ARRAY_FUNC_NAME(type, alloc)(DATA_ARRAY(type) * array)
 
@@ -75,7 +75,9 @@ typedef double real64;
 	DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)
 
 #define DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)                                               \
-	enum { DATA_ARRAY_CAPACITY(type) = capacity };                                                 \
+	enum {                                                                                         \
+		DATA_ARRAY_CAPACITY(type) = capacity                                                       \
+	};                                                                                             \
 	typedef struct DATA_ARRAY(type) {                                                              \
 		STRUCT(type) data[DATA_ARRAY_CAPACITY(type) + 1];                                          \
 		int32 count;                                                                               \
@@ -143,12 +145,12 @@ typedef double real64;
 // fixed_buffer(name, size) creates a char array e.g. char name[size]
 // as well as an accompanying const size_t name_size= size
 #define fixed_buffer(name, size)                                                                   \
-	const size_t name##_size= size;                                                                \
+	const size_t name##_size = size;                                                               \
 	char name[size]
 #endif
 
 #ifndef static_fixed_buffer
 #define static_fixed_buffer(name, size)                                                            \
-	static const size_t name##_size= size;                                                         \
+	static const size_t name##_size = size;                                                        \
 	static char name[size]
 #endif

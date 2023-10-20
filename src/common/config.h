@@ -32,12 +32,29 @@ void config_apply(h_config config_handle);
 const char* config_get_file_name(h_config config_handle);
 ini_t* config_get_ini(h_config config_handle);
 s_config_property_type_entry* config_get_property_type_map(h_config config_handle);
-e_config_property_type properties_map_get_type(s_config_property_type_entry* map, int section, int property);
-void properties_map_set_type(s_config_property_type_entry* map, int section, int property, e_config_property_type type);
+e_config_property_type
+properties_map_get_type(s_config_property_type_entry* map, int section, int property);
+void properties_map_set_type(
+	s_config_property_type_entry* map,
+	int section,
+	int property,
+	e_config_property_type type);
 bool config_has_section(h_config config_handle, const char* section);
-int32 config_get_or_default_int(h_config config_handle, const char* section, const char* property, int32 default_value);
-float config_get_or_default_float(h_config config_handle, const char* section, const char* property, float default_value);
-bool config_get_or_default_bool(h_config config_handle, const char* section, const char* property, bool default_value);
+int32 config_get_or_default_int(
+	h_config config_handle,
+	const char* section,
+	const char* property,
+	int32 default_value);
+float config_get_or_default_float(
+	h_config config_handle,
+	const char* section,
+	const char* property,
+	float default_value);
+bool config_get_or_default_bool(
+	h_config config_handle,
+	const char* section,
+	const char* property,
+	bool default_value);
 const char* config_get_or_default_string(
 	h_config config_handle,
 	const char* section,

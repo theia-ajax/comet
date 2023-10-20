@@ -215,10 +215,10 @@
 // 	int* out_h_count,
 // 	int* out_v_count);
 // h_map_node find_node_handle_at_tile(int tile_x, int tile_y, s_map_node* nodes, int32 node_count);
-// h_map_node scan_for_node_in_direction(float pos_x, float pos_y, e_direction direction, s_map_node* nodes, int32 node_count);
-// void game_map_build_graph(const s_game_map* game_map, s_game_map_graph* out_graph);
-// int32 find_index_of_node_at_tile(int tile_x, int tile_y, s_map_node* nodes, int32 node_count);
-// int16* get_game_map_wall_adjacency_matrix();
+// h_map_node scan_for_node_in_direction(float pos_x, float pos_y, e_direction direction,
+// s_map_node* nodes, int32 node_count); void game_map_build_graph(const s_game_map* game_map,
+// s_game_map_graph* out_graph); int32 find_index_of_node_at_tile(int tile_x, int tile_y,
+// s_map_node* nodes, int32 node_count); int16* get_game_map_wall_adjacency_matrix();
 
 // bool try_create_sprite_sheet_from_image_file(
 // 	const char* file_name,
@@ -227,17 +227,11 @@
 // 	int32 sprite_height,
 // 	s_sprite_sheet* out_sprite_sheet);
 // void sprite_sheet_destroy(s_sprite_sheet* sprite_sheet);
-// bool sprite_sheet_get_sprite_rect(const s_sprite_sheet* sprite_sheet, int16 sprite_id, SDL_Rect* out_rect);
-// bool sprite_sheet_get_sprite_rect_ex(const s_sprite_sheet* sprite_sheet, int16 sprite_id, SDL_Rect* out_rect);
-// void sprite_sheet_sample_sprite(
-// 	const s_sprite_sheet* sprite_sheet,
-// 	int16 sprite_id,
-// 	int x,
-// 	int y,
-// 	uint8* red,
-// 	uint8* green,
-// 	uint8* blue,
-// 	uint8* alpha);
+// bool sprite_sheet_get_sprite_rect(const s_sprite_sheet* sprite_sheet, int16 sprite_id, SDL_Rect*
+// out_rect); bool sprite_sheet_get_sprite_rect_ex(const s_sprite_sheet* sprite_sheet, int16
+// sprite_id, SDL_Rect* out_rect); void sprite_sheet_sample_sprite( 	const s_sprite_sheet*
+// sprite_sheet, 	int16 sprite_id, 	int x, 	int y, 	uint8* red, 	uint8* green, 	uint8* blue, 	uint8*
+// alpha);
 
 // SDL_Point entity_get_tile(e_entity_id entity_id);
 // bool entity_can_move_in_direction(e_entity_id entity_id, e_direction move_direction);
@@ -246,7 +240,8 @@
 // void world_fpoint_to_screen_point(float x, float y, int* out_x, int* out_y);
 // void world_point_to_screen_point(int x, int y, int* out_x, int* out_y);
 // bool window_point_to_world_point(int window_x, int window_y, float* out_x, float* out_y);
-// bool window_point_to_tile_coordinate(int window_x, int window_y, int* out_tile_x, int* out_tile_y);
+// bool window_point_to_tile_coordinate(int window_x, int window_y, int* out_tile_x, int*
+// out_tile_y);
 
 // static inline bool test_button(uint8 button_mask, e_buttons button)
 // {

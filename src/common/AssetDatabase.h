@@ -8,8 +8,8 @@ typedef enum AssetTypeId {
 	AssetTypeId_Count,
 } AssetTypeId;
 
-typedef void *(*LoadAssetFunc)(const char *FileName);
-typedef void (*UnloadAssetFunc)(void *Asset);
+typedef void* (*LoadAssetFunc)(const char* FileName);
+typedef void (*UnloadAssetFunc)(void* Asset);
 
 void AssetDatabase_Initialize(void);
 void AssetDatabase_Shutdown(void);
@@ -17,4 +17,4 @@ void AssetDatabase_RegisterAssetType(
 	AssetTypeId AssetType,
 	LoadAssetFunc LoadAsset,
 	UnloadAssetFunc UnloadAsset);
-void *AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char *AssetName);
+void* AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char* AssetName);

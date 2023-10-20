@@ -112,15 +112,14 @@ void DrawRender(void)
 			NULL,
 			SDL_FLIP_NONE);
 	}
+
+	GDraw.SpriteCount = 0;
 }
 
 // Private Implementations
 
-static SDL_Rect GetSpriteRect(
-	const SpriteSheet* spriteSheet,
-	int32 spriteId,
-	int32 spriteTilesX,
-	int32 spriteTilesY)
+static SDL_Rect
+GetSpriteRect(const SpriteSheet* spriteSheet, int32 spriteId, int32 spriteTilesX, int32 spriteTilesY)
 {
 	int32 SpriteTileX = spriteId % spriteSheet->SpritesPerRow;
 	int32 SpriteTileY = spriteId / spriteSheet->SpritesPerRow;

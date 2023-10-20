@@ -3,12 +3,12 @@
 #include <stb_ds.h>
 
 typedef struct AssetNode {
-	const char *Key;
-	void *Value;
+	const char* Key;
+	void* Value;
 } AssetNode;
 
 typedef struct TypedAssetDatabase {
-	AssetNode *AssetMap;
+	AssetNode* AssetMap;
 	LoadAssetFunc LoadAsset;
 	UnloadAssetFunc UnloadAsset;
 } TypedAssetDatabase;
@@ -19,7 +19,7 @@ typedef struct TypedAssetDatabaseNode {
 } TypedAssetDatabaseNode;
 
 struct {
-	TypedAssetDatabaseNode *TypedAssetDatabaseMap;
+	TypedAssetDatabaseNode* TypedAssetDatabaseMap;
 } GAssetDatabase;
 
 const TypedAssetDatabase KDefaultTypedAssetDatabase = {0};
@@ -54,10 +54,10 @@ void AssetDatabase_RegisterAssetType(
 		}));
 }
 
-void *AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char *AssetName)
+void* AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char* AssetName)
 {
-	void *Result = NULL;
-	TypedAssetDatabase *AssetDatabase =
+	void* Result = NULL;
+	TypedAssetDatabase* AssetDatabase =
 		&hmgetp(GAssetDatabase.TypedAssetDatabaseMap, AssetType)->Value;
 
 	ASSERT(AssetDatabase != NULL && "AssetType not registered.");

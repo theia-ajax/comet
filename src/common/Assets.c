@@ -10,19 +10,19 @@ typedef int32 FreeStack;
 
 struct {
 	AssetsConfig Config;
-	ImageAsset *ImageAssets;
-	FreeStack *ImageAssetsFreeStack;
+	ImageAsset* ImageAssets;
+	FreeStack* ImageAssetsFreeStack;
 } GAssets;
 
 // Private Prototypes
 
-static ImageAsset *AllocateImageAsset();
-static void ReleaseImageAsset(ImageAsset *image);
-static void FreeImageAssetResources(ImageAsset *image);
+static ImageAsset* AllocateImageAsset();
+static void ReleaseImageAsset(ImageAsset* image);
+static void FreeImageAssetResources(ImageAsset* image);
 
 // Public Implementations
 
-void AssetsInitialize(const AssetsConfig *config)
+void AssetsInitialize(const AssetsConfig* config)
 {
 	arrsetcap(GAssets.ImageAssets, 256);
 	arrsetcap(GAssets.ImageAssetsFreeStack, 256);
@@ -38,9 +38,9 @@ void AssetsShutdown(void)
 	arrfree(GAssets.ImageAssetsFreeStack);
 }
 
-ImageAsset *LoadImageAsset(const char *fileName)
+ImageAsset* LoadImageAsset(const char* fileName)
 {
-	ImageAsset *Result = AllocateImageAsset();
+	ImageAsset* Result = AllocateImageAsset();
 
 	// Hardcoding 4 bytes per pixel regardless of source because lazy
 
@@ -62,7 +62,7 @@ ImageAsset *LoadImageAsset(const char *fileName)
 	return Result;
 }
 
-void UnloadImageAsset(ImageAsset *image)
+void UnloadImageAsset(ImageAsset* image)
 {
 	FreeImageAssetResources(image);
 	ReleaseImageAsset(image);
@@ -70,7 +70,7 @@ void UnloadImageAsset(ImageAsset *image)
 
 // Private Implementations
 
-static ImageAsset *AllocateImageAsset()
+static ImageAsset* AllocateImageAsset()
 {
 	if (arrlen(GAssets.ImageAssetsFreeStack) > 0) {
 		int32 Index = arrpop(GAssets.ImageAssetsFreeStack);
@@ -81,7 +81,7 @@ static ImageAsset *AllocateImageAsset()
 	return arrlastp(GAssets.ImageAssets);
 }
 
-static void ReleaseImageAsset(ImageAsset *image)
+static void ReleaseImageAsset(ImageAsset* image)
 {
 	ASSERT(image != NULL);
 
@@ -91,7 +91,7 @@ static void ReleaseImageAsset(ImageAsset *image)
 	arrput(GAssets.ImageAssetsFreeStack, IndexOf);
 }
 
-static void FreeImageAssetResources(ImageAsset *image)
+static void FreeImageAssetResources(ImageAsset* image)
 {
 	SDL_FreeSurface(image->Surface);
 	stbi_image_free(image->Pixels);

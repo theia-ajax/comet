@@ -250,7 +250,8 @@
 // 		}
 
 // 		is_intersection_tile= (open_count == 2 && h_count == v_count) || (open_count > 2);
-// 		is_intersection_tile|= (tile_x < 0 || tile_y < 0 || tile_x >= MAP_MAX_TILE_X || tile_y >= MAP_MAX_TILE_Y);
+// 		is_intersection_tile|= (tile_x < 0 || tile_y < 0 || tile_x >= MAP_MAX_TILE_X || tile_y >=
+// MAP_MAX_TILE_Y);
 // 	}
 
 // 	if (out_open_count) *out_open_count= open_count;
@@ -269,7 +270,6 @@
 // 		{-1, 0},
 // 		{0, -1},
 // 	};
-
 
 // 	_Static_assert(ARRAY_COUNT(directions) == k_direction_count, "");
 // 	// _STATIC_ASSERT(ARRAY_COUNT(directions) == k_direction_count);
@@ -330,9 +330,9 @@
 // 	for (int tile_y= -1; tile_y <= MAP_MAX_TILE_Y; ++tile_y) {
 // 		for (int tile_x= -1; tile_x <= MAP_MAX_TILE_X; ++tile_x) {
 // 			int open_count, h_count, v_count;
-// 			if (game_map_tile_is_intersection(game_map, tile_x, tile_y, &open_count, &h_count, &v_count)) {
-// 				h_map_node node_handle= map_node_data_array_alloc(&out_graph->nodes);
-// 				s_map_node* node= map_node_data_array_get(&out_graph->nodes, node_handle);
+// 			if (game_map_tile_is_intersection(game_map, tile_x, tile_y, &open_count, &h_count,
+// &v_count)) { 				h_map_node node_handle= map_node_data_array_alloc(&out_graph->nodes); 				s_map_node*
+// node= map_node_data_array_get(&out_graph->nodes, node_handle);
 
 // 				node->tile_x= tile_x;
 // 				node->tile_y= tile_y;
@@ -356,19 +356,20 @@
 
 // 				h_map_node found_node_handle= INVALID_HANDLE;
 
-// 				while (!HANDLE_IS_VALID(found_node_handle) && !game_map_tile_is_solid_clamped(game_map, tile_x, tile_y)
-// 					   && (tile_x >= -1 && tile_y >= -1 && tile_x <= MAP_MAX_TILE_X && tile_y <= MAP_MAX_TILE_Y))
+// 				while (!HANDLE_IS_VALID(found_node_handle) &&
+// !game_map_tile_is_solid_clamped(game_map, tile_x, tile_y)
+// 					   && (tile_x >= -1 && tile_y >= -1 && tile_x <= MAP_MAX_TILE_X && tile_y <=
+// MAP_MAX_TILE_Y))
 // 				{
 // 					found_node_handle=
-// 						find_node_handle_at_tile(tile_x, tile_y, out_graph->nodes.data, out_graph->nodes.count);
-// 					tile_x+= delta_x;
-// 					tile_y+= delta_y;
+// 						find_node_handle_at_tile(tile_x, tile_y, out_graph->nodes.data,
+// out_graph->nodes.count); 					tile_x+= delta_x; 					tile_y+= delta_y;
 // 				}
 
 // 				if (HANDLE_IS_VALID(found_node_handle)) {
 // 					out_graph->edges[node_index][direction - _direction_first]= found_node_handle;
-// 					out_graph->edges[HANDLE_INDEX(found_node_handle)][direction_flip(direction) - _direction_first]=
-// 						node_handle;
+// 					out_graph->edges[HANDLE_INDEX(found_node_handle)][direction_flip(direction) -
+// _direction_first]= 						node_handle;
 // 				}
 // 			}
 // 		}
@@ -387,7 +388,8 @@
 // 	ZERO_STRUCT(out_sprite_sheet);
 
 // 	int image_width, image_height, image_bytes_per_pixel;
-// 	stbi_uc* image_pixels= stbi_load(file_name, &image_width, &image_height, &image_bytes_per_pixel, 4);
+// 	stbi_uc* image_pixels= stbi_load(file_name, &image_width, &image_height, &image_bytes_per_pixel,
+// 4);
 
 // 	if (image_pixels) {
 // 		// For now require sprite sheet is evenly divisible
@@ -401,9 +403,10 @@
 // 		out_sprite_sheet->sprite_height= sprite_height;
 // 		out_sprite_sheet->sprites_per_row= image_width / out_sprite_sheet->sprite_width;
 // 		out_sprite_sheet->sprites_per_column= image_height / out_sprite_sheet->sprite_height;
-// 		out_sprite_sheet->max_sprites= out_sprite_sheet->sprites_per_row * out_sprite_sheet->sprites_per_column;
-// 		out_sprite_sheet->surface= image_surface;
-// 		out_sprite_sheet->texture= SDL_CreateTextureFromSurface(renderer, out_sprite_sheet->surface);
+// 		out_sprite_sheet->max_sprites= out_sprite_sheet->sprites_per_row *
+// out_sprite_sheet->sprites_per_column; 		out_sprite_sheet->surface= image_surface;
+// 		out_sprite_sheet->texture= SDL_CreateTextureFromSurface(renderer,
+// out_sprite_sheet->surface);
 // 	}
 
 // 	return out_sprite_sheet->surface != NULL;
@@ -418,7 +421,8 @@
 // 	ZERO_STRUCT(sprite_sheet);
 // }
 
-// bool sprite_sheet_get_sprite_rect(const s_sprite_sheet* sprite_sheet, int16 sprite_id, SDL_Rect* out_rect)
+// bool sprite_sheet_get_sprite_rect(const s_sprite_sheet* sprite_sheet, int16 sprite_id, SDL_Rect*
+// out_rect)
 // {
 // 	ASSERT(sprite_sheet != NULL);
 // 	ASSERT(out_rect != NULL);
@@ -459,7 +463,8 @@
 // 		if (x >= 0 && x < sprite_rect.w && y >= 0 && y < sprite_rect.h) {
 // 			int pixel_x= sprite_rect.x + x;
 // 			int pixel_y= sprite_rect.y + y;
-// 			pixel= (uint32*)(((uint8*)sprite_sheet->surface->pixels) + (pixel_y * sprite_sheet->surface->pitch)
+// 			pixel= (uint32*)(((uint8*)sprite_sheet->surface->pixels) + (pixel_y *
+// sprite_sheet->surface->pitch)
 // 							 + (pixel_x * sprite_sheet->surface->format->BytesPerPixel));
 // 		}
 // 	}
@@ -534,9 +539,8 @@
 // 	};
 
 // 	s_move_request* move_request= GET_COMPONENT(entity_id, move_request);
-// 	if (move_request->requested_direction != _direction_none && move_request->requested_direction != *move_direction) {
-// 		bool switched_direction= false;
-// 		float distance_to_node= 0.0f;
+// 	if (move_request->requested_direction != _direction_none && move_request->requested_direction !=
+// *move_direction) { 		bool switched_direction= false; 		float distance_to_node= 0.0f;
 
 // 		if (*move_direction == _direction_none) {
 // 			switched_direction= true;
@@ -544,31 +548,28 @@
 // 			switched_direction= true;
 // 		} else {
 // 			h_map_node linked_node=
-// 				g_game.game_state.map->graph.edges[node_index][move_request->requested_direction - 1];
-// 			if (HANDLE_IS_VALID(linked_node)) {
-// 				switch (*move_direction) {
-// 					case _direction_east:
-// 						if (position->x <= next_node->world_x && next_position.x >= next_node->world_x) {
-// 							distance_to_node= next_node->world_x - position->x;
-// 							position->x= next_node->world_x;
+// 				g_game.game_state.map->graph.edges[node_index][move_request->requested_direction -
+// 1]; 			if (HANDLE_IS_VALID(linked_node)) { 				switch (*move_direction) { 					case _direction_east: 						if
+// (position->x <= next_node->world_x && next_position.x >= next_node->world_x) { 							distance_to_node=
+// next_node->world_x - position->x; 							position->x= next_node->world_x;
 // 						}
 // 						break;
 // 					case _direction_west:
-// 						if (position->x >= next_node->world_x && next_position.x <= next_node->world_x) {
-// 							distance_to_node= position->x - next_node->world_x;
-// 							position->x= next_node->world_x;
+// 						if (position->x >= next_node->world_x && next_position.x <=
+// next_node->world_x) { 							distance_to_node= position->x - next_node->world_x; 							position->x=
+// next_node->world_x;
 // 						}
 // 						break;
 // 					case _direction_south:
-// 						if (position->y <= next_node->world_y && next_position.y >= next_node->world_y) {
-// 							distance_to_node= next_node->world_y - position->y;
-// 							position->y= next_node->world_y;
+// 						if (position->y <= next_node->world_y && next_position.y >=
+// next_node->world_y) { 							distance_to_node= next_node->world_y - position->y; 							position->y=
+// next_node->world_y;
 // 						}
 // 						break;
 // 					case _direction_north:
-// 						if (position->y >= next_node->world_y && next_position.y <= next_node->world_y) {
-// 							distance_to_node= position->y - next_node->world_y;
-// 							position->y= next_node->world_y;
+// 						if (position->y >= next_node->world_y && next_position.y <=
+// next_node->world_y) { 							distance_to_node= position->y - next_node->world_y; 							position->y=
+// next_node->world_y;
 // 						}
 // 						break;
 // 					default: break;
@@ -591,7 +592,8 @@
 
 // 	while (velocity->x > 0.0f
 // 		   && (game_map_position_is_solid(
-// 			   get_game()->game_state.map, position->x + velocity->x + k_scan_distance, position->y)))
+// 			   get_game()->game_state.map, position->x + velocity->x + k_scan_distance,
+// position->y)))
 // 	{
 // 		velocity->x= max(velocity->x - k_collision_check_delta, 0.0f);
 // 		wall_hit= true;
@@ -599,7 +601,8 @@
 
 // 	while (velocity->x < 0.0f
 // 		   && (game_map_position_is_solid(
-// 			   get_game()->game_state.map, position->x + velocity->x - k_scan_distance, position->y)))
+// 			   get_game()->game_state.map, position->x + velocity->x - k_scan_distance,
+// position->y)))
 // 	{
 // 		velocity->x= min(velocity->x + k_collision_check_delta, 0.0f);
 // 		wall_hit= true;
@@ -607,7 +610,8 @@
 
 // 	while (velocity->y > 0.0f
 // 		   && (game_map_position_is_solid(
-// 			   get_game()->game_state.map, position->x, position->y + velocity->y + k_scan_distance)))
+// 			   get_game()->game_state.map, position->x, position->y + velocity->y +
+// k_scan_distance)))
 // 	{
 // 		velocity->y= max(velocity->y - k_collision_check_delta, 0.0f);
 // 		wall_hit= true;
@@ -615,7 +619,8 @@
 
 // 	while (velocity->y < 0.0f
 // 		   && (game_map_position_is_solid(
-// 			   get_game()->game_state.map, position->x, position->y + velocity->y - k_scan_distance)))
+// 			   get_game()->game_state.map, position->x, position->y + velocity->y -
+// k_scan_distance)))
 // 	{
 // 		velocity->y= min(velocity->y + k_collision_check_delta, 0.0f);
 // 		wall_hit= true;
@@ -683,9 +688,9 @@
 // 		SDL_FPoint origin= origins[index];
 // 		Color color= (Color){.g= 255, .a= 255};
 // 		debug_line(
-// 			position->x + origin.x, position->y + origin.y, position->x + offset.x, position->y + offset.y, color, 1);
-// 		if (game_map_position_is_solid(get_game()->game_state.map, position->x + offset.x, position->y + offset.y)) {
-// 			can_move= false;
+// 			position->x + origin.x, position->y + origin.y, position->x + offset.x, position->y +
+// offset.y, color, 1); 		if (game_map_position_is_solid(get_game()->game_state.map, position->x +
+// offset.x, position->y + offset.y)) { 			can_move= false;
 // 			// break;
 // 		}
 // 	}
@@ -739,7 +744,8 @@
 // 	return result;
 // }
 
-// bool window_point_to_tile_coordinate(int window_x, int window_y, int* out_tile_x, int* out_tile_y)
+// bool window_point_to_tile_coordinate(int window_x, int window_y, int* out_tile_x, int*
+// out_tile_y)
 // {
 // 	float world_x, world_y;
 // 	bool result= false;
@@ -765,10 +771,8 @@
 // 		e_direction input_direction= _direction_none;
 
 // 		if (input_move_x != 0 && input_move_y != 0) {
-// 			if (move_request->last_horizontal_request_frame > move_request->last_vertical_request_frame) {
-// 				input_move_x= 0;
-// 			} else {
-// 				input_move_y= 0;
+// 			if (move_request->last_horizontal_request_frame >
+// move_request->last_vertical_request_frame) { 				input_move_x= 0; 			} else { 				input_move_y= 0;
 // 			}
 // 		}
 
@@ -787,15 +791,14 @@
 // 				move_request->requested_direction= _direction_west;
 // 			}
 // 			move_request->last_horizontal_request_frame= game->game_state.game_frame;
-// 			move_request->request_early_forgiveness_timer= game->game_config.input.move_input_early_forgiveness_seconds;
-// 		} else if (input_move_y != 0) {
-// 			if (input_move_y > 0) {
-// 				move_request->requested_direction= _direction_south;
-// 			} else {
+// 			move_request->request_early_forgiveness_timer=
+// game->game_config.input.move_input_early_forgiveness_seconds; 		} else if (input_move_y != 0) { 			if
+// (input_move_y > 0) { 				move_request->requested_direction= _direction_south; 			} else {
 // 				move_request->requested_direction= _direction_north;
 // 			}
 // 			move_request->last_vertical_request_frame= game->game_state.game_frame;
-// 			move_request->request_early_forgiveness_timer= game->game_config.input.move_input_early_forgiveness_seconds;
+// 			move_request->request_early_forgiveness_timer=
+// game->game_config.input.move_input_early_forgiveness_seconds;
 // 		}
 // 	}
 
@@ -817,7 +820,8 @@
 // 		if (*animation_time >= 1.0f) *animation_time-= 1.0f;
 
 // 		*GET_COMPONENT(entity, sprite_id)=
-// 			(int16)(ping_pong(*animation_time) * config->animation_frames) * 2 + config->base_sprite_id;
+// 			(int16)(ping_pong(*animation_time) * config->animation_frames) * 2 +
+// config->base_sprite_id;
 // 	};
 
 // 	// Eat dots
@@ -839,12 +843,9 @@
 // 		for (int tile_y= 0; tile_y < MAP_MAX_TILE_Y; ++tile_y) {
 // 			int16 tile_id= game->game_map.data[tile_x][tile_y];
 // 			if (tile_id < 0) tile_id= _map_tile_error;
-// 			if (tile_id != _map_tile_monster && tile_id != _map_tile_none && tile_id != _map_tile_hidden_solid) {
-// 				SDL_Rect source_rect;
-// 				sprite_sheet_get_sprite_rect(&game->sprite_sheet, tile_id, &source_rect);
-// 				SDL_Rect dest_rect= {
-// 					.w= 8,
-// 					.h= 8,
+// 			if (tile_id != _map_tile_monster && tile_id != _map_tile_none && tile_id !=
+// _map_tile_hidden_solid) { 				SDL_Rect source_rect; 				sprite_sheet_get_sprite_rect(&game->sprite_sheet,
+// tile_id, &source_rect); 				SDL_Rect dest_rect= { 					.w= 8, 					.h= 8,
 // 				};
 // 				world_point_to_screen_point(tile_x, tile_y, &dest_rect.x, &dest_rect.y);
 // 				SDL_RenderCopy(renderer, game->sprite_sheet.texture, &source_rect, &dest_rect);
@@ -887,19 +888,17 @@
 // 				}
 
 // 				SDL_RenderCopyEx(
-// 					renderer, game->sprite_sheet.texture, &source_rect, &dest_rect, facing_angle, NULL, flip);
-// 			} else {
-// 				SDL_RenderCopy(renderer, game->sprite_sheet.texture, &source_rect, &dest_rect);
+// 					renderer, game->sprite_sheet.texture, &source_rect, &dest_rect, facing_angle,
+// NULL, flip); 			} else { 				SDL_RenderCopy(renderer, game->sprite_sheet.texture, &source_rect,
+// &dest_rect);
 // 			}
 // 		}
 
-// 		if ((flags & _entity_flags_draw_eyes) != 0 && game->game_config.general.eyes_base_sprite_id > 0) {
-// 			int16 sprite_id= game->game_config.general.eyes_base_sprite_id + (*facing - _direction_east) * 2;
-// 			SDL_Rect source_rect;
-// 			sprite_sheet_get_sprite_rect(&game->sprite_sheet, sprite_id, &source_rect);
-// 			source_rect.w= 16;
-// 			source_rect.h= 16;
-// 			SDL_RenderCopy(renderer, game->sprite_sheet.texture, &source_rect, &dest_rect);
+// 		if ((flags & _entity_flags_draw_eyes) != 0 && game->game_config.general.eyes_base_sprite_id
+// > 0) { 			int16 sprite_id= game->game_config.general.eyes_base_sprite_id + (*facing -
+// _direction_east) * 2; 			SDL_Rect source_rect; 			sprite_sheet_get_sprite_rect(&game->sprite_sheet,
+// sprite_id, &source_rect); 			source_rect.w= 16; 			source_rect.h= 16; 			SDL_RenderCopy(renderer,
+// game->sprite_sheet.texture, &source_rect, &dest_rect);
 // 		}
 // 	}
 // }
@@ -911,15 +910,16 @@
 // 	game->game_config.general.eyes_base_sprite_id=
 // 		config_get_or_default_int(game->config_handle, "general", "eyes_base_sprite_id", 0);
 // 	game->game_config.input.move_input_early_forgiveness_seconds=
-// 		config_get_or_default_float(game->config_handle, "input", "move_input_early_forgiveness_seconds", 0.0f);
+// 		config_get_or_default_float(game->config_handle, "input",
+// "move_input_early_forgiveness_seconds", 0.0f);
 
 // 	for (int32 entity= _entity_id_pacman; entity != _entity_end; entity++) {
 // 		const char* entity_name= k_entity_names[entity];
 
 // 		s_entity_config* config= GET_COMPONENT(entity, config);
 // 		if (config_has_section(game->config_handle, entity_name)) {
-// #define get_property(type, name, def) config_get_or_default_##type(game->config_handle, entity_name, name, def)
-// 			config->move_speed= get_property(float, "move_speed", 1.0f);
+// #define get_property(type, name, def) config_get_or_default_##type(game->config_handle,
+// entity_name, name, def) 			config->move_speed= get_property(float, "move_speed", 1.0f);
 // 			config->size= get_property(float, "size", 1.0f);
 // 			config->base_sprite_id= (int16)get_property(int, "base_sprite_id", 0);
 // 			config->animation_frames= (int16)get_property(int, "animation_frames", 0);
