@@ -9,7 +9,7 @@
 #include "Draw.h"
 
 enum {
-	KMaxProjectiles = 256,
+	KMaxProjectiles = 4096,
 };
 
 enum EntityFlags {
@@ -38,8 +38,9 @@ typedef struct Projectile {
 
 typedef struct GameState {
 	CometShip CometShips[1];
-	Projectile Projectiles[KMaxProjectiles];
-	int32 _ProjectileCount;
+	FixedList(Projectile, KMaxProjectiles) Projectiles;
+	// Projectile Projectiles[KMaxProjectiles];
+	// int32 _ProjectileCount;
 } GameState;
 
 Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
@@ -124,7 +125,7 @@ void GameUpdate(const GameTime* gameTime)
 	GameState* State = &GGame.State;
 
 	{
-		float MoveInput[2] = { 0 };
+		float MoveInput[2] = {0};
 		if (GGame.Input.KeyStates[SDL_SCANCODE_LEFT]) MoveInput[0] -= 1.0f;
 		if (GGame.Input.KeyStates[SDL_SCANCODE_RIGHT]) MoveInput[0] += 1.0f;
 		if (GGame.Input.KeyStates[SDL_SCANCODE_UP]) MoveInput[1] -= 1.0f;
@@ -135,35 +136,44 @@ void GameUpdate(const GameTime* gameTime)
 		State->CometShips[0].Position[1] += MoveInput[1] * KSpeed * gameTime->DeltaTimeF;
 	}
 
-	if (GGame.Frame % (120) == 0) {
-		CreateProjectile(
-			State,
-			&(Projectile){
-				.Position = {State->CometShips[0].Position[0], State->CometShips[0].Position[1]},
-				.Velocity = {100.0f, 0.0f},
-				.SecondsRemaining = 1.0f,
-			});
+	if (GGame.Frame % 6 == 0) {
+		real32 yy[] = {-0.2f, -0.1f, 0.0f, 0.1f, 0.2f};
+		real32 speed = 200.0f;
+		for (int32 i = 0; i < ARRAY_COUNT(yy); i++) {
+			CreateProjectile(
+				State,
+				&(Projectile){
+					.Position = {State->CometShips[0].Position[0], State->CometShips[0].Position[1]},
+					.Velocity = {cosf(yy[i]) * speed, sinf(yy[i]) * speed},
+					.SecondsRemaining = 2.5f,
+				});
+		}
 	}
 
-	for (int32 ProjectileIndex = 0; ProjectileIndex < State->_ProjectileCount; ProjectileIndex++) {
-		Projectile* ProjectileIter = &State->Projectiles[ProjectileIndex];
-		ProjectileIter->Position[0] += ProjectileIter->Velocity[0] * gameTime->DeltaTimeF;
-		ProjectileIter->Position[1] += ProjectileIter->Velocity[1] * gameTime->DeltaTimeF;
+	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
+		 Iter != FixedListEnd(GGame.State.Projectiles);
+		 Iter++)
+	{
+		Iter->Position[0] += Iter->Velocity[0] * gameTime->DeltaTimeF;
+		Iter->Position[1] += Iter->Velocity[1] * gameTime->DeltaTimeF;
 
-		if (ProjectileIter->SecondsRemaining > 0.0f) {
-			ProjectileIter->SecondsRemaining -= gameTime->DeltaTimeF;
-			if (ProjectileIter->SecondsRemaining <= 0.0f) {
-				ProjectileIter->Flags |= EntityFlags_Destroyed;
+		if (Iter->SecondsRemaining > 0.0f) {
+			Iter->SecondsRemaining -= gameTime->DeltaTimeF;
+			if (Iter->SecondsRemaining <= 0.0f) {
+				Iter->Flags |= EntityFlags_Destroyed;
 			}
 		}
 	}
 
-	for (int32 ProjectileIndex = State->_ProjectileCount - 1; ProjectileIndex >= 0;
-		 ProjectileIndex--)
+	Projectile* Start = FixedListBegin(GGame.State.Projectiles);
+	Projectile* End = FixedListEnd(GGame.State.Projectiles);
+
+	for (Projectile* Iter = FixedListLast(GGame.State.Projectiles);
+		 Iter >= FixedListBegin(GGame.State.Projectiles);
+		 Iter--)
 	{
-		Projectile* Projectile_ = &State->Projectiles[ProjectileIndex];
-		if ((Projectile_->Flags & EntityFlags_Destroyed) != 0) {
-			DestroyProjectile(&GGame.State, Projectile_);
+		if ((Iter->Flags & EntityFlags_Destroyed) != 0) {
+			DestroyProjectile(&GGame.State, Iter);
 		}
 	}
 
@@ -180,9 +190,7 @@ void GameRender(const GameTime* gameTime)
 	int RenderWidth, RenderHeight;
 	SDL_GetRendererOutputSize(GGame.Renderer, &RenderWidth, &RenderHeight);
 
-	SDL_Rect BgRect= {
-		0, 0, RenderWidth, RenderHeight
-	};
+	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
@@ -193,8 +201,8 @@ void GameRender(const GameTime* gameTime)
 		.SpriteTiles = {2, 1},
 	});
 
-	for (Projectile* Iter = GGame.State.Projectiles;
-		 Iter != GGame.State.Projectiles + GGame.State._ProjectileCount;
+	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
+		 Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
 	{
 		SpriteDraw DrawCommand = (SpriteDraw){
@@ -226,9 +234,9 @@ void GameRequestShutdown(void)
 Projectile* CreateProjectile(GameState* gameState, const Projectile* config)
 {
 	ASSERT(gameState);
-	ASSERT(gameState->_ProjectileCount < KMaxProjectiles);
+	ASSERT(!FixedListIsFull(gameState->Projectiles));
 
-	Projectile* Result = &gameState->Projectiles[gameState->_ProjectileCount++];
+	Projectile* Result = FixedListPush(gameState->Projectiles);
 	*Result = (config != NULL) ? *config : (Projectile){};
 
 	return Result;
@@ -239,10 +247,10 @@ void DestroyProjectile(GameState* gameState, Projectile* projectile)
 	ASSERT(gameState);
 	ASSERT(projectile);
 
-	ptrdiff_t ProjectileIndex = projectile - &gameState->Projectiles[0];
+	// ptrdiff_t ProjectileIndex = FixedListIndexOf(gameState->Projectiles, projectile);
+	ptrdiff_t ProjectileIndex = projectile - &gameState->Projectiles.Data[0];
 
-	ASSERT(VALID_INDEX(ProjectileIndex, gameState->_ProjectileCount));
+	ASSERT(VALID_INDEX(ProjectileIndex, gameState->Projectiles.Count));
 
-	gameState->_ProjectileCount--;
-	gameState->Projectiles[ProjectileIndex] = gameState->Projectiles[gameState->_ProjectileCount];
+	FixedListRemoveAt(gameState->Projectiles, ProjectileIndex);
 }

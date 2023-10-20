@@ -154,3 +154,21 @@ typedef double real64;
 	static const size_t name##_size = size;                                                        \
 	static char name[size]
 #endif
+
+#define FixedList(type, cap)                                                                       \
+	struct {                                                                                       \
+		type Data[cap];                                                                            \
+		int32 Count;                                                                               \
+	}
+
+#define FixedListBegin(list) &((list).Data[0])
+#define FixedListEnd(list) &((list).Data[(list).Count])
+#define FixedListCapacity(list) ARRAY_COUNT((list).Data)
+#define FixedListLast(list) &((list).Data[(list).Count - 1])
+#define FixedListIndexOf(list, item) ((item) - &(list).Data[0])
+#define FixedListIsEmpty(list) ((list).Count == 0)
+#define FixedListIsFull(list) ((list).Count == FixedListCapacity(list))
+#define FixedListPush(list) &((list).Data[(list).Count++])
+#define FixedListPop(list) (list).Count--
+#define FixedListRemoveAt(list, index)                                                             \
+	(FixedListPop(list), (list).Data[index] = (list).Data[(list).Count])

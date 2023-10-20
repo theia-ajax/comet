@@ -47,7 +47,8 @@
         "ratio": "c",
         "tuple": "c",
         "utility": "c",
-        "variant": "c"
+        "variant": "c",
+        "random": "c"
     },
     "game_target": "comet"
 }
