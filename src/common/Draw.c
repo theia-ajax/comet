@@ -72,6 +72,10 @@ void DrawSprite(const SpriteDraw* spriteDraw)
 {
 	SpriteDraw DrawCommand = (spriteDraw != NULL) ? *spriteDraw : (SpriteDraw){0};
 
+	if (EqV2(DrawCommand.Scale, V2(0, 0))) {
+		DrawCommand.Scale = V2(1, 1);
+	}
+	
 	DrawCommand.SpriteTiles[0] = (DrawCommand.SpriteTiles[0] > 0) ? DrawCommand.SpriteTiles[0] : 1;
 	DrawCommand.SpriteTiles[1] = (DrawCommand.SpriteTiles[1] > 0) ? DrawCommand.SpriteTiles[1] : 1;
 
@@ -85,21 +89,25 @@ void DrawRender(void)
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
 
-		if (DrawCommand->SpriteId <= 0) {
-			continue;
-		}
-
 		SDL_Rect SourceRect = GetSpriteRect(
 			&GDraw.SpriteSheets[DrawCommand->SpriteSheetId],
 			DrawCommand->SpriteId,
 			DrawCommand->SpriteTiles[0],
 			DrawCommand->SpriteTiles[1]);
 
+		float Width = SourceRect.w * DrawCommand->Scale.X;
+		float Height = SourceRect.h * DrawCommand->Scale.Y;
+
 		SDL_FRect DestRect = {
-			.x = DrawCommand->Position.X,
-			.y = DrawCommand->Position.Y,
-			.w = SourceRect.w,
-			.h = SourceRect.h,
+			.x = DrawCommand->Position.X - Width / 2.0f,
+			.y = DrawCommand->Position.Y - Height / 2.0f,
+			.w = Width,
+			.h = Height,
+		};
+
+		SDL_FPoint Center = {
+			DestRect.w / 2.0f,
+			DestRect.h / 2.0f,
 		};
 
 		// for now it's all in the first sprite sheet
@@ -108,9 +116,18 @@ void DrawRender(void)
 			GDraw.SpriteSheetTextures[DrawCommand->SpriteSheetId],
 			&SourceRect,
 			&DestRect,
-			0.0,
-			NULL,
+			DrawCommand->Rotation * TurnToDeg,
+			&Center,
 			SDL_FLIP_NONE);
+
+		// SDL_FRect PosRect = (SDL_FRect){
+		// 	.x = DestRect.x + Center.x,
+		// 	.y = DestRect.y + Center.y,
+		// 	.w = 1.0f,
+		// 	.h = 1.0f,
+		// };
+		// SDL_SetRenderDrawColor(GDraw.Renderer, 0, 255, 255, 0);
+		// SDL_RenderDrawRectF(GDraw.Renderer, &PosRect);
 	}
 
 	GDraw.SpriteCount = 0;
@@ -118,8 +135,11 @@ void DrawRender(void)
 
 // Private Implementations
 
-static SDL_Rect
-GetSpriteRect(const SpriteSheet* spriteSheet, int32 spriteId, int32 spriteTilesX, int32 spriteTilesY)
+static SDL_Rect GetSpriteRect(
+	const SpriteSheet* spriteSheet,
+	int32 spriteId,
+	int32 spriteTilesX,
+	int32 spriteTilesY)
 {
 	int32 SpriteTileX = spriteId % spriteSheet->SpritesPerRow;
 	int32 SpriteTileY = spriteId / spriteSheet->SpritesPerRow;

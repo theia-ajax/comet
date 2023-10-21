@@ -84,7 +84,7 @@ PenaltyBreakFirstLessLess: 60
 PenaltyBreakString: 80
 PenaltyBreakTemplateDeclaration: 5
 PenaltyExcessCharacter: 100
-PenaltyReturnTypeOnItsOwnLine: 8
+PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
 PointerBindsToType: true
 ReflowComments: true

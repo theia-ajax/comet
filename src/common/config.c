@@ -34,8 +34,10 @@ struct {
 static h_config alloc_config(void);
 static s_config* get_config(h_config config_handle);
 static bool try_load_config(const char* file_name, s_config* out_config);
-static const char*
-get_property_value(h_config config_handle, const char* section_name, const char* property_name);
+static const char* get_property_value(
+	h_config config_handle,
+	const char* section_name,
+	const char* property_name);
 static bool contains(const char** strings, int count, const char* search);
 static uint32 hash_section_and_property(int section, int property);
 static void build_property_map(s_config* config);
@@ -154,8 +156,10 @@ s_config_property_type_entry* config_get_property_type_map(h_config config_handl
 	return get_config(config_handle)->property_type_map;
 }
 
-e_config_property_type
-properties_map_get_type(s_config_property_type_entry* map, int section, int property)
+e_config_property_type properties_map_get_type(
+	s_config_property_type_entry* map,
+	int section,
+	int property)
 {
 	e_config_property_type result = _config_property_type_string;
 	uint32 key = hash_section_and_property(section, property);
@@ -253,8 +257,10 @@ static s_config* get_config(h_config config_handle)
 	return config_data_array_get(&g_config.entries, config_handle);
 }
 
-static const char*
-get_property_value(h_config config_handle, const char* section_name, const char* property_name)
+static const char* get_property_value(
+	h_config config_handle,
+	const char* section_name,
+	const char* property_name)
 {
 	s_config* config = get_config(config_handle);
 	const char* result = NULL;
