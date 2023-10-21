@@ -1,4 +1,4 @@
-#include "game.h"
+#include "Game.h"
 
 #include <HandmadeMath.h>
 #include <SDL2/SDL.h>
@@ -7,6 +7,7 @@
 
 #include "Assets.h"
 #include "Draw.h"
+#include "Debug.h"
 
 enum SpriteSheetId {
 	SpriteSheetId_Default,
@@ -80,6 +81,11 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.ImGui.IO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	igStyleColorsDark(NULL);
 
+	DebugInitialize(&(DebugConfig){
+		.CanvasWidth = 320,
+		.CanvasHeight = 180,
+	});
+
 	ImGui_ImplSDL2_InitForSDLRenderer(GGame.Window, GGame.Renderer);
 	ImGui_ImplSDLRenderer_Init(GGame.Renderer);
 
@@ -120,6 +126,7 @@ void GameDestroy(void)
 {
 	DrawShutdown();
 	AssetsShutdown();
+	DebugShutdown();
 }
 
 void GameSendInput(const GameInput* input)
@@ -138,6 +145,8 @@ void GameUpdate(const GameTime* gameTime)
 	ImGui_ImplSDLRenderer_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	igNewFrame();
+
+	DebugNextFrame();
 
 	GameState* State = &GGame.State;
 
@@ -190,6 +199,10 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
+	DebugPrintf("FPS: %d", (int)round(1.0 / gameTime->DeltaTime));
+	DebugPrintf(
+		"Pos: %0.1f, %0.1f", GGame.State.CometShips[0].Position.X, GGame.State.CometShips[0].Position.Y);
+
 	igShowDemoWindow(NULL);
 
 	GGame.Frame++;
@@ -231,6 +244,8 @@ void GameRender(const GameTime* gameTime)
 	}
 
 	DrawRender();
+
+	DebugDraw(GGame.Renderer);
 
 	igRender();
 	ImGui_ImplSDLRenderer_RenderDrawData(igGetDrawData());

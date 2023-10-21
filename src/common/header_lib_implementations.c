@@ -9,3 +9,6 @@
 
 #define INI_IMPLEMENTATION
 #include "ini.h"
+
+#define SYSFONT_IMPLEMENTATION
+#include "Sysfont.h"

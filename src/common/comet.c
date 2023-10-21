@@ -1,4 +1,4 @@
-#include "game.h"
+#include "Game.h"
 
 // #include "debug.h"
 // #include "stb_ds.h"
@@ -687,7 +687,7 @@
 // 		SDL_FPoint offset= offsets[index];
 // 		SDL_FPoint origin= origins[index];
 // 		Color color= (Color){.g= 255, .a= 255};
-// 		debug_line(
+// 		DebugLine(
 // 			position->x + origin.x, position->y + origin.y, position->x + offset.x, position->y +
 // offset.y, color, 1); 		if (game_map_position_is_solid(get_game()->game_state.map, position->x +
 // offset.x, position->y + offset.y)) { 			can_move= false;

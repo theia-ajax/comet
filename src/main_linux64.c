@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common/game.h"
+#include "common/Game.h"
 
 int main(int argc, char* argv[])
 {
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
 	ASSERT(Success);
 
-	const int KTargetFramesPerSecond = 60;
+	const int KTargetFramesPerSecond = 144;
 	double KTargetFrameRateSeconds =
 		(KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
 	uint64 NowTicks = 0;
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
 	while (GameIsRunning()) {
 		uint64 FrameStartTicks = stm_now();
-		// debug_next_frame();
+		// DebugNextFrame();
 
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {
