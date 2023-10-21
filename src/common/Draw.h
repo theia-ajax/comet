@@ -1,5 +1,7 @@
 #pragma once
 
+#include <HandmadeMath.h>
+
 #include "types.h"
 #include "Assets.h"
 
@@ -26,8 +28,9 @@ typedef struct DrawConfig
 
 typedef struct SpriteDraw
 {
+	int32 SpriteSheetId;
 	int32 SpriteId;
-	real32 Position[2];
+	Vec2 Position;
 	int32 SpriteTiles[2];
 } SpriteDraw;
 

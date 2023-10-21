@@ -1,12 +1,20 @@
 #include "game.h"
 
+#include <HandmadeMath.h>
 #include <SDL2/SDL.h>
 #include <cimgui.h>
 #include <cimgui_impl.h>
-#include <math.h>
 
 #include "Assets.h"
 #include "Draw.h"
+
+enum SpriteSheetId {
+	SpriteSheetId_Default,
+	SpriteSheetId_Ships,
+	SpriteSheetId_Projectiles,
+	SpriteSheetId_BGObjects0,
+	SpriteSheetId_Count,
+};
 
 enum {
 	KMaxProjectiles = 4096,
@@ -25,13 +33,13 @@ typedef enum Affiliation {
 } Affiliation;
 
 typedef struct CometShip {
-	real32 Position[2];
+	Vec2 Position;
 } CometShip;
 
 typedef struct Projectile {
 	uint32 Flags;
-	real32 Position[2];
-	real32 Velocity[2];
+	Vec2 Position;
+	Vec2 Velocity;
 	real32 SecondsRemaining;
 	Affiliation Affiliation;
 } Projectile;
@@ -43,8 +51,9 @@ typedef struct GameState {
 	// int32 _ProjectileCount;
 } GameState;
 
-Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
-void DestroyProjectile(GameState* gameState, Projectile* projectile);
+#define GetImage(Id) GGame.ImageAssets[Id]
+static Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
+static void DestroyProjectile(GameState* gameState, Projectile* projectile);
 
 struct {
 	bool IsRunning;
@@ -54,7 +63,7 @@ struct {
 		ImGuiIO* IO;
 	} ImGui;
 	GameInput Input;
-	ImageAsset* SpriteSheet;
+	ImageAsset* ImageAssets[16];
 	int32 Frame;
 	GameState State;
 } GGame;
@@ -76,13 +85,21 @@ bool GameInitialize(const GameInitParams* params)
 
 	AssetsInitialize(&(AssetsConfig){});
 
-	GGame.SpriteSheet = LoadImageAsset("assets/sprite_sheet.png");
+	GetImage(SpriteSheetId_Default) = LoadImageAsset("assets/sprite_sheet.png");
+	GetImage(SpriteSheetId_Ships) = LoadImageAsset("assets/shipsheet.png");
+	GetImage(SpriteSheetId_Projectiles) = LoadImageAsset("assets/projectilesheet.png");
+	GetImage(SpriteSheetId_BGObjects0) = LoadImageAsset("assets/CelestialObjects.png");
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
 		.SpriteSheets =
 			{
-				[0] = CreateSpriteSheet(GGame.SpriteSheet, 8, 8),
+				[SpriteSheetId_Default] = CreateSpriteSheet(GetImage(SpriteSheetId_Default), 8, 8),
+				[SpriteSheetId_Ships] = CreateSpriteSheet(GetImage(SpriteSheetId_Ships), 48, 48),
+				[SpriteSheetId_Projectiles] =
+					CreateSpriteSheet(GetImage(SpriteSheetId_Projectiles), 32, 32),
+				[SpriteSheetId_BGObjects0] =
+					CreateSpriteSheet(GetImage(SpriteSheetId_BGObjects0), 32, 32),
 			},
 	});
 
@@ -125,26 +142,26 @@ void GameUpdate(const GameTime* gameTime)
 	GameState* State = &GGame.State;
 
 	{
-		float MoveInput[2] = {0};
-		if (GGame.Input.KeyStates[SDL_SCANCODE_LEFT]) MoveInput[0] -= 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_RIGHT]) MoveInput[0] += 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_UP]) MoveInput[1] -= 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_DOWN]) MoveInput[1] += 1.0f;
+		Vec2 MoveInput = {0};
+		if (GGame.Input.KeyStates[SDL_SCANCODE_LEFT]) MoveInput.X -= 1.0f;
+		if (GGame.Input.KeyStates[SDL_SCANCODE_RIGHT]) MoveInput.X += 1.0f;
+		if (GGame.Input.KeyStates[SDL_SCANCODE_UP]) MoveInput.Y -= 1.0f;
+		if (GGame.Input.KeyStates[SDL_SCANCODE_DOWN]) MoveInput.Y += 1.0f;
 
 		const float KSpeed = 64.0f;
-		State->CometShips[0].Position[0] += MoveInput[0] * KSpeed * gameTime->DeltaTimeF;
-		State->CometShips[0].Position[1] += MoveInput[1] * KSpeed * gameTime->DeltaTimeF;
+		Vec2 Delta = Mul(MoveInput, KSpeed * gameTime->DeltaTimeF);
+		State->CometShips[0].Position = Add(State->CometShips[0].Position, Delta);
 	}
 
 	if (GGame.Frame % 6 == 0) {
-		real32 yy[] = {-0.2f, -0.1f, 0.0f, 0.1f, 0.2f};
+		real32 yy[] = {-0.1f, -0.05f, 0.0f, 0.05f, 0.1f};
 		real32 speed = 200.0f;
 		for (int32 i = 0; i < ARRAY_COUNT(yy); i++) {
 			CreateProjectile(
 				State,
 				&(Projectile){
-					.Position = {State->CometShips[0].Position[0], State->CometShips[0].Position[1]},
-					.Velocity = {cosf(yy[i]) * speed, sinf(yy[i]) * speed},
+					.Position = State->CometShips[0].Position,
+					.Velocity = {CosF(yy[i]) * speed, SinF(yy[i]) * speed},
 					.SecondsRemaining = 2.5f,
 				});
 		}
@@ -154,8 +171,7 @@ void GameUpdate(const GameTime* gameTime)
 		 Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
 	{
-		Iter->Position[0] += Iter->Velocity[0] * gameTime->DeltaTimeF;
-		Iter->Position[1] += Iter->Velocity[1] * gameTime->DeltaTimeF;
+		Iter->Position = Add(Iter->Position, Mul(Iter->Velocity, gameTime->DeltaTimeF));
 
 		if (Iter->SecondsRemaining > 0.0f) {
 			Iter->SecondsRemaining -= gameTime->DeltaTimeF;
@@ -192,9 +208,15 @@ void GameRender(const GameTime* gameTime)
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
 	DrawSprite(&(SpriteDraw){
+		.SpriteSheetId = SpriteSheetId_BGObjects0,
+		.SpriteId = 44,
+		.Position = {170.0f, 20.0f},
+		.SpriteTiles = {4, 4},
+	});
+
+	DrawSprite(&(SpriteDraw){
 		.SpriteId = 16 + ((GGame.Frame % 8) / 4) * 2,
-		.Position[0] = GGame.State.CometShips[0].Position[0],
-		.Position[1] = GGame.State.CometShips[0].Position[1],
+		.Position = GGame.State.CometShips[0].Position,
 		.SpriteTiles = {2, 1},
 	});
 
@@ -202,12 +224,10 @@ void GameRender(const GameTime* gameTime)
 		 Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
 	{
-		SpriteDraw DrawCommand = (SpriteDraw){
+		DrawSprite(&(SpriteDraw){
 			.SpriteId = 8,
-		};
-		memcpy(DrawCommand.Position, Iter->Position, sizeof(DrawCommand.Position));
-
-		DrawSprite(&DrawCommand);
+			.Position = Iter->Position,
+		});
 	}
 
 	DrawRender();
@@ -228,7 +248,7 @@ void GameRequestShutdown(void)
 	GGame.IsRunning = false;
 }
 
-Projectile* CreateProjectile(GameState* gameState, const Projectile* config)
+static Projectile* CreateProjectile(GameState* gameState, const Projectile* config)
 {
 	ASSERT(gameState);
 	ASSERT(!FixedListIsFull(gameState->Projectiles));
@@ -239,7 +259,7 @@ Projectile* CreateProjectile(GameState* gameState, const Projectile* config)
 	return Result;
 }
 
-void DestroyProjectile(GameState* gameState, Projectile* projectile)
+static void DestroyProjectile(GameState* gameState, Projectile* projectile)
 {
 	ASSERT(gameState);
 	ASSERT(projectile);

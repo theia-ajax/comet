@@ -90,14 +90,14 @@ void DrawRender(void)
 		}
 
 		SDL_Rect SourceRect = GetSpriteRect(
-			&GDraw.SpriteSheets[0],
+			&GDraw.SpriteSheets[DrawCommand->SpriteSheetId],
 			DrawCommand->SpriteId,
 			DrawCommand->SpriteTiles[0],
 			DrawCommand->SpriteTiles[1]);
 
 		SDL_FRect DestRect = {
-			.x = DrawCommand->Position[0],
-			.y = DrawCommand->Position[1],
+			.x = DrawCommand->Position.X,
+			.y = DrawCommand->Position.Y,
 			.w = SourceRect.w,
 			.h = SourceRect.h,
 		};
@@ -105,7 +105,7 @@ void DrawRender(void)
 		// for now it's all in the first sprite sheet
 		SDL_RenderCopyExF(
 			GDraw.Renderer,
-			GDraw.SpriteSheetTextures[0],
+			GDraw.SpriteSheetTextures[DrawCommand->SpriteSheetId],
 			&SourceRect,
 			&DestRect,
 			0.0,
