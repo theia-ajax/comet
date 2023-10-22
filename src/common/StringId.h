@@ -9,13 +9,15 @@ typedef struct StringId {
 #endif
 } StringId;
 
-#define KStringIdInvalid (StringId){0}
+#define KStringIdInvalid ((StringId){0})
 
 #define STR_ID_LITERAL(str) GetStringIdN(str, sizeof(len))
 
 StringId GetStringId(const char* string);
 StringId GetStringIdN(const char* string, size_t length);
 const char* StringIdCStr(StringId stringId);
+bool StringIdIsValid(StringId S);
+bool StringIdEq(StringId A, StringId B);
 
 void StringIdPoolsInitialize(void);
 void StringIdPoolsShutdown(void);

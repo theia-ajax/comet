@@ -31,6 +31,16 @@ const char* StringIdCStr(StringId stringId)
 	return strpool_cstr(&GStringId.Pool, stringId.Id);
 }
 
+bool StringIdIsValid(StringId S)
+{
+	return strpool_cstr(&GStringId.Pool, S.Id) != NULL;
+}
+
+bool StringIdEq(StringId A, StringId B)
+{
+	return A.Id == B.Id;
+}
+
 void StringIdPoolsInitialize(void)
 {
 	ASSERT(!GStringId.IsInitialized);

@@ -39,12 +39,18 @@ static bool ParseSpriteSheetFrameData(
 static bool ParseSpriteFrameData(
 	struct json_value_s* FrameValue,
 	SpriteSheetFramesData* DataOut,
-	int32 SpriteIndex);
-static double ParseNumber(struct json_value_s* NumberValue);
+	int32 Id);
+static bool ParseNumber(struct json_value_s* NumberValue, double* NumberOut);
 static bool ParseBool(struct json_value_s* BoolValue, bool* BoolOut);
 static bool ParseStringId(struct json_value_s* StringValue, StringId* StringIdOut);
 static bool ParseRect(struct json_value_s* RectValue, Rect* RectOut);
 static bool ParseDimensions(struct json_value_s* DimValue, Point* DimOut);
+static struct json_value_s* JsonFindKeyValue(struct json_object_s* Object, const char* Key);
+static bool JsonGetBool(struct json_object_s* Object, const char* Key, bool Default);
+static StringId JsonGetStringId(struct json_object_s* Object, const char* Key, StringId Default);
+static double JsonGetNumber(struct json_object_s* Object, const char* Key, double Default);
+static int64 JsonGetInt64(struct json_object_s* Object, const char* Key, int64 Default);
+static int32 JsonGetInt32(struct json_object_s* Object, const char* Key, int32 Default);
 
 // Public Implementations
 
@@ -207,28 +213,15 @@ static bool ParseSpriteSheetMetaData(
 		return false;
 	}
 
-	enum { KExpectedKeys = 4 };
-	int32 ParsedKeys = 0;
+	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KStringIdInvalid);
+	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KStringIdInvalid);
+	DataOut->Scale = JsonGetNumber(MetaObject, "scale", 1.0);
+	bool ParsedSize = ParseDimensions(JsonFindKeyValue(MetaObject, "size"), &DataOut->Size);
 
-	struct json_object_element_s* Current = MetaObject->start;
+	bool Success = StringIdIsValid(DataOut->ImageNameId) &&
+				   StringIdIsValid(DataOut->FormatNameId) && ParsedSize;
 
-	while (Current != NULL && ParsedKeys != KExpectedKeys) {
-		struct json_value_s* Value = Current->value;
-		if (JsonKeyEq(Current, "image") && ParseStringId(Value, &DataOut->ImageNameId)) {
-			ParsedKeys++;
-		} else if (JsonKeyEq(Current, "format") && ParseStringId(Value, &DataOut->FormatNameId)) {
-			ParsedKeys++;
-		} else if (JsonKeyEq(Current, "size") && ParseDimensions(Value, &DataOut->Size)) {
-			ParsedKeys++;
-		} else if (JsonKeyEq(Current, "scale")) {
-			DataOut->Scale = ParseNumber(Value);
-			ParsedKeys++;
-		}
-
-		Current = Current->next;
-	}
-
-	return ParsedKeys == KExpectedKeys;
+	return Success;
 }
 
 static bool ParseSpriteSheetFrameData(
@@ -260,53 +253,48 @@ static bool ParseSpriteSheetFrameData(
 static bool ParseSpriteFrameData(
 	struct json_value_s* FrameValue,
 	SpriteSheetFramesData* DataOut,
-	int32 SpriteIndex)
+	int32 Id)
 {
-	bool Success = true;
-
 	struct json_object_s* FrameObject = json_value_as_object(FrameValue);
 	if (FrameObject == NULL) {
 		return false;
 	}
 
-	enum { KExpectedKeys = 5 };
-	int32 ParsedKeys = 0;
+	bool Success = true;
 
-	int32 Id = SpriteIndex;
+	DataOut->Name[Id] = JsonGetStringId(FrameObject, "filename", KStringIdInvalid);
 
-	struct json_object_element_s* Current = FrameObject->start;
-	while (Current) {
-		struct json_value_s* Value = Current->value;
-		if (JsonKeyEq(Current, "filename") && ParseStringId(Value, &DataOut->Name[Id]))
-			ParsedKeys++;
-		else if (JsonKeyEq(Current, "frame") && ParseRect(Value, &DataOut->Frame[Id]))
-			ParsedKeys++;
-		else if (JsonKeyEq(Current, "sourceSize") && ParseDimensions(Value, &DataOut->SourceSize[Id]))
-			ParsedKeys++;
-		else if (JsonKeyEq(Current, "rotated") && ParseBool(Value, &DataOut->Rotated[Id]))
-			ParsedKeys++;
-		else if (JsonKeyEq(Current, "trimmed") && ParseBool(Value, &DataOut->Trimmed[Id]))
-			ParsedKeys++;
+	Success &= ParseRect(JsonFindKeyValue(FrameObject, "frame"), &DataOut->Frame[Id]);
+	Success &=
+		ParseDimensions(JsonFindKeyValue(FrameObject, "sourceSize"), &DataOut->SourceSize[Id]);
+	Success &= StringIdIsValid(DataOut->Name[Id]);
 
-		Current = Current->next;
-	}
+	DataOut->Rotated[Id] = JsonGetBool(FrameObject, "rotated", false);
+	DataOut->Trimmed[Id] = JsonGetBool(FrameObject, "trimmed", false);
 
-	return ParsedKeys == KExpectedKeys;
+	return Success;
 }
 
-static double ParseNumber(struct json_value_s* NumberValue)
+static bool ParseNumber(struct json_value_s* NumberValue, double* NumberOut)
 {
+	ASSERT(NumberOut);
+	*NumberOut = 0.0;
+
+	bool Success = false;
 	double Result = 0.0;
 	struct json_number_s* NumberObject = json_value_as_number(NumberValue);
 	if (NumberObject != NULL) {
 		Result = strtod(NumberObject->number, NULL);
+		Success = true;
 	} else {
 		struct json_string_s* StringObject = json_value_as_string(NumberValue);
 		if (StringObject != NULL) {
 			Result = strtod(StringObject->string, NULL);
+			Success = true;
 		}
 	}
-	return Result;
+	*NumberOut = Result;
+	return Success;
 }
 
 static bool ParseBool(struct json_value_s* BoolValue, bool* BoolOut)
@@ -345,39 +333,16 @@ static bool ParseRect(struct json_value_s* RectValue, Rect* RectOut)
 
 	struct json_object_s* RectObject = json_value_as_object(RectValue);
 
-	if (RectObject == NULL) {
+	if (RectObject == NULL || RectObject->length != 4) {
 		return false;
 	}
 
-	Rect Result = {0};
+	RectOut->X = JsonGetInt32(RectObject, "x", 0);
+	RectOut->Y = JsonGetInt32(RectObject, "y", 0);
+	RectOut->W = JsonGetInt32(RectObject, "w", 0);
+	RectOut->H = JsonGetInt32(RectObject, "h", 0);
 
-	enum { KExpectedKeys = 4 };
-	int32 ParsedKeys = 0;
-
-	struct json_object_element_s* Current = RectObject->start;
-	while (Current && ParsedKeys != KExpectedKeys) {
-		if (JsonKeyEq(Current, "x")) {
-			Result.X = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
-		}
-		if (JsonKeyEq(Current, "y")) {
-			Result.Y = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
-		}
-		if (JsonKeyEq(Current, "w")) {
-			Result.W = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
-		}
-		if (JsonKeyEq(Current, "h")) {
-			Result.H = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
-		}
-		Current = Current->next;
-	}
-
-	*RectOut = Result;
-
-	return ParsedKeys == KExpectedKeys;
+	return true;
 }
 
 static bool ParseDimensions(struct json_value_s* DimValue, Point* DimOut)
@@ -387,29 +352,84 @@ static bool ParseDimensions(struct json_value_s* DimValue, Point* DimOut)
 
 	struct json_object_s* DimObject = json_value_as_object(DimValue);
 
-	if (DimObject == NULL) {
+	if (DimObject == NULL || DimObject->length != 2) {
 		return false;
 	}
 
-	Point Result = {0};
+	DimOut->X = JsonGetInt32(DimObject, "w", 0);
+	DimOut->Y = JsonGetInt32(DimObject, "h", 0);
 
-	enum { KExpectedKeys = 2 };
-	int32 ParsedKeys = 0;
+	return true;
+}
 
-	struct json_object_element_s* Current = DimObject->start;
-	while (Current && ParsedKeys != KExpectedKeys) {
-		if (JsonKeyEq(Current, "w")) {
-			Result.X = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
-		}
-		if (JsonKeyEq(Current, "h")) {
-			Result.Y = (int32)ParseNumber(Current->value);
-			ParsedKeys++;
+static struct json_value_s* JsonFindKeyValue(struct json_object_s* Object, const char* Key)
+{
+	if (Object == NULL) {
+		return NULL;
+	}
+
+	struct json_object_element_s* Current = Object->start;
+	while (Current != NULL) {
+		if (strcmp(Current->name->string, Key) == 0) {
+			return Current->value;
 		}
 		Current = Current->next;
 	}
 
-	*DimOut = Result;
+	return NULL;
+}
 
-	return ParsedKeys == KExpectedKeys;
+static bool JsonGetBool(struct json_object_s* Object, const char* Key, bool Default)
+{
+	struct json_value_s* BoolValue = JsonFindKeyValue(Object, Key);
+
+	bool Result;
+	if (ParseBool(BoolValue, &Result)) {
+		return Result;
+	}
+	return Default;
+}
+
+static StringId JsonGetStringId(struct json_object_s* Object, const char* Key, StringId Default)
+{
+	struct json_value_s* StringValue = JsonFindKeyValue(Object, Key);
+
+	StringId Result;
+	if (ParseStringId(StringValue, &Result)) {
+		return Result;
+	}
+	return Default;
+}
+
+static double JsonGetNumber(struct json_object_s* Object, const char* Key, double Default)
+{
+	struct json_value_s* NumberValue = JsonFindKeyValue(Object, Key);
+
+	double Result;
+	if (ParseNumber(NumberValue, &Result)) {
+		return Result;
+	}
+	return Default;
+}
+
+static int64 JsonGetInt64(struct json_object_s* Object, const char* Key, int64 Default)
+{
+	struct json_value_s* NumberValue = JsonFindKeyValue(Object, Key);
+
+	double Result;
+	if (ParseNumber(NumberValue, &Result)) {
+		return (int64)Result;
+	}
+	return Default;
+}
+
+static int32 JsonGetInt32(struct json_object_s* Object, const char* Key, int32 Default)
+{
+	struct json_value_s* NumberValue = JsonFindKeyValue(Object, Key);
+
+	double Result;
+	if (ParseNumber(NumberValue, &Result)) {
+		return (int32)Result;
+	}
+	return Default;
 }
