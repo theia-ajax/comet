@@ -15,8 +15,13 @@ struct {
 	AssetsConfig Config;
 	ImageAsset* ImageAssets;
 	FreeStack* ImageAssetsFreeStack;
-	SpriteSheetAsset* SpriteSheetAssets;
+	SpriteSheetDataAsset* SpriteSheetAssets;
 } GAssets;
+
+typedef struct SpriteNameIdMap {
+	StringId Key;
+	int32 Value;
+} SpriteNameIdMap;
 
 // Private Prototypes
 
@@ -24,8 +29,9 @@ static ImageAsset* AllocateImageAsset(void);
 static void ReleaseImageAsset(ImageAsset* image);
 static void FreeImageAssetResources(ImageAsset* image);
 
-static SpriteSheetAsset* AllocateSpriteSheetAsset(void);
+static SpriteSheetDataAsset* AllocateSpriteSheetAsset(void);
 static void _ReleaseLastAllocatedSpriteSheetAsset(void);
+static void FreeSpriteSheetAssetResources(SpriteSheetDataAsset* SpriteSheet);
 
 static bool ParseSpriteSheetMetaData(
 	struct json_value_s* MetaObjectValue,
@@ -90,9 +96,9 @@ void UnloadImageAsset(ImageAsset* image)
 	ReleaseImageAsset(image);
 }
 
-SpriteSheetAsset* LoadSpriteSheetAsset(const char* fileName)
+SpriteSheetDataAsset* LoadSpriteSheetDataAsset(const char* fileName)
 {
-	SpriteSheetAsset* Result = NULL;
+	SpriteSheetDataAsset* Result = NULL;
 	struct json_value_s* ParsedJson = JsonLoadFile(fileName);
 	struct json_object_s* Object = json_value_as_object(ParsedJson);
 
@@ -114,7 +120,15 @@ SpriteSheetAsset* LoadSpriteSheetAsset(const char* fileName)
 	if (!(MetaObjectParsed && FramesArrayParsed)) {
 		Result = NULL;
 		_ReleaseLastAllocatedSpriteSheetAsset();
+		goto CleanUp;
 	}
+
+	for (int32 SpriteId = 0; SpriteId < Result->Frames.Count; SpriteId++) {
+		StringId NameId = Result->Frames.Name[SpriteId];
+		hmput(Result->NameIdMap, NameId, SpriteId);
+	}
+
+	size_t len = hmlen(Result->NameIdMap);
 
 CleanUp:
 	free(ParsedJson);
@@ -151,15 +165,20 @@ static void FreeImageAssetResources(ImageAsset* image)
 	ZERO_STRUCT(image);
 }
 
-static SpriteSheetAsset* AllocateSpriteSheetAsset(void)
+static SpriteSheetDataAsset* AllocateSpriteSheetAsset(void)
 {
-	arrput(GAssets.SpriteSheetAssets, (SpriteSheetAsset){0});
+	arrput(GAssets.SpriteSheetAssets, (SpriteSheetDataAsset){0});
 	return arrlastp(GAssets.SpriteSheetAssets);
 }
 
 static void _ReleaseLastAllocatedSpriteSheetAsset(void)
 {
 	arrpop(GAssets.SpriteSheetAssets);
+}
+
+static void FreeSpriteSheetAssetResources(SpriteSheetDataAsset* SpriteSheet)
+{
+	hmfree(SpriteSheet->NameIdMap);
 }
 
 static bool ParseSpriteSheetMetaData(

@@ -38,10 +38,13 @@ typedef struct SpriteSheetMetaData {
 	real64 Scale;
 } SpriteSheetMetaData;
 
-typedef struct SpriteSheetAsset {
+typedef struct SpriteNameIdMap SpriteNameIdMap;
+
+typedef struct SpriteSheetDataAsset {
 	SpriteSheetFramesData Frames;
 	SpriteSheetMetaData Meta;
-} SpriteSheetAsset;
+	SpriteNameIdMap* NameIdMap;
+} SpriteSheetDataAsset;
 
 void AssetsInitialize(const AssetsConfig* config);
 void AssetsShutdown(void);
@@ -49,5 +52,5 @@ void AssetsShutdown(void);
 ImageAsset* LoadImageAsset(const char* fileName);
 void UnloadImageAsset(ImageAsset* image);
 
-SpriteSheetAsset* LoadSpriteSheetAsset(const char* fileName);
-void UnloadSpriteSheetAsset(SpriteSheetAsset* spriteSheet);
+SpriteSheetDataAsset* LoadSpriteSheetDataAsset(const char* fileName);
+void UnloadSpriteSheetDataAsset(SpriteSheetDataAsset* spriteSheet);

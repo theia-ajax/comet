@@ -67,7 +67,7 @@ struct {
 	} ImGui;
 	GameInput Input;
 	ImageAsset* ImageAssets[16];
-	SpriteSheetAsset* SpriteSheetAssets[16];
+	SpriteSheetDataAsset* SpriteSheetAssets[16];
 	int32 Frame;
 	GameState State;
 } GGame;
@@ -105,7 +105,7 @@ bool GameInitialize(const GameInitParams* params)
 	GetImage(SpriteSheetId_BGObjects0) = LoadImageAsset("assets/CelestialObjects.png");
 
 	GGame.SpriteSheetAssets[0] =
-		LoadSpriteSheetAsset("assets/spritesheets/ship_objects/ship_objects.json");
+		LoadSpriteSheetDataAsset("assets/spritesheets/ship_objects/ship_objects.json");
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
