@@ -51,7 +51,8 @@
         "random": "c",
         "sysfont.h": "c",
         "stringid.h": "c",
-        "json.h": "c"
+        "json.h": "c",
+        "math.h": "c"
     },
     "game_target": "comet"
 }
