@@ -8,6 +8,7 @@
 #include "Debug.h"
 #include "Draw.h"
 #include "Math.h"
+#include "StringId.h"
 
 enum SpriteSheetId {
 	SpriteSheetId_Default,
@@ -66,12 +67,15 @@ struct {
 	} ImGui;
 	GameInput Input;
 	ImageAsset* ImageAssets[16];
+	SpriteSheetAsset* SpriteSheetAssets[16];
 	int32 Frame;
 	GameState State;
 } GGame;
 
 bool GameInitialize(const GameInitParams* params)
 {
+	StringIdPoolsInitialize();
+
 	int32 GameResWidth = 576;
 	int32 GameRestHeight = 324;
 
@@ -100,6 +104,9 @@ bool GameInitialize(const GameInitParams* params)
 	GetImage(SpriteSheetId_Projectiles) = LoadImageAsset("assets/projectilesheet.png");
 	GetImage(SpriteSheetId_BGObjects0) = LoadImageAsset("assets/CelestialObjects.png");
 
+	GGame.SpriteSheetAssets[0] =
+		LoadSpriteSheetAsset("assets/spritesheets/ship_objects/ship_objects.json");
+
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
 		.SpriteSheets =
@@ -127,11 +134,12 @@ bool GameInitialize(const GameInitParams* params)
 	return true;
 }
 
-void GameDestroy(void)
+void GameShutdown(void)
 {
 	DrawShutdown();
 	AssetsShutdown();
 	DebugShutdown();
+	StringIdPoolsShutdown();
 }
 
 void GameSendInput(const GameInput* input)

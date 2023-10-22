@@ -22,7 +22,7 @@ typedef struct GameTime {
 } GameTime;
 
 bool GameInitialize(const GameInitParams* params);
-void GameDestroy(void);
+void GameShutdown(void);
 void GameSendInput(const GameInput* input);
 void GameProcessEvent(const SDL_Event* event);
 void GameUpdate(const GameTime* time);

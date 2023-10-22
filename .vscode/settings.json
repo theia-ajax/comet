@@ -48,7 +48,10 @@
         "tuple": "c",
         "utility": "c",
         "variant": "c",
-        "random": "c"
+        "random": "c",
+        "sysfont.h": "c",
+        "stringid.h": "c",
+        "json.h": "c"
     },
     "game_target": "comet"
 }

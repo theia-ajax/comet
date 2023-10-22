@@ -6,7 +6,7 @@
 strpool.h - v1.4 - Highly efficient string pool for C/C++.
 
 Do this:
-    #define STRPOOL_IMPLEMENTATION
+   #define STRPOOL_IMPLEMENTATION 
 before you include this file in *one* C/C++ file to create the implementation.
 */
 

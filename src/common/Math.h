@@ -13,3 +13,11 @@ static inline bool Approximately(real32 a, real32 b)
 {
 	return fabs(a - b) <= KEpsilon32;
 }
+
+typedef struct Rect {
+	int32 X, Y, W, H;
+} Rect;
+
+typedef struct Point {
+	int32 X, Y;
+} Point;

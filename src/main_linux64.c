@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 		// game->game_state.game_frame++;
 	}
 
-	GameDestroy();
+	GameShutdown();
 
 	return 0;
 }

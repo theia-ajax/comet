@@ -1,6 +1,7 @@
 #include "Draw.h"
 
 #include <SDL2/SDL.h>
+#include <json.h>
 
 // Constants
 
@@ -26,6 +27,11 @@ static SDL_Rect GetSpriteRect(
 	int32 spriteTilesY);
 
 // Public Implementations
+
+bool LoadSpriteData(const char* dataFileName)
+{
+	
+}
 
 SpriteSheet CreateSpriteSheet(ImageAsset* imageAsset, int32 SpriteWidth, int32 SpriteHeight)
 {
@@ -75,7 +81,7 @@ void DrawSprite(const SpriteDraw* spriteDraw)
 	if (EqV2(DrawCommand.Scale, V2(0, 0))) {
 		DrawCommand.Scale = V2(1, 1);
 	}
-	
+
 	DrawCommand.SpriteTiles[0] = (DrawCommand.SpriteTiles[0] > 0) ? DrawCommand.SpriteTiles[0] : 1;
 	DrawCommand.SpriteTiles[1] = (DrawCommand.SpriteTiles[1] > 0) ? DrawCommand.SpriteTiles[1] : 1;
 

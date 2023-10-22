@@ -3,7 +3,12 @@
 #include <SDL2/SDL.h>
 #include <stdarg.h>
 
-#include "Sysfont.h"
+#define SYSFONT_U8 uint8
+#define SYSFONT_U16 uint16
+#define SYSFONT_U32 uint32
+#define SYSFONT_IMPLEMENTATION
+#include "sysfont.h"
+
 #include "Game.h"
 #include "util.h"
 
