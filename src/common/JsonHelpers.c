@@ -2,7 +2,7 @@
 
 #include <SDL2/SDL.h>
 
-struct json_value_s *JsonLoadFile(const char *fileName)
+struct json_value_s* JsonLoadFile(const char* fileName)
 {
 	size_t Size;
 	void* FileData = SDL_LoadFile(fileName, &Size);
@@ -101,6 +101,42 @@ bool JsonParseDimensions(struct json_value_s* DimValue, Point* DimOut)
 
 	DimOut->X = JsonGetInt32(DimObject, "w", 0);
 	DimOut->Y = JsonGetInt32(DimObject, "h", 0);
+
+	return true;
+}
+
+bool JsonParseRect16(struct json_value_s* RectValue, Rect16* RectOut)
+{
+	ASSERT(RectOut);
+	ZERO_STRUCT(RectOut);
+
+	struct json_object_s* RectObject = json_value_as_object(RectValue);
+
+	if (RectObject == NULL || RectObject->length != 4) {
+		return false;
+	}
+
+	RectOut->X = (int16)JsonGetInt32(RectObject, "x", 0);
+	RectOut->Y = (int16)JsonGetInt32(RectObject, "y", 0);
+	RectOut->W = (int16)JsonGetInt32(RectObject, "w", 0);
+	RectOut->H = (int16)JsonGetInt32(RectObject, "h", 0);
+
+	return true;
+}
+
+bool JsonParseDimensions16(struct json_value_s* DimValue, Point16* DimOut)
+{
+	ASSERT(DimOut);
+	ZERO_STRUCT(DimOut);
+
+	struct json_object_s* DimObject = json_value_as_object(DimValue);
+
+	if (DimObject == NULL || DimObject->length != 2) {
+		return false;
+	}
+
+	DimOut->X = (int16)JsonGetInt32(DimObject, "w", 0);
+	DimOut->Y = (int16)JsonGetInt32(DimObject, "h", 0);
 
 	return true;
 }

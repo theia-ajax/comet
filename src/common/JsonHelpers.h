@@ -11,6 +11,8 @@ bool JsonParseBool(struct json_value_s* BoolValue, bool* BoolOut);
 bool JsonParseStringId(struct json_value_s* StringValue, StringId* StringIdOut);
 bool JsonParseRect(struct json_value_s* RectValue, Rect* RectOut);
 bool JsonParseDimensions(struct json_value_s* DimValue, Point* DimOut);
+bool JsonParseRect16(struct json_value_s* RectValue, Rect16* RectOut);
+bool JsonParseDimensions16(struct json_value_s* DimValue, Point16* DimOut);
 struct json_value_s* JsonFindKeyValue(struct json_object_s* Object, const char* Key);
 bool JsonGetBool(struct json_object_s* Object, const char* Key, bool Default);
 StringId JsonGetStringId(struct json_object_s* Object, const char* Key, StringId Default);

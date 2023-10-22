@@ -28,21 +28,28 @@ static SDL_Rect GetSpriteRect(
 
 // Public Implementations
 
-bool LoadSpriteData(const char* dataFileName)
-{
-	
-}
-
-SpriteSheet CreateSpriteSheet(ImageAsset* imageAsset, int32 SpriteWidth, int32 SpriteHeight)
+SpriteSheet CreateSpriteSheetGrid(ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight)
 {
 	SpriteSheet Result = {
-		.Image = imageAsset,
+		.SheetType = SpriteSheetType_Grid,
+		.Image = Image,
 		.SpriteWidth = SpriteWidth,
 		.SpriteHeight = SpriteHeight,
 	};
 
-	Result.SpritesPerRow = Result.Image->Width / SpriteWidth;
-	Result.SpritesPerCol = Result.Image->Height / SpriteHeight;
+	Result.SpritesPerRow = Result.Image->Data->Surface->w / SpriteWidth;
+	Result.SpritesPerCol = Result.Image->Data->Surface->h / SpriteHeight;
+
+	return Result;
+}
+
+SpriteSheet CreateSpriteSheetFrameData(ImageAsset* Image, SpriteSheetAsset* Sheet)
+{
+	SpriteSheet Result = {
+		.SheetType = SpriteSheetType_Frames,
+		.Image = Image,
+		.SheetData = Sheet,
+	};
 
 	return Result;
 }
@@ -58,12 +65,12 @@ void DrawInitialize(const DrawConfig* config)
 	for (int32 SpriteSheetIndex = 0; SpriteSheetIndex < KMaxDrawSpriteSheets; SpriteSheetIndex++) {
 		const SpriteSheet* SpriteSheet = &config->SpriteSheets[SpriteSheetIndex];
 
-		if (SpriteSheet->Image == NULL || SpriteSheet->Image->Surface == NULL) {
+		if (SpriteSheet->SheetType == SpriteSheetType_None || SpriteSheet->Image == NULL) {
 			break;
 		}
 
 		GDraw.SpriteSheetTextures[SpriteSheetIndex] =
-			SDL_CreateTextureFromSurface(GDraw.Renderer, SpriteSheet->Image->Surface);
+			SDL_CreateTextureFromSurface(GDraw.Renderer, SpriteSheet->Image->Data->Surface);
 	}
 }
 
@@ -147,21 +154,39 @@ static SDL_Rect GetSpriteRect(
 	int32 spriteTilesX,
 	int32 spriteTilesY)
 {
-	int32 SpriteTileX = spriteId % spriteSheet->SpritesPerRow;
-	int32 SpriteTileY = spriteId / spriteSheet->SpritesPerRow;
+	SDL_Rect Result;
 
-	if (SpriteTileX + spriteTilesX > spriteSheet->SpritesPerRow)
-		spriteTilesX = spriteSheet->SpritesPerRow - SpriteTileX;
+	switch (spriteSheet->SheetType) {
+		case SpriteSheetType_Grid:
+			{
+				int32 SpriteTileX = spriteId % spriteSheet->SpritesPerRow;
+				int32 SpriteTileY = spriteId / spriteSheet->SpritesPerRow;
 
-	if (SpriteTileY + spriteTilesY > spriteSheet->SpritesPerCol)
-		spriteTilesY = spriteSheet->SpritesPerCol - SpriteTileY;
+				if (SpriteTileX + spriteTilesX > spriteSheet->SpritesPerRow)
+					spriteTilesX = spriteSheet->SpritesPerRow - SpriteTileX;
 
-	SDL_Rect Result = {
-		.x = SpriteTileX * spriteSheet->SpriteWidth,
-		.y = SpriteTileY * spriteSheet->SpriteHeight,
-		.w = spriteTilesX * spriteSheet->SpriteWidth,
-		.h = spriteTilesY * spriteSheet->SpriteHeight,
-	};
+				if (SpriteTileY + spriteTilesY > spriteSheet->SpritesPerCol)
+					spriteTilesY = spriteSheet->SpritesPerCol - SpriteTileY;
+
+				Result = (SDL_Rect){
+					.x = SpriteTileX * spriteSheet->SpriteWidth,
+					.y = SpriteTileY * spriteSheet->SpriteHeight,
+					.w = spriteTilesX * spriteSheet->SpriteWidth,
+					.h = spriteTilesY * spriteSheet->SpriteHeight,
+				};
+			}
+			break;
+		case SpriteSheetType_Frames:
+			{
+				Rect16 R = spriteSheet->SheetData->Data->Frames.Frame[spriteId];
+				Result = (SDL_Rect) {
+					R.X, R.Y, R.W, R.H
+				};
+			}
+			break;
+		default:
+			break;
+	}
 
 	return Result;
 }

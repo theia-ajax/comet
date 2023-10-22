@@ -4,7 +4,7 @@
 #include <cimgui.h>
 #include <cimgui_impl.h>
 
-#include "Assets.h"
+#include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
 #include "Math.h"
@@ -12,8 +12,7 @@
 
 enum SpriteSheetId {
 	SpriteSheetId_Default,
-	SpriteSheetId_Ships,
-	SpriteSheetId_Projectiles,
+	SpriteSheetId_ShipObjects,
 	SpriteSheetId_BGObjects0,
 	SpriteSheetId_Count,
 };
@@ -67,7 +66,7 @@ struct {
 	} ImGui;
 	GameInput Input;
 	ImageAsset* ImageAssets[16];
-	SpriteSheetDataAsset* SpriteSheetAssets[16];
+	SpriteSheetAsset* SpriteSheetAssets[16];
 	int32 Frame;
 	GameState State;
 } GGame;
@@ -97,26 +96,38 @@ bool GameInitialize(const GameInitParams* params)
 	ImGui_ImplSDL2_InitForSDLRenderer(GGame.Window, GGame.Renderer);
 	ImGui_ImplSDLRenderer_Init(GGame.Renderer);
 
-	AssetsInitialize(&(AssetsConfig){});
+	AssetsInitialize(&(AssetsConfig){
+		.TypeConfigs = {
+			[AssetType_Image] =
+				{.LoadAssetData = (LoadAssetDataFunc)LoadImageData,
+				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadImageData,
+				 .Size = sizeof(ImageData)},
+			[AssetType_SpriteSheetData] =
+				{.LoadAssetData = (LoadAssetDataFunc)LoadSpriteSheetData,
+				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadSpriteSheetData,
+				 .Size = sizeof(SpriteSheetData)},
+		}});
 
-	GetImage(SpriteSheetId_Default) = LoadImageAsset("assets/sprite_sheet.png");
-	GetImage(SpriteSheetId_Ships) = LoadImageAsset("assets/shipsheet.png");
-	GetImage(SpriteSheetId_Projectiles) = LoadImageAsset("assets/projectilesheet.png");
-	GetImage(SpriteSheetId_BGObjects0) = LoadImageAsset("assets/CelestialObjects.png");
+	GetImage(SpriteSheetId_Default) =
+		(ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
+	GetImage(SpriteSheetId_ShipObjects) =
+		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
+	GetImage(SpriteSheetId_BGObjects0) =
+		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
-	GGame.SpriteSheetAssets[0] =
-		LoadSpriteSheetDataAsset("assets/spritesheets/ship_objects/ship_objects.json");
+	GGame.SpriteSheetAssets[0] = (SpriteSheetAsset*)LoadAsset(
+		AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
 		.SpriteSheets =
 			{
-				[SpriteSheetId_Default] = CreateSpriteSheet(GetImage(SpriteSheetId_Default), 8, 8),
-				[SpriteSheetId_Ships] = CreateSpriteSheet(GetImage(SpriteSheetId_Ships), 48, 48),
-				[SpriteSheetId_Projectiles] =
-					CreateSpriteSheet(GetImage(SpriteSheetId_Projectiles), 32, 32),
+				[SpriteSheetId_Default] =
+					CreateSpriteSheetGrid(GetImage(SpriteSheetId_Default), 8, 8),
+				[SpriteSheetId_ShipObjects] = CreateSpriteSheetFrameData(
+					GetImage(SpriteSheetId_ShipObjects), GGame.SpriteSheetAssets[0]),
 				[SpriteSheetId_BGObjects0] =
-					CreateSpriteSheet(GetImage(SpriteSheetId_BGObjects0), 32, 32),
+					CreateSpriteSheetGrid(GetImage(SpriteSheetId_BGObjects0), 32, 32),
 			},
 	});
 
@@ -250,23 +261,23 @@ void GameRender(const GameTime* gameTime)
 	});
 
 	DrawSprite(&(SpriteDraw){
-		.SpriteSheetId = SpriteSheetId_Ships,
+		.SpriteSheetId = SpriteSheetId_ShipObjects,
 		.Position = V2(270, 90),
-		.SpriteId = (GGame.Frame / 60) % 53,
+		.SpriteId = (GGame.Frame / 60) % GGame.SpriteSheetAssets[0]->Data->Frames.Count,
 	});
 
-	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
-		 Iter != FixedListEnd(GGame.State.Projectiles);
-		 Iter++)
-	{
-		DrawSprite(&(SpriteDraw){
-			.SpriteSheetId = SpriteSheetId_Projectiles,
-			.SpriteId = 8,
-			.Position = Iter->Position,
-			.Scale = MulV2F(V2(1, 1), 0.5f),
-			.Rotation = Iter->Facing + 0.25f,
-		});
-	}
+	// for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
+	// 	 Iter != FixedListEnd(GGame.State.Projectiles);
+	// 	 Iter++)
+	// {
+	// 	DrawSprite(&(SpriteDraw){
+	// 		.SpriteSheetId = SpriteSheetId_Projectiles,
+	// 		.SpriteId = 8,
+	// 		.Position = Iter->Position,
+	// 		.Scale = MulV2F(V2(1, 1), 0.5f),
+	// 		.Rotation = Iter->Facing + 0.25f,
+	// 	});
+	// }
 
 	DrawRender();
 

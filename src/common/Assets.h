@@ -6,51 +6,55 @@
 
 typedef struct SDL_Surface SDL_Surface;
 
-typedef struct AssetsConfig {
+typedef enum AssetType {
+	AssetType_None,
+	AssetType_Image,
+	AssetType_SpriteSheetData,
+	AssetType_Count,
 
+	AssetType_First = AssetType_Image,
+} AssetType;
+
+typedef bool (*LoadAssetDataFunc)(const char* FileName, void* DataOut);
+typedef void (*UnloadAssetDataFunc)(void* Data);
+
+typedef struct AssetTypeConfig {
+	AssetType Type;
+	size_t Size;
+	LoadAssetDataFunc LoadAssetData;
+	UnloadAssetDataFunc UnloadAssetData;
+} AssetTypeConfig;
+
+typedef struct AssetsConfig {
+	AssetTypeConfig TypeConfigs[AssetType_Count];
 } AssetsConfig;
 
-typedef struct ImageAsset {
-	uint8* Pixels;
-	SDL_Surface* Surface;
-	int32 Width;
-	int32 Height;
-	int32 Pitch;
-} ImageAsset;
+typedef struct AssetMetaData {
+	AssetType Type;
+	StringId Path;
+	size_t Size;
+} AssetMetaData;
 
-enum {
-	KSpriteSheetAssetMaxSprites = 256,
-};
+typedef struct Asset {
+	AssetMetaData Meta;
+	void* Data;
+} Asset;
 
-typedef struct SpriteSheetFramesData {
-	int32 Count;
-	StringId Name[KSpriteSheetAssetMaxSprites];
-	Rect Frame[KSpriteSheetAssetMaxSprites];
-	Point SourceSize[KSpriteSheetAssetMaxSprites];
-	bool Rotated[KSpriteSheetAssetMaxSprites];
-	bool Trimmed[KSpriteSheetAssetMaxSprites];
-} SpriteSheetFramesData;
+#define ASSET(Type) NAME2(Type, Asset)
+#define ASSET_DATA(Type) NAME2(Type, Data)
+#define ASSET_CAST(Type, Asset) (ASSET(Type)*)(Asset)
 
-typedef struct SpriteSheetMetaData {
-	StringId ImageNameId;
-	StringId FormatNameId;
-	Point Size;
-	real64 Scale;
-} SpriteSheetMetaData;
+#define DEFINE_ASSET(Type)                                                                     \
+	typedef struct ASSET(Type) {                                                               \
+		AssetMetaData Meta;                                                                        \
+		ASSET_DATA(Type)* Data;                                                                            \
+	} ASSET(Type);
 
-typedef struct SpriteNameIdMap SpriteNameIdMap;
-
-typedef struct SpriteSheetDataAsset {
-	SpriteSheetFramesData Frames;
-	SpriteSheetMetaData Meta;
-	SpriteNameIdMap* NameIdMap;
-} SpriteSheetDataAsset;
+AssetType GetAssetType(const Asset* Self);
+const char* GetAssetPath(const Asset* Self);
 
 void AssetsInitialize(const AssetsConfig* config);
 void AssetsShutdown(void);
 
-ImageAsset* LoadImageAsset(const char* fileName);
-void UnloadImageAsset(ImageAsset* image);
-
-SpriteSheetDataAsset* LoadSpriteSheetDataAsset(const char* fileName);
-void UnloadSpriteSheetDataAsset(SpriteSheetDataAsset* spriteSheet);
+Asset* LoadAsset(AssetType Type, const char* FileName);
+void UnloadAsset(Asset* AssetToUnload);

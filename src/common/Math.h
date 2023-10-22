@@ -21,3 +21,11 @@ typedef struct Rect {
 typedef struct Point {
 	int32 X, Y;
 } Point;
+
+typedef struct Rect16 {
+	int16 X, Y, W, H;
+} Rect16;
+
+typedef struct Point16 {
+	int16 X, Y;
+} Point16;

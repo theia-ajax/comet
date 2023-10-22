@@ -12,246 +12,112 @@
 typedef int32 FreeStack;
 
 struct {
-	AssetsConfig Config;
-	ImageAsset* ImageAssets;
-	FreeStack* ImageAssetsFreeStack;
-	SpriteSheetDataAsset* SpriteSheetAssets;
+	AssetTypeConfig TypeInfoDatabase[AssetType_Count];
+	Asset* AssetStorage;
+	FreeStack* AssetStorageFreeStack;
 } GAssets;
-
-typedef struct SpriteNameIdMap {
-	StringId Key;
-	int32 Value;
-} SpriteNameIdMap;
 
 // Private Prototypes
 
-static ImageAsset* AllocateImageAsset(void);
-static void ReleaseImageAsset(ImageAsset* image);
-static void FreeImageAssetResources(ImageAsset* image);
-
-static SpriteSheetDataAsset* AllocateSpriteSheetAsset(void);
-static void _ReleaseLastAllocatedSpriteSheetAsset(void);
-static void FreeSpriteSheetAssetResources(SpriteSheetDataAsset* SpriteSheet);
-
-static bool ParseSpriteSheetMetaData(
-	struct json_value_s* MetaObjectValue,
-	SpriteSheetMetaData* DataOut);
-static bool ParseSpriteSheetFrameData(
-	struct json_value_s* FrameArrayValue,
-	SpriteSheetFramesData* DataOut);
-static bool ParseSpriteFrameData(
-	struct json_value_s* FrameValue,
-	SpriteSheetFramesData* DataOut,
-	int32 Id);
+static int32 _FreeStackPop(FreeStack* Stack);
+static Asset* _AcquireAsset(void);
+static void _ReleaseAsset(Asset* AssetToRelease);
 
 // Public Implementations
 
 void AssetsInitialize(const AssetsConfig* config)
 {
-	arrsetcap(GAssets.ImageAssets, 256);
-	arrsetcap(GAssets.ImageAssetsFreeStack, 256);
+	ASSERT(config);
 
-	arrsetcap(GAssets.SpriteSheetAssets, 16);
+	memcpy(GAssets.TypeInfoDatabase, config->TypeConfigs, sizeof(GAssets.TypeInfoDatabase));
+
+	for (int32 AssetIndex = AssetType_First; AssetIndex < AssetType_Count; AssetIndex++) {
+		GAssets.TypeInfoDatabase[AssetIndex].Type = (AssetType)AssetIndex;
+		ASSERT(GAssets.TypeInfoDatabase[AssetIndex].LoadAssetData);
+		ASSERT(GAssets.TypeInfoDatabase[AssetIndex].UnloadAssetData);
+	}
+
+	arrsetcap(GAssets.AssetStorage, 256);
+	arrsetcap(GAssets.AssetStorageFreeStack, 256);
 }
 
 void AssetsShutdown(void)
 {
-	for (size_t ImageIndex = 0; ImageIndex < arrlenu(GAssets.ImageAssets); ImageIndex++) {
-		FreeImageAssetResources(&GAssets.ImageAssets[ImageIndex]);
+	for (ptrdiff_t AssetIndex = arrlen(GAssets.AssetStorage) - 1; AssetIndex >= 0; AssetIndex--) {
+		Asset* NextAsset = &GAssets.AssetStorage[AssetIndex];
+		UnloadAsset(NextAsset);
 	}
 
-	arrfree(GAssets.ImageAssets);
-	arrfree(GAssets.ImageAssetsFreeStack);
-
-	arrfree(GAssets.SpriteSheetAssets);
+	arrfree(GAssets.AssetStorage);
+	arrfree(GAssets.AssetStorageFreeStack);
 }
 
-ImageAsset* LoadImageAsset(const char* fileName)
+Asset* LoadAsset(AssetType Type, const char* FileName)
 {
-	ImageAsset* Result = AllocateImageAsset();
+	Asset* Result = _AcquireAsset();
 
-	// Hardcoding 4 bytes per pixel regardless of source because lazy
+	const AssetTypeConfig* TypeInfo = &GAssets.TypeInfoDatabase[Type];
 
-	int Width, Height, Channels;
-	Result->Pixels = stbi_load(fileName, &Width, &Height, &Channels, 4);
+	Result->Meta.Type = Type;
+	Result->Meta.Path = GetStringId(FileName);
+	Result->Meta.Size = TypeInfo->Size;
 
-	if (Result->Pixels == NULL) {
-		ReleaseImageAsset(Result);
-		return NULL;
-	}
+	void* DataStorage = malloc(Result->Meta.Size);
+	ASSERT(DataStorage != NULL);
 
-	Result->Width = (int32)Width;
-	Result->Height = (int32)Height;
-	Result->Pitch = Result->Width * 4;
-
-	Result->Surface = SDL_CreateRGBSurfaceWithFormatFrom(
-		Result->Pixels, Result->Width, Result->Height, 32, Result->Pitch, SDL_PIXELFORMAT_ABGR8888);
-
-	return Result;
-}
-
-void UnloadImageAsset(ImageAsset* image)
-{
-	FreeImageAssetResources(image);
-	ReleaseImageAsset(image);
-}
-
-SpriteSheetDataAsset* LoadSpriteSheetDataAsset(const char* fileName)
-{
-	SpriteSheetDataAsset* Result = NULL;
-	struct json_value_s* ParsedJson = JsonLoadFile(fileName);
-	struct json_object_s* Object = json_value_as_object(ParsedJson);
-
-	if (Object == NULL || Object->length != 2) {
-		goto CleanUp;
-	}
-
-	Result = AllocateSpriteSheetAsset();
-
-	if (Result == NULL) {
-		goto CleanUp;
-	}
-
-	bool MetaObjectParsed =
-		ParseSpriteSheetMetaData(JsonFindKeyValue(Object, "meta"), &Result->Meta);
-	bool FramesArrayParsed =
-		ParseSpriteSheetFrameData(JsonFindKeyValue(Object, "frames"), &Result->Frames);
-
-	if (!(MetaObjectParsed && FramesArrayParsed)) {
+	if (TypeInfo->LoadAssetData(FileName, DataStorage)) {
+		Result->Data = DataStorage;
+	} else {
+		free(DataStorage);
+		_ReleaseAsset(Result);
 		Result = NULL;
-		_ReleaseLastAllocatedSpriteSheetAsset();
-		goto CleanUp;
 	}
 
-	for (int32 SpriteId = 0; SpriteId < Result->Frames.Count; SpriteId++) {
-		StringId NameId = Result->Frames.Name[SpriteId];
-		hmput(Result->NameIdMap, NameId, SpriteId);
-	}
-
-	size_t len = hmlen(Result->NameIdMap);
-
-CleanUp:
-	free(ParsedJson);
 	return Result;
+}
+
+void UnloadAsset(Asset* AssetToUnload)
+{
+	if (!AssetToUnload) {
+		return;
+	}
+
+	const AssetTypeConfig* TypeInfo = &GAssets.TypeInfoDatabase[AssetToUnload->Meta.Type];
+	TypeInfo->UnloadAssetData(AssetToUnload->Data);
+	free(AssetToUnload->Data);
+	_ReleaseAsset(AssetToUnload);
 }
 
 // Private Implementations
 
-static ImageAsset* AllocateImageAsset(void)
+static int32 _FreeStackPop(FreeStack* Stack)
 {
-	if (arrlen(GAssets.ImageAssetsFreeStack) > 0) {
-		int32 Index = arrpop(GAssets.ImageAssetsFreeStack);
-		return &GAssets.ImageAssets[Index];
+	int32 Result = NONE;
+	if (arrlen(Stack) > 0) {
+		Result = arrpop(Stack);
 	}
-
-	arrput(GAssets.ImageAssets, (ImageAsset){0});
-	return arrlastp(GAssets.ImageAssets);
+	return Result;
 }
 
-static void ReleaseImageAsset(ImageAsset* image)
+// Just acquires memory for the asset, does not set any fields or load any data
+static Asset* _AcquireAsset(void)
 {
-	ASSERT(image != NULL);
-
-	ptrdiff_t IndexOf = image - GAssets.ImageAssets;
-	ASSERT(VALID_INDEX(IndexOf, arrlen(GAssets.ImageAssets)));
-
-	arrput(GAssets.ImageAssetsFreeStack, IndexOf);
-}
-
-static void FreeImageAssetResources(ImageAsset* image)
-{
-	SDL_FreeSurface(image->Surface);
-	stbi_image_free(image->Pixels);
-	ZERO_STRUCT(image);
-}
-
-static SpriteSheetDataAsset* AllocateSpriteSheetAsset(void)
-{
-	arrput(GAssets.SpriteSheetAssets, (SpriteSheetDataAsset){0});
-	return arrlastp(GAssets.SpriteSheetAssets);
-}
-
-static void _ReleaseLastAllocatedSpriteSheetAsset(void)
-{
-	arrpop(GAssets.SpriteSheetAssets);
-}
-
-static void FreeSpriteSheetAssetResources(SpriteSheetDataAsset* SpriteSheet)
-{
-	hmfree(SpriteSheet->NameIdMap);
-}
-
-static bool ParseSpriteSheetMetaData(
-	struct json_value_s* MetaObjectValue,
-	SpriteSheetMetaData* DataOut)
-{
-	ASSERT(DataOut);
-	ZERO_STRUCT(DataOut);
-
-	struct json_object_s* MetaObject = json_value_as_object(MetaObjectValue);
-
-	if (MetaObject == NULL) {
-		return false;
+	Asset* Result = NULL;
+	int32 Index = _FreeStackPop(GAssets.AssetStorageFreeStack);
+	if (Index != NONE) {
+		Result = &GAssets.AssetStorage[Index];
+	} else {
+		arrput(GAssets.AssetStorage, (Asset){0});
+		Result = arrlastp(GAssets.AssetStorage);
 	}
-
-	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KStringIdInvalid);
-	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KStringIdInvalid);
-	DataOut->Scale = JsonGetNumber(MetaObject, "scale", 1.0);
-	bool ParsedSize = JsonParseDimensions(JsonFindKeyValue(MetaObject, "size"), &DataOut->Size);
-
-	bool Success = StringIdIsValid(DataOut->ImageNameId) &&
-				   StringIdIsValid(DataOut->FormatNameId) && ParsedSize;
-
-	return Success;
+	return Result;
 }
 
-static bool ParseSpriteSheetFrameData(
-	struct json_value_s* FrameArrayValue,
-	SpriteSheetFramesData* DataOut)
+// Assumes data has already been freed
+static void _ReleaseAsset(Asset* AssetToRelease)
 {
-	ASSERT(DataOut);
-	ZERO_STRUCT(DataOut);
-
-	struct json_array_s* FrameArray = json_value_as_array(FrameArrayValue);
-
-	if (FrameArray == NULL) {
-		return false;
-	}
-
-	const int32 ExpectedSprites = FrameArray->length;
-
-	struct json_array_element_s* Current = FrameArray->start;
-	while (Current) {
-		if (ParseSpriteFrameData(Current->value, DataOut, DataOut->Count)) {
-			DataOut->Count++;
-		}
-		Current = Current->next;
-	}
-
-	return DataOut->Count == ExpectedSprites;
-}
-
-static bool ParseSpriteFrameData(
-	struct json_value_s* FrameValue,
-	SpriteSheetFramesData* DataOut,
-	int32 Id)
-{
-	struct json_object_s* FrameObject = json_value_as_object(FrameValue);
-	if (FrameObject == NULL) {
-		return false;
-	}
-
-	bool Success = true;
-
-	DataOut->Name[Id] = JsonGetStringId(FrameObject, "filename", KStringIdInvalid);
-
-	Success &= JsonParseRect(JsonFindKeyValue(FrameObject, "frame"), &DataOut->Frame[Id]);
-	Success &=
-		JsonParseDimensions(JsonFindKeyValue(FrameObject, "sourceSize"), &DataOut->SourceSize[Id]);
-	Success &= StringIdIsValid(DataOut->Name[Id]);
-
-	DataOut->Rotated[Id] = JsonGetBool(FrameObject, "rotated", false);
-	DataOut->Trimmed[Id] = JsonGetBool(FrameObject, "trimmed", false);
-
-	return Success;
+	ptrdiff_t IndexOf = AssetToRelease - GAssets.AssetStorage;
+	ASSERT(VALID_INDEX(IndexOf, arrlenu(GAssets.AssetStorage)));
+	arrput(GAssets.AssetStorageFreeStack, IndexOf);
+	ZERO_STRUCT(&GAssets.AssetStorage[IndexOf]);
 }

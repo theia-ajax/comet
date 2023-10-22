@@ -52,7 +52,9 @@
         "sysfont.h": "c",
         "stringid.h": "c",
         "json.h": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "jsonhelpers.h": "c",
+        "assets.h": "c"
     },
     "game_target": "comet"
 }

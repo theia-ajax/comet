@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Assets.h"
+#include "AssetTypes.h"
 #include "Math.h"
-#include "types.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 
@@ -11,24 +10,21 @@ enum {
 	KMaxSpritesPerSheet = 512,
 };
 
-typedef uint32 SpriteNameId;
-
-typedef struct SpriteData {
-	int32 SpriteCount;
-	SpriteNameId Name[KMaxSpritesPerSheet];
-	Rect Frame[KMaxSpritesPerSheet];
-	Point SourceSize[KMaxSpritesPerSheet];
-} SpriteData;
-
-static size_t size = sizeof(SpriteData);
+typedef enum SpriteSheetType {
+	SpriteSheetType_None,
+	SpriteSheetType_Grid,
+	SpriteSheetType_Frames,
+	SpriteSheetType_Count,
+} SpriteSheetType;
 
 typedef struct SpriteSheet {
+	SpriteSheetType SheetType;
 	ImageAsset* Image;
+	SpriteSheetAsset* SheetData;
 	int32 SpriteWidth;
 	int32 SpriteHeight;
 	int32 SpritesPerRow;
 	int32 SpritesPerCol;
-	SpriteData Sprites;
 } SpriteSheet;
 
 typedef struct DrawConfig {
@@ -45,8 +41,8 @@ typedef struct SpriteDraw {
 	int32 SpriteTiles[2];
 } SpriteDraw;
 
-bool LoadSpriteData(const char* dataFileName);
-SpriteSheet CreateSpriteSheet(ImageAsset* imageAsset, int32 spriteWidth, int32 spriteHeight);
+SpriteSheet CreateSpriteSheetGrid(ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight);
+SpriteSheet CreateSpriteSheetFrameData(ImageAsset* Image, SpriteSheetAsset* Sheet);
 
 void DrawInitialize(const DrawConfig* config);
 void DrawShutdown(void);

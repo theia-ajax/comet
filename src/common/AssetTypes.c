@@ -1,0 +1,181 @@
+#include "AssetTypes.h"
+
+#include <SDL2/SDL.h>
+#include <stb_ds.h>
+#include <stb_image.h>
+
+#include "JsonHelpers.h"
+
+// Private Definitions
+
+typedef struct SpriteNameIdMap {
+	StringId Key;
+	int32 Value;
+} SpriteNameIdMap;
+
+// Private Prototypes
+
+static bool ParseSpriteSheetMetaData(
+	struct json_value_s* MetaObjectValue,
+	SpriteSheetMetaData* DataOut);
+static bool ParseSpriteSheetFrameData(
+	struct json_value_s* FrameArrayValue,
+	SpriteSheetFramesData* DataOut);
+static bool ParseSpriteFrameData(
+	struct json_value_s* FrameValue,
+	SpriteSheetFramesData* DataOut,
+	int32 Id);
+
+// Public Implementations
+
+bool LoadImageData(const char* FileName, ImageData* DataOut)
+{
+	ASSERT(DataOut);
+
+	ZERO_STRUCT(DataOut);
+
+	// Hardcoding 4 bytes per pixel regardless of source because lazy
+	int Width, Height, Channels;
+	uint8* Pixels = stbi_load(FileName, &Width, &Height, &Channels, 4);
+
+	if (Pixels == NULL) {
+		return false;
+	}
+
+	SDL_Surface* Surface = SDL_CreateRGBSurfaceWithFormatFrom(
+		Pixels, Width, Height, 32, Width * 4, SDL_PIXELFORMAT_ABGR8888);
+
+	if (Surface == NULL) {
+		stbi_image_free(Pixels);
+		return false;
+	}
+
+	DataOut->Pixels = Pixels;
+	DataOut->Surface = Surface;
+	return true;
+}
+
+void UnloadImageData(ImageData* Data)
+{
+	SDL_FreeSurface(Data->Surface);
+	stbi_image_free(Data->Pixels);
+}
+
+bool LoadSpriteSheetData(const char* FileName, SpriteSheetData* DataOut)
+{
+	ASSERT(DataOut);
+	ZERO_STRUCT(DataOut);
+
+	bool Success = true;
+
+	struct json_value_s* ParsedJson = JsonLoadFile(FileName);
+	struct json_object_s* Object = json_value_as_object(ParsedJson);
+
+	if (Object == NULL || Object->length != 2) {
+		Success = false;
+		goto CleanUp;
+	}
+
+	bool MetaObjectParsed =
+		ParseSpriteSheetMetaData(JsonFindKeyValue(Object, "meta"), &DataOut->Meta);
+	bool FramesArrayParsed =
+		ParseSpriteSheetFrameData(JsonFindKeyValue(Object, "frames"), &DataOut->Frames);
+
+	if (!(MetaObjectParsed && FramesArrayParsed)) {
+		Success = false;
+		goto CleanUp;
+	}
+
+	for (int32 SpriteId = 0; SpriteId < DataOut->Frames.Count; SpriteId++) {
+		StringId NameId = DataOut->Frames.Name[SpriteId];
+		hmput(DataOut->NameIdMap, NameId, SpriteId);
+	}
+
+CleanUp:
+	free(ParsedJson);
+	return Success;
+}
+
+void UnloadSpriteSheetData(SpriteSheetData* Data)
+{
+	hmfree(Data->NameIdMap);
+	ZERO_STRUCT(Data);
+}
+
+// Private Implementations
+
+static bool ParseSpriteSheetMetaData(
+	struct json_value_s* MetaObjectValue,
+	SpriteSheetMetaData* DataOut)
+{
+	ASSERT(DataOut);
+	ZERO_STRUCT(DataOut);
+
+	struct json_object_s* MetaObject = json_value_as_object(MetaObjectValue);
+
+	if (MetaObject == NULL) {
+		return false;
+	}
+
+	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KStringIdInvalid);
+	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KStringIdInvalid);
+	DataOut->Scale = JsonGetNumber(MetaObject, "scale", 1.0);
+	bool ParsedSize = JsonParseDimensions(JsonFindKeyValue(MetaObject, "size"), &DataOut->Size);
+
+	bool Success = StringIdIsValid(DataOut->ImageNameId) &&
+				   StringIdIsValid(DataOut->FormatNameId) && ParsedSize;
+
+	return Success;
+}
+
+static bool ParseSpriteSheetFrameData(
+	struct json_value_s* FrameArrayValue,
+	SpriteSheetFramesData* DataOut)
+{
+	ASSERT(DataOut);
+	ZERO_STRUCT(DataOut);
+
+	struct json_array_s* FrameArray = json_value_as_array(FrameArrayValue);
+
+	if (FrameArray == NULL) {
+		return false;
+	}
+
+	const int32 ExpectedSprites = FrameArray->length;
+
+	struct json_array_element_s* Current = FrameArray->start;
+	while (Current) {
+		if (ParseSpriteFrameData(Current->value, DataOut, DataOut->Count)) {
+			ASSERT(DataOut->Count < KSpriteSheetAssetMaxSprites);
+			DataOut->Count++;
+		}
+		Current = Current->next;
+	}
+
+	return DataOut->Count == ExpectedSprites;
+}
+
+static bool ParseSpriteFrameData(
+	struct json_value_s* FrameValue,
+	SpriteSheetFramesData* DataOut,
+	int32 Id)
+{
+	struct json_object_s* FrameObject = json_value_as_object(FrameValue);
+	if (FrameObject == NULL) {
+		return false;
+	}
+
+	bool Success = true;
+
+	DataOut->Name[Id] = JsonGetStringId(FrameObject, "filename", KStringIdInvalid);
+
+	Success &= JsonParseRect16(JsonFindKeyValue(FrameObject, "frame"), &DataOut->Frame[Id]);
+	Success &= JsonParseDimensions16(
+		JsonFindKeyValue(FrameObject, "sourceSize"), &DataOut->SourceSize[Id]);
+	Success &= StringIdIsValid(DataOut->Name[Id]);
+
+	DataOut->Rotated[Id] = JsonGetBool(FrameObject, "rotated", false);
+	DataOut->Trimmed[Id] = JsonGetBool(FrameObject, "trimmed", false);
+
+	return Success;
+}
