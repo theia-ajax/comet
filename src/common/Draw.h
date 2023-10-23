@@ -33,13 +33,16 @@ typedef struct DrawConfig {
 } DrawConfig;
 
 typedef struct SpriteDraw {
-	int32 SpriteSheetId;
 	int32 SpriteId;
 	Vec2 Position;
 	Vec2 Scale;
 	real32 Rotation;
 	int32 SpriteTiles[2];
 } SpriteDraw;
+
+#define SPRITE_ID(Sheet, Sprite) (((Sheet) << 16) | ((Sprite) & 0xFFFF))
+#define SPRITE_ID_SHEET(SpriteId) ((SpriteId) >> 16)
+#define SPRITE_ID_INDEX(SpriteId) ((SpriteId) & 0xFFFF)
 
 SpriteSheet CreateSpriteSheetGrid(ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight);
 SpriteSheet CreateSpriteSheetFrameData(ImageAsset* Image, SpriteSheetAsset* Sheet);

@@ -86,6 +86,7 @@ bool LoadSpriteSheetData(const char* FileName, SpriteSheetData* DataOut)
 		goto CleanUp;
 	}
 
+	hmdefault(DataOut->NameIdMap, NONE);
 	for (int32 SpriteId = 0; SpriteId < DataOut->Frames.Count; SpriteId++) {
 		StringId NameId = DataOut->Frames.Name[SpriteId];
 		hmput(DataOut->NameIdMap, NameId, SpriteId);
@@ -100,6 +101,12 @@ void UnloadSpriteSheetData(SpriteSheetData* Data)
 {
 	hmfree(Data->NameIdMap);
 	ZERO_STRUCT(Data);
+}
+
+int32 FindSpriteByName(SpriteSheetData* Data, StringId Name)
+{
+	// hmdefault set to NONE
+	return hmget(Data->NameIdMap, Name);
 }
 
 // Private Implementations

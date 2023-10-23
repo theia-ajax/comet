@@ -6,6 +6,7 @@ typedef struct ImageData {
 	uint8* Pixels;
 	SDL_Surface* Surface;
 } ImageData;
+DEFINE_ASSET(Image);
 
 enum {
 	KSpriteSheetAssetMaxSprites = 256,
@@ -34,8 +35,6 @@ typedef struct SpriteSheetData {
 	SpriteSheetMetaData Meta;
 	SpriteNameIdMap* NameIdMap;
 } SpriteSheetData;
-
-DEFINE_ASSET(Image);
 DEFINE_ASSET(SpriteSheet);
 
 bool LoadImageData(const char* FileName, ImageData* DataOut);
@@ -43,3 +42,4 @@ void UnloadImageData(ImageData* Data);
 
 bool LoadSpriteSheetData(const char* FileName, SpriteSheetData* DataOut);
 void UnloadSpriteSheetData(SpriteSheetData* Data);
+int32 FindSpriteByName(SpriteSheetData* Data, StringId Name);

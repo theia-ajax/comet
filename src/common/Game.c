@@ -35,6 +35,7 @@ typedef enum Affiliation {
 
 typedef struct CometShip {
 	Vec2 Position;
+	int32 SpriteId;
 } CometShip;
 
 typedef struct Projectile {
@@ -71,9 +72,13 @@ struct {
 	GameState State;
 } GGame;
 
+StringId GProjectileSpriteName;
+
 bool GameInitialize(const GameInitParams* params)
 {
 	StringIdPoolsInitialize();
+
+	GProjectileSpriteName = GetStringId("projectile01-1");
 
 	int32 GameResWidth = 576;
 	int32 GameRestHeight = 324;
@@ -110,8 +115,8 @@ bool GameInitialize(const GameInitParams* params)
 
 	GetImage(SpriteSheetId_Default) =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
-	GetImage(SpriteSheetId_ShipObjects) =
-		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
+	GetImage(SpriteSheetId_ShipObjects) = (ImageAsset*)LoadAsset(
+		AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
 	GetImage(SpriteSheetId_BGObjects0) =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
@@ -131,13 +136,16 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	});
 
-	GGame.State = (GameState){
+	int32 PlayerSpriteIndex =
+		FindSpriteByName(GGame.SpriteSheetAssets[0]->Data, GetStringId("purple_06"));
 
+	GGame.State = (GameState){
 		.CometShips =
 			{
 				[0] =
 					{
 						.Position = {144.0f, 96.0f},
+						.SpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, PlayerSpriteIndex),
 					},
 			},
 	};
@@ -247,37 +255,41 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
+	// Background nebula
 	DrawSprite(&(SpriteDraw){
-		.SpriteSheetId = SpriteSheetId_BGObjects0,
-		.SpriteId = 44,
+		.SpriteId = SPRITE_ID(SpriteSheetId_BGObjects0, 44),
 		.Position = {170.0f, 20.0f},
 		.SpriteTiles = {4, 4},
 	});
 
+	// Player ship
 	DrawSprite(&(SpriteDraw){
-		.SpriteId = 16 + ((GGame.Frame % 8) / 4) * 2,
+		.SpriteId = GGame.State.CometShips[0].SpriteId,
 		.Position = GGame.State.CometShips[0].Position,
 		.SpriteTiles = {2, 1},
+		.Rotation = 0.25f,
 	});
 
+	// Cycling through big sprite sheet
 	DrawSprite(&(SpriteDraw){
-		.SpriteSheetId = SpriteSheetId_ShipObjects,
 		.Position = V2(270, 90),
-		.SpriteId = (GGame.Frame / 60) % GGame.SpriteSheetAssets[0]->Data->Frames.Count,
+		.SpriteId = SPRITE_ID(
+			SpriteSheetId_ShipObjects,
+			(GGame.Frame / 15) % GGame.SpriteSheetAssets[0]->Data->Frames.Count),
 	});
 
-	// for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
-	// 	 Iter != FixedListEnd(GGame.State.Projectiles);
-	// 	 Iter++)
-	// {
-	// 	DrawSprite(&(SpriteDraw){
-	// 		.SpriteSheetId = SpriteSheetId_Projectiles,
-	// 		.SpriteId = 8,
-	// 		.Position = Iter->Position,
-	// 		.Scale = MulV2F(V2(1, 1), 0.5f),
-	// 		.Rotation = Iter->Facing + 0.25f,
-	// 	});
-	// }
+	int32 SpriteIndex = FindSpriteByName(GGame.SpriteSheetAssets[0]->Data, GProjectileSpriteName);
+	// Projectiles
+	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
+		 Iter != FixedListEnd(GGame.State.Projectiles);
+		 Iter++)
+	{
+		DrawSprite(&(SpriteDraw){
+			.SpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, SpriteIndex),
+			.Position = Iter->Position,
+			.Rotation = Iter->Facing + 0.25f,
+		});
+	}
 
 	DrawRender();
 

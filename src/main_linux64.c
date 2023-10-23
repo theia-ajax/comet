@@ -88,5 +88,7 @@ int main(int argc, char* argv[])
 
 	GameShutdown();
 
+	SDL_Quit();
+
 	return 0;
 }
