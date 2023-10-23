@@ -3,11 +3,13 @@
 #include <SDL2/SDL.h>
 #include <cimgui.h>
 #include <cimgui_impl.h>
+#include <stdlib.h>
 
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
 #include "Math.h"
+#include "Physics.h"
 #include "StringId.h"
 
 enum SpriteSheetId {
@@ -57,6 +59,7 @@ typedef struct GameState {
 #define GetImage(Id) GGame.ImageAssets[Id]
 static Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
 static void DestroyProjectile(GameState* gameState, Projectile* projectile);
+static uint32 HsvToArgb8888(real32 H, real32 S, real32 V);
 
 struct {
 	bool IsRunning;
@@ -70,6 +73,10 @@ struct {
 	SpriteSheetAsset* SpriteSheetAssets[16];
 	int32 Frame;
 	GameState State;
+	real32 Timer;
+	ImageAsset* HeatRampImage;
+	uint32 HeatRampColors[256];
+	int32 HeatRampCount;
 } GGame;
 
 StringId GProjectileSpriteName;
@@ -113,6 +120,13 @@ bool GameInitialize(const GameInitParams* params)
 				 .Size = sizeof(SpriteSheetData)},
 		}});
 
+	GGame.HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, "assets/heat_color_ramp.png");
+	GGame.HeatRampCount =
+		MIN(GGame.HeatRampImage->Data->Surface->w, ARRAY_COUNT(GGame.HeatRampColors));
+	for (int I = 0; I < GGame.HeatRampCount; I++) {
+		GGame.HeatRampColors[I] = *((uint32*)GGame.HeatRampImage->Data->Surface->pixels + I);
+	}
+
 	GetImage(SpriteSheetId_Default) =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
 	GetImage(SpriteSheetId_ShipObjects) = (ImageAsset*)LoadAsset(
@@ -150,11 +164,24 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	};
 
+	PhysicsInitialize();
+
+	real32 Radius = 4.0f;
+	for (real32 PosY = 324 - Radius; PosY > 100; PosY -= Radius * 4) {
+		for (real32 PosX = Radius; PosX <= 576 - Radius; PosX += Radius * 3) {
+			PhysicsAddObject(&(VertletObject){
+				.Position = V2(PosX + (rand() % 10 - 5), PosY),
+				.Radius = Radius,
+			});
+		}
+	}
+
 	return true;
 }
 
 void GameShutdown(void)
 {
+	PhysicsShutdown();
 	DrawShutdown();
 	AssetsShutdown();
 	DebugShutdown();
@@ -180,6 +207,7 @@ void GameUpdate(const GameTime* gameTime)
 
 	DebugNextFrame();
 
+#if 0
 	GameState* State = &GGame.State;
 
 	{
@@ -232,11 +260,37 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	DebugPrintf("FPS: %d", (int)round(1.0 / gameTime->DeltaTime));
 	DebugPrintf(
 		"Pos: %0.1f, %0.1f",
 		GGame.State.CometShips[0].Position.X,
 		GGame.State.CometShips[0].Position.Y);
+#endif
+	GGame.Timer -= gameTime->DeltaTimeF;
+	static Vec2 LastForce = (Vec2){0};
+	if (GGame.Timer <= 0.0f) {
+		GGame.Timer += 0.25f;
+
+		if (PhysicsGetObjectCount() < 800) {
+			real32 Hue = gameTime->ElapsedSeconds / 2.0f;
+			uint32 Color = HsvToArgb8888(Hue, 1.0f, 1.0f);
+			VertletObject* Object = PhysicsAddObject(&(VertletObject){
+				.Position = V2(288.0f, 10.0f),
+				.Radius = 8.0f,
+			});
+
+			real32 Angle = SinF(gameTime->ElapsedSeconds / 2.0f) * 0.3f + 0.25f;
+			real32 Force = 100000.0f;
+			Vec2 ForceVec = V2(CosF(Angle) * Force, CosF(Angle) * Force * 0.75f);
+			LastForce = ForceVec;
+			VertletObjectAccelerate(Object, ForceVec);
+		}
+	}
+
+	PhysicsUpdate(gameTime->DeltaTimeF);
+
+	DebugPrintf("FPS: %d", (int)round(1.0 / gameTime->DeltaTime));
+	DebugPrintf("Objects: %llu", PhysicsGetObjectCount());
+	// DebugPrintf("LastF: %0.2f, %0.2f", LastForce.X, LastForce.Y);
 
 	igRender();
 
@@ -255,6 +309,7 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
+#if 0
 	// Background nebula
 	DrawSprite(&(SpriteDraw){
 		.SpriteId = SPRITE_ID(SpriteSheetId_BGObjects0, 44),
@@ -290,17 +345,29 @@ void GameRender(const GameTime* gameTime)
 			.Rotation = Iter->Facing + 0.25f,
 		});
 	}
+#endif
+	{
+		size_t ObjectCount = 0;
+		const VertletObject* Objects = PhysicsGetObjects();
+		for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
+			const VertletObject* Object = &Objects[Index];
+			Vec2 Pos = Object->Position;
+			real32 Radius = Object->Radius;
+			SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
+
+			uint32 HeatColor = GGame.HeatRampColors[(int32)(MIN(Object->Heat, 1.0f - KEpsilon32) *
+															GGame.HeatRampCount)];
+			uint R = (HeatColor >> 0) & 0xFF;
+			uint G = (HeatColor >> 8) & 0xFF;
+			uint B = (HeatColor >> 16) & 0xFF;
+			uint A = (HeatColor >> 24);
+
+			SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
+			SDL_RenderFillRectF(GGame.Renderer, &PosRect);
+		}
+	}
 
 	DrawRender();
-
-	SDL_SetRenderDrawColor(GGame.Renderer, 255, 0, 255, 255);
-	SDL_RenderFillRect(
-		GGame.Renderer,
-		&(SDL_Rect){
-			.x = GGame.State.CometShips[0].Position.X,
-			.y = GGame.State.CometShips[0].Position.Y,
-			.w = 1,
-			.h = 1});
 
 	DebugDraw(GGame.Renderer);
 	ImGui_ImplSDLRenderer_RenderDrawData(igGetDrawData());
@@ -340,4 +407,41 @@ static void DestroyProjectile(GameState* gameState, Projectile* projectile)
 	ASSERT(VALID_INDEX(ProjectileIndex, gameState->Projectiles.Count));
 
 	FixedListRemoveAt(gameState->Projectiles, ProjectileIndex);
+}
+
+static uint32 HsvToArgb8888(real32 H, real32 S, real32 V)
+{
+	H = (H >= 0 ? 0.0f : 1.0f) + fmodf(H, 1.0f);
+	H *= 360.0f;
+	real32 C = V * S;
+	real32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
+	real32 M = V - C;
+
+	real32 RP = 0.0f, GP = 0.0f, BP = 0.0f;
+	if (H < 60) {
+		RP = C;
+		GP = X;
+	} else if (H < 120) {
+		RP = X;
+		GP = C;
+	} else if (H < 180) {
+		GP = C;
+		BP = X;
+	} else if (H < 240) {
+		GP = X;
+		BP = C;
+	} else if (H < 300) {
+		RP = X;
+		BP = C;
+	} else if (H < 360) {
+		RP = C;
+		BP = X;
+	}
+
+	Uint8 R = (Uint8)((RP + M) * 255.0f);
+	Uint8 G = (Uint8)((GP + M) * 255.0f);
+	Uint8 B = (Uint8)((BP + M) * 255.0f);
+
+	uint32 Result = (255 << 24) | (R << 16) | (G << 8) | B;
+	return Result;
 }
