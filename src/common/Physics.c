@@ -6,36 +6,6 @@
 const Vec2 KGravity = (Vec2){0.0f, 1000.0f};
 const Vec2 KHeatForce = (Vec2){0.0f, -3000.0f};
 
-enum PhysConstraintType {
-	PhysConstraintType_None,
-	PhysConstraintType_Pin,
-	PhysConstraintType_Link,
-	PhysConstraintType_Count,
-};
-typedef enum PhysConstraintType PhysConstraintType;
-
-struct PhysPinConstraint {
-	PhysicsObjectHandle HObject;
-	Vec2 Position;
-};
-typedef struct PhysPinConstraint PhysPinConstraint;
-
-struct PhysLinkConstraint {
-	PhysicsObjectHandle HObject0;
-	PhysicsObjectHandle HObject1;
-	real32 TargetDistance;
-};
-typedef struct PhysLinkConstraint PhysLinkConstraint;
-
-struct PhysConstraint {
-	PhysConstraintType Type;
-	union {
-		PhysPinConstraint Pin;
-		PhysLinkConstraint Link;
-	};
-};
-typedef struct PhysConstraint PhysConstraint;
-
 // Private Definitions
 struct {
 	PhysicsObject* Objects;
@@ -57,7 +27,7 @@ void VertletObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Object->LastPosition = Object->Position;
 	Object->Position =
 		Add(Add(Object->Position, Velocity), Mul(Object->Acceleration, DeltaTime * DeltaTime));
-	Object->Heat -= (Object->Heat * 1.5f) * DeltaTime;
+	Object->Heat -= (Object->Heat * 1.0f) * DeltaTime;
 
 	real32 HeaterDistance = 80.0f;
 	real32 HeaterThreshold = 1080 - HeaterDistance;
@@ -109,7 +79,7 @@ const PhysicsObject* PhysicsGetObjects(void)
 	return GPhysics.Objects;
 }
 
-void PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec2 Position)
+PhysicsConstraintHandle PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec2 Position)
 {
 	PhysConstraint Constraint = (PhysConstraint){
 		.Type = PhysConstraintType_Pin,
@@ -120,9 +90,11 @@ void PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec2 Position)
 			},
 	};
 	arrput(GPhysics.Constraints, Constraint);
+	uint32 RawHandle = (uint32)(arrlenu(GPhysics.Constraints) - 1);
+	return (PhysicsConstraintHandle){RawHandle};
 }
 
-void PhysicsAddLinkConstraint(
+PhysicsConstraintHandle PhysicsAddLinkConstraint(
 	PhysicsObjectHandle HObject0,
 	PhysicsObjectHandle HObject1,
 	real32 TargetDistance)
@@ -137,6 +109,8 @@ void PhysicsAddLinkConstraint(
 			},
 	};
 	arrput(GPhysics.Constraints, Constraint);
+	uint32 RawHandle = (uint32)(arrlenu(GPhysics.Constraints) - 1);
+	return (PhysicsConstraintHandle){RawHandle};
 }
 
 size_t PhysicsGetObjectCount(void)
@@ -164,8 +138,14 @@ PhysicsObject* PhysicsGetObject(PhysicsObjectHandle Handle)
 {
 	ASSERT(Handle.Value != KInvalidHandle);
 	ASSERT(VALID_INDEX(Handle.Value, arrlenu(GPhysics.Objects)));
-	PhysicsObject* Result = &GPhysics.Objects[Handle.Value];
-	return Result;
+	return &GPhysics.Objects[Handle.Value];
+}
+
+PhysConstraint* PhysicsGetConstraint(PhysicsConstraintHandle Handle)
+{
+	ASSERT(Handle.Value != KInvalidHandle);
+	ASSERT(VALID_INDEX(Handle.Value, arrlenu(GPhysics.Constraints)));
+	return &GPhysics.Constraints[Handle.Value];
 }
 
 // Private Implementations

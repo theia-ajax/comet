@@ -79,6 +79,7 @@ struct {
 	uint32 HeatRampColors[256];
 	int32 HeatRampCount;
 	rnd_pcg_t RandomGen;
+	PhysicsConstraintHandle MousePinConstraint;
 } GGame;
 
 StringId GProjectileSpriteName;
@@ -176,33 +177,54 @@ bool GameInitialize(const GameInitParams* params)
 		.Radius = 24.0f,
 		.Tint = 0xFF00FFFF,
 	});
-	PhysicsAddPinConstraint(HPinObject, V2(GameResWidth / 2, GameRestHeight / 2));
+	GGame.MousePinConstraint =
+		PhysicsAddPinConstraint(HPinObject, V2(GameResWidth / 2, GameRestHeight / 2));
 
-	PhysicsObjectHandle LastHandle = {KInvalidHandle};
-	for (int i = 0; i < 20; i++) {
-		real32 Radius = 16.0f;
-		PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
-			.Radius = Radius,
-			.Position = V2(200.0f + Radius * 2 * i, 50.0f),
-			.Flags = 1,
-			.Tint = 0xFFFFFFF,
-		});
+	{
+		PhysicsObjectHandle LastHandle = {KInvalidHandle};
+		for (int i = 0; i < 20; i++) {
+			real32 Radius = 16.0f;
+			PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
+				.Radius = Radius,
+				.Position = V2(GameResWidth / 4.0f, 200.0f + Radius * 2 * i),
+				.Flags = 1,
+				.Tint = 0xFFFFFFF,
+			});
 
-		if (LastHandle.Value != KInvalidHandle) {
-			PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
-		} else {
-			PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+			if (LastHandle.Value != KInvalidHandle) {
+				PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
+			} else {
+				PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+			}
+
+			LastHandle = NewHandle;
 		}
+	}
+	{
+		PhysicsObjectHandle LastHandle = {KInvalidHandle};
+		for (int i = 0; i < 20; i++) {
+			real32 Radius = 16.0f;
+			PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
+				.Radius = Radius,
+				.Position = V2(3.0f * GameResWidth / 4.0f, 200.0f + Radius * 2 * i),
+				.Flags = 1,
+				.Tint = 0xFFFFFFF,
+			});
 
-		LastHandle = NewHandle;
+			if (LastHandle.Value != KInvalidHandle) {
+				PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
+			} else {
+				PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+			}
+
+			LastHandle = NewHandle;
+		}
 	}
 
-	PhysicsAddPinConstraint(LastHandle, PhysicsGetObject(LastHandle)->Position);
-
-	real32 Spacing = 12.0f;
+	real32 Spacing = 16.0f;
 	for (real32 PosY = GameRestHeight - Spacing; PosY > -100; PosY -= Spacing * 2.5f) {
 		for (real32 PosX = Spacing; PosX <= GameResWidth - Spacing; PosX += Spacing * 2) {
-			real32 Radius = 2.0f + rnd_pcg_nextf(&GGame.RandomGen) * 4.0f;
+			real32 Radius = 3.0f + rnd_pcg_nextf(&GGame.RandomGen) * 8.0f;
 
 			PhysicsAddObject(&(PhysicsObject){
 				.Position = V2(PosX + (rand() % 10 - 5), PosY),
@@ -321,6 +343,10 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// }
 
+	int MouseX, MouseY;
+	SDL_GetMouseState(&MouseX, &MouseY);
+	PhysicsGetConstraint(GGame.MousePinConstraint)->Pin.Position = V2(MouseX, MouseY);
+
 	PhysicsUpdate(gameTime->DeltaTimeF);
 
 	DebugPrintf("FPS: %d", (int)round(1.0 / gameTime->DeltaTime));
@@ -342,7 +368,7 @@ void GameRender(const GameTime* gameTime)
 
 	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
-	// SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
+	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
 #if 0
