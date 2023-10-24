@@ -37,7 +37,7 @@
                 "-File",
                 "build.ps1",
                 "-Target",
-                "${config:game_target}"
+                "${config:game_target}",
                 "-Configuration",
                 "Release"
             ],
@@ -74,32 +74,16 @@
             ]
         },
         {
-            "type": "cppbuild",
-            "label": "mingw64 build",
-            "command": "mingw32-make.exe",
-            "args": [
-                "config=debug_win64",
-                "all"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}\\bin\\"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "type": "shell",
+            "label": "Linux Build Debug",
+            "command": "./build.sh debug",
             "group": "build"
         },
         {
             "type": "shell",
-            "label": "Linux Build",
-            "command": "./build.sh",
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "label": "Linux Build Release",
+            "command": "./build.sh release",
+            "group": "build"
         }
     ]
 }

@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
 	ASSERT(Success);
 
-	const int KTargetFramesPerSecond = 144;
+	const int KTargetFramesPerSecond = 60;
 	double KTargetFrameRateSeconds =
 		(KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
 	uint64 NowTicks = 0;

@@ -58,16 +58,26 @@
             }
         },
         {
-            "name": "Linux launch",
+            "name": "Linux Launch Debug",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
+            "preLaunchTask": "Linux Build Debug",
             "linux": {
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
             }
+        },
+        {
+            "name": "Linux Launch Release",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "preLaunchTask": "Linux Build Release"
         }
     ]
 }

@@ -118,6 +118,17 @@ void DrawRender(void)
 
 		int32 SheetIndex = SPRITE_ID_SHEET(DrawCommand->SpriteId);
 
+		SDL_Texture* Texture = GDraw.SpriteSheetTextures[SheetIndex];
+
+		if (DrawCommand->UseTint)
+		{
+			uint32 TintColor = DrawCommand->TintColor;
+			uint R = (TintColor >> 0) & 0xFF;
+			uint G = (TintColor >> 8) & 0xFF;
+			uint B = (TintColor >> 16) & 0xFF;
+			SDL_SetTextureColorMod(Texture, R, G, B);
+		}
+
 		// for now it's all in the first sprite sheet
 		SDL_RenderCopyExF(
 			GDraw.Renderer,
@@ -127,6 +138,11 @@ void DrawRender(void)
 			DrawCommand->Rotation * TurnToDeg,
 			&Center,
 			SDL_FLIP_NONE);
+
+		if (DrawCommand->UseTint)
+		{
+			SDL_SetTextureColorMod(Texture, 255, 255, 255);
+		}
 
 		// SDL_FRect PosRect = (SDL_FRect){
 		// 	.x = DestRect.x + Center.x,

@@ -10,6 +10,7 @@
 #include "Draw.h"
 #include "Math.h"
 #include "Physics.h"
+#include "Random.h"
 #include "StringId.h"
 
 enum SpriteSheetId {
@@ -70,13 +71,14 @@ struct {
 	} ImGui;
 	GameInput Input;
 	ImageAsset* ImageAssets[16];
-	SpriteSheetAsset* SpriteSheetAssets[16];
+	SpriteSheetAsset* ShipObjectsSheet;
 	int32 Frame;
 	GameState State;
 	real32 Timer;
 	ImageAsset* HeatRampImage;
 	uint32 HeatRampColors[256];
 	int32 HeatRampCount;
+	rnd_pcg_t RandomGen;
 } GGame;
 
 StringId GProjectileSpriteName;
@@ -85,10 +87,13 @@ bool GameInitialize(const GameInitParams* params)
 {
 	StringIdPoolsInitialize();
 
+	Uint64 PerformanceCounter = SDL_GetPerformanceCounter();
+	rnd_pcg_seed(&GGame.RandomGen, (uint32)PerformanceCounter);
+
 	GProjectileSpriteName = GetStringId("projectile01-1");
 
-	int32 GameResWidth = 576;
-	int32 GameRestHeight = 324;
+	int32 GameResWidth = 1920;	 // 576;
+	int32 GameRestHeight = 1080; // 324;
 
 	GGame.IsRunning = true;
 	GGame.Window = params->Window;
@@ -134,7 +139,7 @@ bool GameInitialize(const GameInitParams* params)
 	GetImage(SpriteSheetId_BGObjects0) =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
-	GGame.SpriteSheetAssets[0] = (SpriteSheetAsset*)LoadAsset(
+	GGame.ShipObjectsSheet = (SpriteSheetAsset*)LoadAsset(
 		AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	DrawInitialize(&(DrawConfig){
@@ -144,14 +149,14 @@ bool GameInitialize(const GameInitParams* params)
 				[SpriteSheetId_Default] =
 					CreateSpriteSheetGrid(GetImage(SpriteSheetId_Default), 8, 8),
 				[SpriteSheetId_ShipObjects] = CreateSpriteSheetFrameData(
-					GetImage(SpriteSheetId_ShipObjects), GGame.SpriteSheetAssets[0]),
+					GetImage(SpriteSheetId_ShipObjects), GGame.ShipObjectsSheet),
 				[SpriteSheetId_BGObjects0] =
 					CreateSpriteSheetGrid(GetImage(SpriteSheetId_BGObjects0), 32, 32),
 			},
 	});
 
 	int32 PlayerSpriteIndex =
-		FindSpriteByName(GGame.SpriteSheetAssets[0]->Data, GetStringId("purple_06"));
+		FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("purple_06"));
 
 	GGame.State = (GameState){
 		.CometShips =
@@ -166,10 +171,40 @@ bool GameInitialize(const GameInitParams* params)
 
 	PhysicsInitialize();
 
-	real32 Radius = 4.0f;
-	for (real32 PosY = 324 - Radius; PosY > 100; PosY -= Radius * 4) {
-		for (real32 PosX = Radius; PosX <= 576 - Radius; PosX += Radius * 3) {
-			PhysicsAddObject(&(VertletObject){
+	PhysicsObjectHandle HPinObject = PhysicsAddObject(&(PhysicsObject){
+		.Flags = 1,
+		.Radius = 24.0f,
+		.Tint = 0xFF00FFFF,
+	});
+	PhysicsAddPinConstraint(HPinObject, V2(GameResWidth / 2, GameRestHeight / 2));
+
+	PhysicsObjectHandle LastHandle = {KInvalidHandle};
+	for (int i = 0; i < 20; i++) {
+		real32 Radius = 16.0f;
+		PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
+			.Radius = Radius,
+			.Position = V2(200.0f + Radius * 2 * i, 50.0f),
+			.Flags = 1,
+			.Tint = 0xFFFFFFF,
+		});
+
+		if (LastHandle.Value != KInvalidHandle) {
+			PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
+		} else {
+			PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+		}
+
+		LastHandle = NewHandle;
+	}
+
+	PhysicsAddPinConstraint(LastHandle, PhysicsGetObject(LastHandle)->Position);
+
+	real32 Spacing = 12.0f;
+	for (real32 PosY = GameRestHeight - Spacing; PosY > -100; PosY -= Spacing * 2.5f) {
+		for (real32 PosX = Spacing; PosX <= GameResWidth - Spacing; PosX += Spacing * 2) {
+			real32 Radius = 2.0f + rnd_pcg_nextf(&GGame.RandomGen) * 4.0f;
+
+			PhysicsAddObject(&(PhysicsObject){
 				.Position = V2(PosX + (rand() % 10 - 5), PosY),
 				.Radius = Radius,
 			});
@@ -265,26 +300,26 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.State.CometShips[0].Position.X,
 		GGame.State.CometShips[0].Position.Y);
 #endif
-	GGame.Timer -= gameTime->DeltaTimeF;
-	static Vec2 LastForce = (Vec2){0};
-	if (GGame.Timer <= 0.0f) {
-		GGame.Timer += 0.25f;
+	// GGame.Timer -= gameTime->DeltaTimeF;
+	// static Vec2 LastForce = (Vec2){0};
+	// if (GGame.Timer <= 0.0f) {
+	// 	GGame.Timer += 0.25f;
 
-		if (PhysicsGetObjectCount() < 800) {
-			real32 Hue = gameTime->ElapsedSeconds / 2.0f;
-			uint32 Color = HsvToArgb8888(Hue, 1.0f, 1.0f);
-			VertletObject* Object = PhysicsAddObject(&(VertletObject){
-				.Position = V2(288.0f, 10.0f),
-				.Radius = 8.0f,
-			});
+	// 	if (PhysicsGetObjectCount() < 800) {
+	// 		real32 Hue = gameTime->ElapsedSeconds / 2.0f;
+	// 		uint32 Color = HsvToArgb8888(Hue, 1.0f, 1.0f);
+	// 		PhysicsObject* Object = PhysicsAddObject(&(PhysicsObject){
+	// 			.Position = V2(288.0f, 10.0f),
+	// 			.Radius = 8.0f,
+	// 		});
 
-			real32 Angle = SinF(gameTime->ElapsedSeconds / 2.0f) * 0.3f + 0.25f;
-			real32 Force = 100000.0f;
-			Vec2 ForceVec = V2(CosF(Angle) * Force, CosF(Angle) * Force * 0.75f);
-			LastForce = ForceVec;
-			VertletObjectAccelerate(Object, ForceVec);
-		}
-	}
+	// 		real32 Angle = SinF(gameTime->ElapsedSeconds / 2.0f) * 0.3f + 0.25f;
+	// 		real32 Force = 100000.0f;
+	// 		Vec2 ForceVec = V2(CosF(Angle) * Force, CosF(Angle) * Force * 0.75f);
+	// 		LastForce = ForceVec;
+	// 		VertletObjectAccelerate(Object, ForceVec);
+	// 	}
+	// }
 
 	PhysicsUpdate(gameTime->DeltaTimeF);
 
@@ -307,6 +342,7 @@ void GameRender(const GameTime* gameTime)
 
 	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
+	// SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
 #if 0
@@ -347,23 +383,36 @@ void GameRender(const GameTime* gameTime)
 	}
 #endif
 	{
+		int32 FireSpriteIndex =
+			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("explosion-04"));
+		int32 FireSpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, FireSpriteIndex);
+
 		size_t ObjectCount = 0;
-		const VertletObject* Objects = PhysicsGetObjects();
+		const PhysicsObject* Objects = PhysicsGetObjects();
 		for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
-			const VertletObject* Object = &Objects[Index];
+			const PhysicsObject* Object = &Objects[Index];
 			Vec2 Pos = Object->Position;
 			real32 Radius = Object->Radius;
 			SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
+			uint32 TintColor;
+			if ((Object->Flags & 1) != 0) {
+				TintColor = Object->Tint;
+			} else {
+				TintColor = GGame.HeatRampColors[(int32)(MIN(Object->Heat, 1.0f - KEpsilon32) *
+														 GGame.HeatRampCount)];
+			}
 
-			uint32 HeatColor = GGame.HeatRampColors[(int32)(MIN(Object->Heat, 1.0f - KEpsilon32) *
-															GGame.HeatRampCount)];
-			uint R = (HeatColor >> 0) & 0xFF;
-			uint G = (HeatColor >> 8) & 0xFF;
-			uint B = (HeatColor >> 16) & 0xFF;
-			uint A = (HeatColor >> 24);
+			real32 Scale = Radius / 26.0f;
 
-			SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
-			SDL_RenderFillRectF(GGame.Renderer, &PosRect);
+			DrawSprite(&(SpriteDraw){
+				.SpriteId = FireSpriteId,
+				.Position = Pos,
+				.Scale = V2(Scale, Scale),
+				.UseTint = true,
+				.TintColor = TintColor,
+			});
+			// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
+			// SDL_RenderFillRectF(GGame.Renderer, &PosRect);
 		}
 	}
 

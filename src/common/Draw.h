@@ -38,6 +38,8 @@ typedef struct SpriteDraw {
 	Vec2 Scale;
 	real32 Rotation;
 	int32 SpriteTiles[2];
+	uint32 TintColor;
+	bool UseTint;
 } SpriteDraw;
 
 #define SPRITE_ID(Sheet, Sprite) (((Sheet) << 16) | ((Sprite) & 0xFFFF))

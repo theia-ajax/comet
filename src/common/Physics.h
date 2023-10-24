@@ -2,21 +2,35 @@
 
 #include "Math.h"
 
-typedef struct VertletObject {
+static const uint32 KInvalidHandle;
+
+typedef struct PhysicsObjectHandle {
+	uint32 Value;
+} PhysicsObjectHandle;
+
+typedef struct PhysicsObject {
+	uint32 Flags;
 	Vec2 Position;
 	Vec2 LastPosition;
 	Vec2 Acceleration;
 	real32 Radius;
 	real32 Heat;
-	uint8 R, G, B, A;
-} VertletObject;
+	uint32 Tint;
+} PhysicsObject;
 
-void VertletObjectUpdate(VertletObject* Object, float DeltaTime);
-void VertletObjectAccelerate(VertletObject* Object, Vec2 Acceleration);
+void VertletObjectUpdate(PhysicsObject* Object, float DeltaTime);
+void VertletObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration);
 
 void PhysicsInitialize(void);
 void PhysicsShutdown(void);
 void PhysicsUpdate(float DeltaTime);
-const VertletObject* PhysicsGetObjects(void);
+const PhysicsObject* PhysicsGetObjects(void);
 size_t PhysicsGetObjectCount(void);
-VertletObject* PhysicsAddObject(const VertletObject* OptionalConfig);
+PhysicsObjectHandle PhysicsAddObject(const PhysicsObject* OptionalConfig);
+bool PhysObjectHandleIsValid(PhysicsObjectHandle Handle);
+PhysicsObject* PhysicsGetObject(PhysicsObjectHandle Handle);
+void PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec2 Position);
+void PhysicsAddLinkConstraint(
+	PhysicsObjectHandle HObject0,
+	PhysicsObjectHandle HObject1,
+	real32 TargetDistance);

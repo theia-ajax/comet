@@ -9,3 +9,6 @@
 
 #define INI_IMPLEMENTATION
 #include "ini.h"
+
+#define RND_IMPLEMENTATION
+#include "Random.h"

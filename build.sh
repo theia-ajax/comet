@@ -1,4 +1,4 @@
 #!/usr/bin/sh
 
 premake5 gmake2
-make -C bin/ config=debug_linux64
+make -C bin/ config=$1_linux64
