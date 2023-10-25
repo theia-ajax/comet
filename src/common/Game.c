@@ -82,6 +82,8 @@ struct {
 	PhysicsConstraintHandle MousePinConstraint;
 } GGame;
 
+int32 ExplosionsSpriteIds[11] = {0};
+
 StringId GProjectileSpriteName;
 
 bool GameInitialize(const GameInitParams* params)
@@ -93,8 +95,8 @@ bool GameInitialize(const GameInitParams* params)
 
 	GProjectileSpriteName = GetStringId("projectile01-1");
 
-	int32 GameResWidth = 1920;	 // 576;
-	int32 GameRestHeight = 1080; // 324;
+	int32 GameResWidth = 576;	// 576;
+	int32 GameRestHeight = 324; // 324;
 
 	GGame.IsRunning = true;
 	GGame.Window = params->Window;
@@ -159,6 +161,14 @@ bool GameInitialize(const GameInitParams* params)
 	int32 PlayerSpriteIndex =
 		FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("purple_06"));
 
+	for (int32 Index = 0; Index < ARRAY_COUNT(ExplosionsSpriteIds); Index++) {
+		char buffer[64];
+		SDL_snprintf(buffer, 64, "explosion-%02d", Index + 1);
+		ExplosionsSpriteIds[Index] = SPRITE_ID(
+			SpriteSheetId_ShipObjects,
+			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId(buffer)));
+	}
+
 	GGame.State = (GameState){
 		.CometShips =
 			{
@@ -170,11 +180,17 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	};
 
-	PhysicsInitialize();
+	real32 CellSize = 2.0f;
+	Vec2 WorldMargin = V2(CellSize, CellSize);
+	PhysicsConfig PhysicsCfg = PhysicsDefaultConfig();
+	PhysicsCfg.CellSize = CellSize;
+	PhysicsCfg.Bounds.XY = V2(0, 0);
+	PhysicsCfg.Bounds.ZW = V2(GameResWidth, GameRestHeight);
+	PhysicsInitialize(&PhysicsCfg);
 
 	PhysicsObjectHandle HPinObject = PhysicsAddObject(&(PhysicsObject){
 		.Flags = 1,
-		.Radius = 24.0f,
+		.Radius = 1.0f,
 		.Tint = 0xFF00FFFF,
 	});
 	GGame.MousePinConstraint =
@@ -183,10 +199,10 @@ bool GameInitialize(const GameInitParams* params)
 	{
 		PhysicsObjectHandle LastHandle = {KInvalidHandle};
 		for (int i = 0; i < 20; i++) {
-			real32 Radius = 16.0f;
+			real32 Radius = 2.0f;
 			PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
 				.Radius = Radius,
-				.Position = V2(GameResWidth / 4.0f, 200.0f + Radius * 2 * i),
+				.Position = V2(GameResWidth / 2.0f, 20.0f + Radius * 2 * i),
 				.Flags = 1,
 				.Tint = 0xFFFFFFF,
 			});
@@ -199,39 +215,58 @@ bool GameInitialize(const GameInitParams* params)
 
 			LastHandle = NewHandle;
 		}
+		PhysicsAddPinConstraint(LastHandle, PhysicsGetObject(LastHandle)->Position);
 	}
-	{
-		PhysicsObjectHandle LastHandle = {KInvalidHandle};
-		for (int i = 0; i < 20; i++) {
-			real32 Radius = 16.0f;
-			PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
-				.Radius = Radius,
-				.Position = V2(3.0f * GameResWidth / 4.0f, 200.0f + Radius * 2 * i),
-				.Flags = 1,
-				.Tint = 0xFFFFFFF,
-			});
+	// {
+	// 	PhysicsObjectHandle LastHandle = {KInvalidHandle};
+	// 	for (int i = 0; i < 20; i++) {
+	// 		real32 Radius = 16.0f;
+	// 		PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
+	// 			.Radius = Radius,
+	// 			.Position = V2(3.0f * GameResWidth / 4.0f, 200.0f + Radius * 2 * i),
+	// 			.Flags = 1,
+	// 			.Tint = 0xFFFFFFF,
+	// 		});
 
-			if (LastHandle.Value != KInvalidHandle) {
-				PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
-			} else {
-				PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
-			}
+	// 		if (LastHandle.Value != KInvalidHandle) {
+	// 			PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
+	// 		} else {
+	// 			PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+	// 		}
 
-			LastHandle = NewHandle;
-		}
-	}
+	// 		LastHandle = NewHandle;
+	// 	}
+	// }
 
-	real32 Spacing = 16.0f;
-	for (real32 PosY = GameRestHeight - Spacing; PosY > -100; PosY -= Spacing * 2.5f) {
-		for (real32 PosX = Spacing; PosX <= GameResWidth - Spacing; PosX += Spacing * 2) {
-			real32 Radius = 3.0f + rnd_pcg_nextf(&GGame.RandomGen) * 8.0f;
+	// real32 Spacing = 5.0f;
+	// for (real32 PosY = GameRestHeight - Spacing; PosY > GameRestHeight - 600; PosY -= Spacing
+	// * 2.5f)
+	// {
+	// 	for (real32 PosX = Spacing; PosX <= GameResWidth - Spacing; PosX += Spacing * 2) {
+	// 		real32 Radius = 4.0f;
 
-			PhysicsAddObject(&(PhysicsObject){
-				.Position = V2(PosX + (rand() % 10 - 5), PosY),
-				.Radius = Radius,
-			});
-		}
-	}
+	// 		PhysicsAddObject(&(PhysicsObject){
+	// 			.Position = V2(PosX + (rand() % 10 - 5), PosY),
+	// 			.Radius = Radius,
+	// 		});
+	// 	}
+	// }
+
+	// real32 Spacing = 5.0f;
+	// for (real32 PosY = PhysicsCfg.Bounds.W - Spacing; PosY > PhysicsCfg.Bounds.Y + Spacing;
+	// 	 PosY -= Spacing * 2.0f)
+	// {
+	// 	for (real32 PosX = PhysicsCfg.Bounds.X + Spacing; PosX <= PhysicsCfg.Bounds.Z - Spacing;
+	// 		 PosX += Spacing * 2.0f)
+	// 	{
+	// 		real32 Radius = 1.0f;
+
+	// 		PhysicsAddObject(&(PhysicsObject){
+	// 			.Position = V2(PosX, PosY),
+	// 			.Radius = Radius,
+	// 		});
+	// 	}
+	// }
 
 	return true;
 }
@@ -339,9 +374,32 @@ void GameUpdate(const GameTime* gameTime)
 	// 		real32 Force = 100000.0f;
 	// 		Vec2 ForceVec = V2(CosF(Angle) * Force, CosF(Angle) * Force * 0.75f);
 	// 		LastForce = ForceVec;
-	// 		VertletObjectAccelerate(Object, ForceVec);
+	// 		PhysicsObjectAccelerate(Object, ForceVec);
 	// 	}
 	// }
+
+	int FramesPerSecond = (int)round(1.0 / gameTime->DeltaTime);
+
+	real32 Spawners[4 * 12] = {
+		24,		  100, 100000,	25000, 576 - 24, 100, -100000, 25000, 24,		125, 100000,  25000,
+		576 - 24, 125, -100000, 25000, 24,		 150, 100000,  25000, 576 - 24, 150, -100000, 25000,
+		24,		  175, 100000,	25000, 576 - 24, 175, -100000, 25000, 24,		200, 100000,  25000,
+		576 - 24, 200, -100000, 25000, 24,		 300, 100000,  25000, 576 - 24, 300, -100000, 25000,
+	};
+
+	for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 4) {
+		real32* Spawner = &Spawners[SpawnerIndex];
+		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
+		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
+		if (PhysicsGetObjectCount() < 8000 && PhysicsIsAreaClear(SpawnPos)) {
+			PhysicsAddObject(&(PhysicsObject){
+				.Position = SpawnPos,
+				.Radius = 0.5f,
+				.Acceleration = SpawnAccel,
+				.Heat = 1.0f,
+			});
+		}
+	}
 
 	int MouseX, MouseY;
 	SDL_GetMouseState(&MouseX, &MouseY);
@@ -349,8 +407,15 @@ void GameUpdate(const GameTime* gameTime)
 
 	PhysicsUpdate(gameTime->DeltaTimeF);
 
-	DebugPrintf("FPS: %d", (int)round(1.0 / gameTime->DeltaTime));
+	DebugPrintf("FPS: %d", FramesPerSecond);
 	DebugPrintf("Objects: %llu", PhysicsGetObjectCount());
+	PhysicsObject* MouseObject = PhysicsGetPinConstraintObject(GGame.MousePinConstraint);
+	if (MouseObject)
+		DebugPrintf(
+			"Mouse: %0.2f, %0.2f -- %d",
+			MouseObject->Position.X,
+			MouseObject->Position.Y,
+			MouseObject->GridCell);
 	// DebugPrintf("LastF: %0.2f, %0.2f", LastForce.X, LastForce.Y);
 
 	igRender();
@@ -367,7 +432,8 @@ void GameRender(const GameTime* gameTime)
 	SDL_GetRendererOutputSize(GGame.Renderer, &RenderWidth, &RenderHeight);
 
 	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
-	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
+	// SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
+	// SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
@@ -409,9 +475,9 @@ void GameRender(const GameTime* gameTime)
 	}
 #endif
 	{
-		int32 FireSpriteIndex =
-			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("explosion-04"));
-		int32 FireSpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, FireSpriteIndex);
+		// int32 FireSpriteIndex =
+		// 	FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("explosion-04"));
+		// int32 FireSpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, FireSpriteIndex);
 
 		size_t ObjectCount = 0;
 		const PhysicsObject* Objects = PhysicsGetObjects();
@@ -428,10 +494,10 @@ void GameRender(const GameTime* gameTime)
 														 GGame.HeatRampCount)];
 			}
 
-			real32 Scale = Radius / 26.0f;
+			real32 Scale = (Radius + Object->Heat * 2) / 26.0f;
 
 			DrawSprite(&(SpriteDraw){
-				.SpriteId = FireSpriteId,
+				.SpriteId = ExplosionsSpriteIds[3],
 				.Position = Pos,
 				.Scale = V2(Scale, Scale),
 				.UseTint = true,
@@ -445,6 +511,7 @@ void GameRender(const GameTime* gameTime)
 	DrawRender();
 
 	DebugDraw(GGame.Renderer);
+	// PhysicsDebugDraw(GGame.Renderer);
 	ImGui_ImplSDLRenderer_RenderDrawData(igGetDrawData());
 
 	SDL_RenderPresent(GGame.Renderer);

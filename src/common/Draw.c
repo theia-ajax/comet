@@ -6,7 +6,7 @@
 // Constants
 
 enum {
-	KMaxSpriteDrawCalls = 4096,
+	KMaxSpriteDrawCalls = 4096 * 16,
 };
 
 // Private Definitions

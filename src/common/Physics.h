@@ -2,6 +2,8 @@
 
 #include "Math.h"
 
+typedef struct SDL_Renderer SDL_Renderer;
+
 static const uint32 KInvalidHandle;
 
 typedef struct PhysicsObjectHandle {
@@ -15,11 +17,14 @@ typedef struct PhysicsConstraintHandle {
 typedef struct PhysicsObject {
 	uint32 Flags;
 	Vec2 Position;
+	int32 GridCell;
+	int32 LastGridCell;
 	Vec2 LastPosition;
 	Vec2 Acceleration;
 	real32 Radius;
 	real32 Heat;
 	uint32 Tint;
+	real32 SecondsAlive;
 } PhysicsObject;
 
 typedef enum PhysConstraintType {
@@ -48,15 +53,22 @@ typedef struct PhysConstraint {
 	};
 } PhysConstraint;
 
-void VertletObjectUpdate(PhysicsObject* Object, float DeltaTime);
-void VertletObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration);
+typedef struct PhysicsConfig {
+	Vec2 Gravity;
+	Vec2 HeatForce;
+	Vec4 Bounds;
+	real32 CellSize;
+} PhysicsConfig;
 
-void PhysicsInitialize(void);
+void PhysicsInitialize(const PhysicsConfig* Config);
 void PhysicsShutdown(void);
 void PhysicsUpdate(float DeltaTime);
+PhysicsConfig PhysicsDefaultConfig(void);
+
 const PhysicsObject* PhysicsGetObjects(void);
 size_t PhysicsGetObjectCount(void);
 PhysicsObjectHandle PhysicsAddObject(const PhysicsObject* OptionalConfig);
+void PhysicsObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration);
 bool PhysObjectHandleIsValid(PhysicsObjectHandle Handle);
 PhysicsObject* PhysicsGetObject(PhysicsObjectHandle Handle);
 PhysicsConstraintHandle PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec2 Position);
@@ -65,3 +77,7 @@ PhysicsConstraintHandle PhysicsAddLinkConstraint(
 	PhysicsObjectHandle HObject1,
 	real32 TargetDistance);
 PhysConstraint* PhysicsGetConstraint(PhysicsConstraintHandle Handle);
+PhysicsObject* PhysicsGetPinConstraintObject(PhysicsConstraintHandle Handle);
+bool PhysicsIsAreaClear(Vec2 Position);
+
+void PhysicsDebugDraw(SDL_Renderer *Renderer);
