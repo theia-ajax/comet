@@ -187,35 +187,35 @@ bool GameInitialize(const GameInitParams* params)
 	PhysicsCfg.Bounds.ZW = V2(GameResWidth + CellSize, GameRestHeight + CellSize);
 	PhysicsInitialize(&PhysicsCfg);
 
-	PhysicsObjectHandle HPinObject = PhysicsAddObject(&(PhysicsObject){
-		.Flags = 1,
-		.Radius = 1.0f,
-		.Tint = 0xFF00FFFF,
-	});
-	GGame.MousePinConstraint =
-		PhysicsAddPinConstraint(HPinObject, V2(GameResWidth / 2, GameRestHeight / 2));
+	// PhysicsObjectHandle HPinObject = PhysicsAddObject(&(PhysicsObject){
+	// 	.Flags = 1,
+	// 	.Radius = 1.0f,
+	// 	.Tint = 0xFF00FFFF,
+	// });
+	// GGame.MousePinConstraint =
+	// 	PhysicsAddPinConstraint(HPinObject, V2(GameResWidth / 2, GameRestHeight / 2));
 
-	{
-		PhysicsObjectHandle LastHandle = {KInvalidHandle};
-		for (int i = 0; i < 20; i++) {
-			real32 Radius = 2.0f;
-			PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
-				.Radius = Radius,
-				.Position = V2(GameResWidth / 2.0f, 20.0f + Radius * 2 * i),
-				.Flags = 1,
-				.Tint = 0xFFFFFFF,
-			});
+	// {
+	// 	PhysicsObjectHandle LastHandle = {KInvalidHandle};
+	// 	for (int i = 0; i < 20; i++) {
+	// 		real32 Radius = 2.0f;
+	// 		PhysicsObjectHandle NewHandle = PhysicsAddObject(&(PhysicsObject){
+	// 			.Radius = Radius,
+	// 			.Position = V2(GameResWidth / 2.0f, 20.0f + Radius * 2 * i),
+	// 			.Flags = 1,
+	// 			.Tint = 0xFFFFFFF,
+	// 		});
 
-			if (LastHandle.Value != KInvalidHandle) {
-				PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
-			} else {
-				PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
-			}
+	// 		if (LastHandle.Value != KInvalidHandle) {
+	// 			PhysicsAddLinkConstraint(NewHandle, LastHandle, Radius * 2);
+	// 		} else {
+	// 			PhysicsAddPinConstraint(NewHandle, PhysicsGetObject(NewHandle)->Position);
+	// 		}
 
-			LastHandle = NewHandle;
-		}
-		PhysicsAddPinConstraint(LastHandle, PhysicsGetObject(LastHandle)->Position);
-	}
+	// 		LastHandle = NewHandle;
+	// 	}
+	// 	PhysicsAddPinConstraint(LastHandle, PhysicsGetObject(LastHandle)->Position);
+	// }
 	// {
 	// 	PhysicsObjectHandle LastHandle = {KInvalidHandle};
 	// 	for (int i = 0; i < 20; i++) {
@@ -390,10 +390,10 @@ void GameUpdate(const GameTime* gameTime)
 		real32* Spawner = &Spawners[SpawnerIndex];
 		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
 		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
-		if (gameTime->SimTimeMS < (1000.0 / 60.0) && PhysicsIsAreaClear(SpawnPos)) {
+		if (/*gameTime->SimTimeMS < (1000.0 / 60.0)*/ PhysicsGetObjectCount() < 12000 && PhysicsIsAreaClear(SpawnPos)) {
 			PhysicsAddObject(&(PhysicsObject){
 				.Position = SpawnPos,
-				.Radius = 1.0f,
+				.Radius = 0.5f + rnd_pcg_nextf(&GGame.RandomGen) * 0.5f,
 				.Acceleration = SpawnAccel,
 				.Heat = 1.0f,
 			});
@@ -493,7 +493,7 @@ void GameRender(const GameTime* gameTime)
 														 GGame.HeatRampCount)];
 			}
 
-			real32 Scale = (Radius + Object->Heat * 0.1f) / 26.0f;
+			real32 Scale = (Radius + Object->Heat * 2.0f) / 26.0f;
 
 			DrawSprite(&(SpriteDraw){
 				.SpriteId = ExplosionsSpriteIds[3],

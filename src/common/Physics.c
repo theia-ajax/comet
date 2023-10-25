@@ -11,8 +11,8 @@ static const uint32 KInvalidHandle = (uint32)-1;
 const PhysicsConfig KDefaultPhysicsConfig = (PhysicsConfig){
 	.Bounds = (Vec4){0, 0, 1920, 1080},
 	.CellSize = 24.0f,
-	.Gravity = (Vec2){0.0f, 400.0f},
-	.HeatForce = (Vec2){0.0f, 0.0f},
+	.Gravity = (Vec2){0.0f, 100.0f},
+	.HeatForce = (Vec2){0.0f, -200.0f},
 };
 
 enum { KMaxObjectsPerCell = 64 };
