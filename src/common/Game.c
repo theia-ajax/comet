@@ -181,11 +181,10 @@ bool GameInitialize(const GameInitParams* params)
 	};
 
 	real32 CellSize = 2.0f;
-	Vec2 WorldMargin = V2(CellSize, CellSize);
 	PhysicsConfig PhysicsCfg = PhysicsDefaultConfig();
 	PhysicsCfg.CellSize = CellSize;
-	PhysicsCfg.Bounds.XY = V2(0, 0);
-	PhysicsCfg.Bounds.ZW = V2(GameResWidth, GameRestHeight);
+	PhysicsCfg.Bounds.XY = V2(-CellSize, -CellSize);
+	PhysicsCfg.Bounds.ZW = V2(GameResWidth + CellSize, GameRestHeight + CellSize);
 	PhysicsInitialize(&PhysicsCfg);
 
 	PhysicsObjectHandle HPinObject = PhysicsAddObject(&(PhysicsObject){
@@ -381,20 +380,20 @@ void GameUpdate(const GameTime* gameTime)
 	int FramesPerSecond = (int)round(1.0 / gameTime->DeltaTime);
 
 	real32 Spawners[4 * 12] = {
-		24,		  100, 100000,	25000, 576 - 24, 100, -100000, 25000, 24,		125, 100000,  25000,
-		576 - 24, 125, -100000, 25000, 24,		 150, 100000,  25000, 576 - 24, 150, -100000, 25000,
-		24,		  175, 100000,	25000, 576 - 24, 175, -100000, 25000, 24,		200, 100000,  25000,
-		576 - 24, 200, -100000, 25000, 24,		 300, 100000,  25000, 576 - 24, 300, -100000, 25000,
+		24,		  100, 100000,	25000, 576 - 24, 100, -100000, 25000, 24,		120, 100000,  25000,
+		576 - 24, 120, -100000, 25000, 24,		 140, 100000,  25000, 576 - 24, 140, -100000, 25000,
+		24,		  160, 100000,	25000, 576 - 24, 160, -100000, 25000, 24,		180, 100000,  25000,
+		576 - 24, 180, -100000, 25000, 24,		 200, 100000,  25000, 576 - 24, 200, -100000, 25000,
 	};
 
 	for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 4) {
 		real32* Spawner = &Spawners[SpawnerIndex];
 		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
 		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
-		if (PhysicsGetObjectCount() < 8000 && PhysicsIsAreaClear(SpawnPos)) {
+		if (gameTime->SimTimeMS < (1000.0 / 60.0) && PhysicsIsAreaClear(SpawnPos)) {
 			PhysicsAddObject(&(PhysicsObject){
 				.Position = SpawnPos,
-				.Radius = 0.5f,
+				.Radius = 1.0f,
 				.Acceleration = SpawnAccel,
 				.Heat = 1.0f,
 			});
@@ -407,7 +406,7 @@ void GameUpdate(const GameTime* gameTime)
 
 	PhysicsUpdate(gameTime->DeltaTimeF);
 
-	DebugPrintf("FPS: %d", FramesPerSecond);
+	DebugPrintf("FPS: %d, SIM: %0.3fms", FramesPerSecond, gameTime->SimTimeMS);
 	DebugPrintf("Objects: %llu", PhysicsGetObjectCount());
 	PhysicsObject* MouseObject = PhysicsGetPinConstraintObject(GGame.MousePinConstraint);
 	if (MouseObject)
@@ -494,7 +493,7 @@ void GameRender(const GameTime* gameTime)
 														 GGame.HeatRampCount)];
 			}
 
-			real32 Scale = (Radius + Object->Heat * 2) / 26.0f;
+			real32 Scale = (Radius + Object->Heat * 0.1f) / 26.0f;
 
 			DrawSprite(&(SpriteDraw){
 				.SpriteId = ExplosionsSpriteIds[3],

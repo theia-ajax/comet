@@ -1,5 +1,6 @@
 #include "Physics.h"
 
+#include <SDL2/SDL_thread.h>
 #include <stb_ds.h>
 
 #define USE_GRID_SOLVER
@@ -11,7 +12,7 @@ const PhysicsConfig KDefaultPhysicsConfig = (PhysicsConfig){
 	.Bounds = (Vec4){0, 0, 1920, 1080},
 	.CellSize = 24.0f,
 	.Gravity = (Vec2){0.0f, 400.0f},
-	.HeatForce = (Vec2){0.0f, -600.0f},
+	.HeatForce = (Vec2){0.0f, 0.0f},
 };
 
 enum { KMaxObjectsPerCell = 64 };
@@ -89,9 +90,9 @@ void PhysicsUpdate(float DeltaTime)
 		_PhysicsApplyGravity();
 		_PhysicsApplyHeat();
 		_PhysicsApplyAllConstraints(DeltaTime);
+		_PhysicsUpdateVertletObjects(SubDeltaTime);
 		_PhysicsUpdateGridObjectHandles();
 		_PhysicsSolveAllCollisions();
-		_PhysicsUpdateVertletObjects(SubDeltaTime);
 	}
 }
 
@@ -365,11 +366,9 @@ static void _PhysicsSolveCellCollisions(PhysCell* Cell0, PhysCell* Cell1)
 	}
 
 	for (int32 SubIndex0 = 0; SubIndex0 < Cell0->Objects.Count; SubIndex0++) {
-		PhysicsObjectHandle Handle0 = *FixedListAt(Cell0->Objects, SubIndex0);
-		PhysicsObject* Object0 = PhysicsGetObject(Handle0);
+		PhysicsObject* Object0 = PhysicsGetObject(*FixedListAt(Cell0->Objects, SubIndex0));
 		for (int32 SubIndex1 = 0; SubIndex1 < Cell1->Objects.Count; SubIndex1++) {
-			PhysicsObjectHandle Handle1 = *FixedListAt(Cell1->Objects, SubIndex1);
-			PhysicsObject* Object1 = PhysicsGetObject(Handle1);
+			PhysicsObject* Object1 = PhysicsGetObject(*FixedListAt(Cell1->Objects, SubIndex1));
 
 			if (Object0 != Object1) {
 				_PhysicsSolveCollision(Object0, Object1);
@@ -378,11 +377,16 @@ static void _PhysicsSolveCellCollisions(PhysCell* Cell0, PhysCell* Cell1)
 	}
 }
 
-static void _PhysicsSolveAllCollisions(void)
+typedef struct _ChunkSolverCtx {
+	int32 StartX;
+	int32 EndX;
+} _ChunkSolverCtx;
+
+int _PhysicsSolveChunkWorker(void* Data)
 {
-#ifdef USE_GRID_SOLVER
+	_ChunkSolverCtx* Context = (_ChunkSolverCtx*)Data;
 	for (int32 CellY = 0; CellY < GPhysics.GridHeight; CellY++) {
-		for (int32 CellX = 0; CellX < GPhysics.GridWidth; CellX++) {
+		for (int32 CellX = Context->StartX; CellX < Context->EndX; CellX++) {
 			PhysCell* Cell0 = _PhysicsGetCellGridXY(CellX, CellY);
 			for (int32 LocalX = -1; LocalX <= 1; LocalX++) {
 				for (int32 LocalY = -1; LocalY <= 1; LocalY++) {
@@ -390,6 +394,47 @@ static void _PhysicsSolveAllCollisions(void)
 					_PhysicsSolveCellCollisions(Cell0, Cell1);
 				}
 			}
+		}
+	}
+}
+
+static void _PhysicsSolveAllCollisions(void)
+{
+#ifdef USE_GRID_SOLVER
+	enum { KChunks = 2 };
+	_Static_assert(KChunks > 0);
+
+	if (KChunks == 1) {
+		for (int32 CellY = 0; CellY < GPhysics.GridHeight; CellY++) {
+			for (int32 CellX = 0; CellX < GPhysics.GridWidth; CellX++) {
+				PhysCell* Cell0 = _PhysicsGetCellGridXY(CellX, CellY);
+				for (int32 LocalX = -1; LocalX <= 1; LocalX++) {
+					for (int32 LocalY = -1; LocalY <= 1; LocalY++) {
+						PhysCell* Cell1 = _PhysicsGetCellGridXY(CellX + LocalX, CellY + LocalY);
+						_PhysicsSolveCellCollisions(Cell0, Cell1);
+					}
+				}
+			}
+		}
+	} else {
+		_ChunkSolverCtx ContextStorage[KChunks] = {0};
+		SDL_Thread* Threads[KChunks] = {NULL};
+
+		int32 ColsPerChunk = GPhysics.GridWidth / KChunks;
+		for (int32 ChunkIndex = 0; ChunkIndex < KChunks; ChunkIndex++) {
+			_ChunkSolverCtx* Ctx = &ContextStorage[ChunkIndex];
+			Ctx->StartX = ChunkIndex * ColsPerChunk;
+			if (ChunkIndex < KChunks - 1) {
+				Ctx->EndX = (ChunkIndex + 1) * ColsPerChunk;
+			} else {
+				Ctx->EndX = GPhysics.GridWidth;
+			}
+
+			Threads[ChunkIndex] = SDL_CreateThread(_PhysicsSolveChunkWorker, "ChunkWorker", Ctx);
+		}
+
+		for (int32 ThreadIndex = 0; ThreadIndex < KChunks; ThreadIndex++) {
+			SDL_WaitThread(Threads[ThreadIndex], NULL);
 		}
 	}
 #else

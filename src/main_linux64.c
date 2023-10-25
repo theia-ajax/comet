@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
 		(KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
 	uint64 NowTicks = 0;
 	uint64 DeltaTicks = 0;
+	uint64 SimTimeTicks = 0;
 	double ElapsedSeconds = 0.0;
 
 	GameInput InputState = {0};
@@ -72,10 +73,13 @@ int main(int argc, char* argv[])
 			.DeltaTime = DeltaTimeSeconds,
 			.DeltaTimeF = (float)DeltaTimeSeconds,
 			.ElapsedSeconds = ElapsedSeconds,
+			.SimTimeMS = stm_ms(SimTimeTicks),
 		};
 
 		GameUpdate(&Time);
 		GameRender(&Time);
+
+		SimTimeTicks = stm_since(FrameStartTicks);
 
 		while (KTargetFramesPerSecond != 0 &&
 			   stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds)

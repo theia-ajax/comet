@@ -18,6 +18,7 @@ typedef struct GameInput {
 typedef struct GameTime {
 	real64 ElapsedSeconds;
 	real64 DeltaTime;
+	real64 SimTimeMS;
 	real32 DeltaTimeF;
 } GameTime;
 
