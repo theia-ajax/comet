@@ -75,13 +75,13 @@
         },
         {
             "type": "shell",
-            "label": "Linux Build Debug",
+            "label": "(Linux GCC) Build Debug",
             "command": "./build.sh debug",
             "group": "build"
         },
         {
             "type": "shell",
-            "label": "Linux Build Release",
+            "label": "(Linux GCC) Build Release",
             "command": "./build.sh release",
             "group": "build"
         }
