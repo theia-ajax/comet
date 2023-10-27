@@ -1,4 +1,4 @@
-#include "Physics.h"
+#include "ParticlePhysics.h"
 
 #include <SDL2/SDL_thread.h>
 #include <stb_ds.h>
