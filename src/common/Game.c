@@ -400,21 +400,21 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	int MouseX, MouseY;
-	SDL_GetMouseState(&MouseX, &MouseY);
-	PhysicsGetConstraint(GGame.MousePinConstraint)->Pin.Position = V2(MouseX, MouseY);
+	// int MouseX, MouseY;
+	// SDL_GetMouseState(&MouseX, &MouseY);
+	// PhysicsGetConstraint(GGame.MousePinConstraint)->Pin.Position = V2(MouseX, MouseY);
 
 	PhysicsUpdate(gameTime->DeltaTimeF);
 
 	DebugPrintf("FPS: %d, SIM: %0.3fms", FramesPerSecond, gameTime->SimTimeMS);
 	DebugPrintf("Objects: %llu", PhysicsGetObjectCount());
-	PhysicsObject* MouseObject = PhysicsGetPinConstraintObject(GGame.MousePinConstraint);
-	if (MouseObject)
-		DebugPrintf(
-			"Mouse: %0.2f, %0.2f -- %d",
-			MouseObject->Position.X,
-			MouseObject->Position.Y,
-			MouseObject->GridCell);
+	// PhysicsObject* MouseObject = PhysicsGetPinConstraintObject(GGame.MousePinConstraint);
+	// if (MouseObject)
+	// 	DebugPrintf(
+	// 		"Mouse: %0.2f, %0.2f -- %d",
+	// 		MouseObject->Position.X,
+	// 		MouseObject->Position.Y,
+	// 		MouseObject->GridCell);
 	// DebugPrintf("LastF: %0.2f, %0.2f", LastForce.X, LastForce.Y);
 
 	igRender();
