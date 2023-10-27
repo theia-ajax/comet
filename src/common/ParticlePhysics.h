@@ -80,4 +80,4 @@ PhysConstraint* PhysicsGetConstraint(PhysicsConstraintHandle Handle);
 PhysicsObject* PhysicsGetPinConstraintObject(PhysicsConstraintHandle Handle);
 bool PhysicsIsAreaClear(Vec2 Position);
 
-void PhysicsDebugDraw(SDL_Renderer *Renderer);
+void PhysicsDebugDraw(SDL_Renderer* Renderer);

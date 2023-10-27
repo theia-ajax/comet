@@ -242,8 +242,7 @@ void PhysicsDebugDraw(SDL_Renderer* Renderer)
 		if (GPhysics.Grid[GridIndex].Objects.Count > 0) {
 			SDL_SetRenderDrawColor(Renderer, 0, 0xCC, 0xCC, 255);
 			Vec2 GridPos =
-				Mul(V2(GridIndex % GPhysics.GridWidth, GridIndex / GPhysics.GridWidth),
-					GPhysics.Config.CellSize);
+				Mul(V2(GridIndex % GPhysics.GridWidth, GridIndex / GPhysics.GridWidth), GPhysics.Config.CellSize);
 			SDL_FRect GridRect = {
 				.x = GridPos.X + BoundMin.X,
 				.y = GridPos.Y + BoundMin.Y,
@@ -264,8 +263,7 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 
 	Vec2 Velocity = Sub(Object->Position, Object->LastPosition);
 	Object->LastPosition = Object->Position;
-	Object->Position =
-		Add(Add(Object->Position, Velocity), Mul(Object->Acceleration, DeltaTime * DeltaTime));
+	Object->Position = Add(Add(Object->Position, Velocity), Mul(Object->Acceleration, DeltaTime * DeltaTime));
 	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
 
 	real32 HeaterDistance = 20.0f;
@@ -291,9 +289,7 @@ static void _PhysicsUpdateVertletObjects(float DeltaTime)
 
 static void _PhysicsApplyAllConstraints(float DeltaTime)
 {
-	for (ptrdiff_t ConstraintIndex = 0; ConstraintIndex < arrlen(GPhysics.Constraints);
-		 ConstraintIndex++)
-	{
+	for (ptrdiff_t ConstraintIndex = 0; ConstraintIndex < arrlen(GPhysics.Constraints); ConstraintIndex++) {
 		PhysConstraint* Constraint = &GPhysics.Constraints[ConstraintIndex];
 		switch (Constraint->Type) {
 			case PhysConstraintType_Pin:
@@ -326,14 +322,10 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 	for (ptrdiff_t ObjectIndex = 0; ObjectIndex < arrlen(GPhysics.Objects); ObjectIndex++) {
 		PhysicsObject* Object = &GPhysics.Objects[ObjectIndex];
 
-		if (Object->Position.X > WorldMax.X - Object->Radius)
-			Object->Position.X = WorldMax.X - Object->Radius;
-		if (Object->Position.X < WorldMin.X + Object->Radius)
-			Object->Position.X = WorldMin.X + Object->Radius;
-		if (Object->Position.Y > WorldMax.Y - Object->Radius)
-			Object->Position.Y = WorldMax.Y - Object->Radius;
-		if (Object->Position.Y < WorldMin.Y + Object->Radius)
-			Object->Position.Y = WorldMin.Y + Object->Radius;
+		if (Object->Position.X > WorldMax.X - Object->Radius) Object->Position.X = WorldMax.X - Object->Radius;
+		if (Object->Position.X < WorldMin.X + Object->Radius) Object->Position.X = WorldMin.X + Object->Radius;
+		if (Object->Position.Y > WorldMax.Y - Object->Radius) Object->Position.Y = WorldMax.Y - Object->Radius;
+		if (Object->Position.Y < WorldMin.Y + Object->Radius) Object->Position.Y = WorldMin.Y + Object->Radius;
 		// Vec2 CenterToObject = Sub(Object->Position, KCenter);
 		// real32 Distance = Len(CenterToObject);
 		// if (Distance > KRadius - Object->Radius) {
@@ -354,8 +346,7 @@ static void _PhysicsApplyHeat(void)
 {
 	for (ptrdiff_t ObjectIndex = 0; ObjectIndex < arrlen(GPhysics.Objects); ObjectIndex++) {
 		PhysicsObjectAccelerate(
-			&GPhysics.Objects[ObjectIndex],
-			Mul(GPhysics.Config.HeatForce, GPhysics.Objects[ObjectIndex].Heat));
+			&GPhysics.Objects[ObjectIndex], Mul(GPhysics.Config.HeatForce, GPhysics.Objects[ObjectIndex].Heat));
 	}
 }
 
@@ -479,13 +470,10 @@ static void _PhysicsUpdateGridObjectHandles(void)
 		PhysicsObject* Object = &GPhysics.Objects[ObjectIndex];
 
 		if (Object->LastGridCell != NONE) {
-			for (int32 GridObjectIndex = 0;
-				 GridObjectIndex < GPhysics.Grid[Object->LastGridCell].Objects.Count;
+			for (int32 GridObjectIndex = 0; GridObjectIndex < GPhysics.Grid[Object->LastGridCell].Objects.Count;
 				 GridObjectIndex++)
 			{
-				if (GPhysics.Grid[Object->LastGridCell].Objects.Data[GridObjectIndex].Value ==
-					ObjectIndex)
-				{
+				if (GPhysics.Grid[Object->LastGridCell].Objects.Data[GridObjectIndex].Value == ObjectIndex) {
 					FixedListRemoveAt(GPhysics.Grid[Object->LastGridCell].Objects, GridObjectIndex);
 					break;
 				}

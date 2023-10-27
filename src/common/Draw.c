@@ -98,8 +98,8 @@ void DrawRender(void)
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
 
-		SDL_Rect SourceRect = GetSpriteRect(
-			DrawCommand->SpriteId, DrawCommand->SpriteTiles[0], DrawCommand->SpriteTiles[1]);
+		SDL_Rect SourceRect =
+			GetSpriteRect(DrawCommand->SpriteId, DrawCommand->SpriteTiles[0], DrawCommand->SpriteTiles[1]);
 
 		float Width = SourceRect.w * DrawCommand->Scale.X;
 		float Height = SourceRect.h * DrawCommand->Scale.Y;
@@ -120,8 +120,7 @@ void DrawRender(void)
 
 		SDL_Texture* Texture = GDraw.SpriteSheetTextures[SheetIndex];
 
-		if (DrawCommand->UseTint)
-		{
+		if (DrawCommand->UseTint) {
 			uint32 TintColor = DrawCommand->TintColor;
 			uint R = (TintColor >> 0) & 0xFF;
 			uint G = (TintColor >> 8) & 0xFF;
@@ -139,8 +138,7 @@ void DrawRender(void)
 			&Center,
 			SDL_FLIP_NONE);
 
-		if (DrawCommand->UseTint)
-		{
+		if (DrawCommand->UseTint) {
 			SDL_SetTextureColorMod(Texture, 255, 255, 255);
 		}
 

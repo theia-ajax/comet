@@ -127,44 +127,37 @@ bool GameInitialize(const GameInitParams* params)
 		}});
 
 	GGame.HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, "assets/heat_color_ramp.png");
-	GGame.HeatRampCount =
-		MIN(GGame.HeatRampImage->Data->Surface->w, ARRAY_COUNT(GGame.HeatRampColors));
+	GGame.HeatRampCount = MIN(GGame.HeatRampImage->Data->Surface->w, ARRAY_COUNT(GGame.HeatRampColors));
 	for (int I = 0; I < GGame.HeatRampCount; I++) {
 		GGame.HeatRampColors[I] = *((uint32*)GGame.HeatRampImage->Data->Surface->pixels + I);
 	}
 
-	GetImage(SpriteSheetId_Default) =
-		(ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
-	GetImage(SpriteSheetId_ShipObjects) = (ImageAsset*)LoadAsset(
-		AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
-	GetImage(SpriteSheetId_BGObjects0) =
-		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
+	GetImage(SpriteSheetId_Default) = (ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
+	GetImage(SpriteSheetId_ShipObjects) =
+		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
+	GetImage(SpriteSheetId_BGObjects0) = (ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
-	GGame.ShipObjectsSheet = (SpriteSheetAsset*)LoadAsset(
-		AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
+	GGame.ShipObjectsSheet =
+		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
 		.SpriteSheets =
 			{
-				[SpriteSheetId_Default] =
-					CreateSpriteSheetGrid(GetImage(SpriteSheetId_Default), 8, 8),
-				[SpriteSheetId_ShipObjects] = CreateSpriteSheetFrameData(
-					GetImage(SpriteSheetId_ShipObjects), GGame.ShipObjectsSheet),
-				[SpriteSheetId_BGObjects0] =
-					CreateSpriteSheetGrid(GetImage(SpriteSheetId_BGObjects0), 32, 32),
+				[SpriteSheetId_Default] = CreateSpriteSheetGrid(GetImage(SpriteSheetId_Default), 8, 8),
+				[SpriteSheetId_ShipObjects] =
+					CreateSpriteSheetFrameData(GetImage(SpriteSheetId_ShipObjects), GGame.ShipObjectsSheet),
+				[SpriteSheetId_BGObjects0] = CreateSpriteSheetGrid(GetImage(SpriteSheetId_BGObjects0), 32, 32),
 			},
 	});
 
-	int32 PlayerSpriteIndex =
-		FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("purple_06"));
+	int32 PlayerSpriteIndex = FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("purple_06"));
 
 	for (int32 Index = 0; Index < ARRAY_COUNT(ExplosionsSpriteIds); Index++) {
 		char buffer[64];
 		SDL_snprintf(buffer, 64, "explosion-%02d", Index + 1);
-		ExplosionsSpriteIds[Index] = SPRITE_ID(
-			SpriteSheetId_ShipObjects,
-			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId(buffer)));
+		ExplosionsSpriteIds[Index] =
+			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId(buffer)));
 	}
 
 	GGame.State = (GameState){
@@ -237,8 +230,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
-		 Iter != FixedListEnd(GGame.State.Projectiles);
+	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles); Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
 	{
 		Iter->Position = Add(Iter->Position, Mul(Iter->Velocity, gameTime->DeltaTimeF));
@@ -251,8 +243,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	for (Projectile* Iter = FixedListLast(GGame.State.Projectiles);
-		 Iter >= FixedListBegin(GGame.State.Projectiles);
+	for (Projectile* Iter = FixedListLast(GGame.State.Projectiles); Iter >= FixedListBegin(GGame.State.Projectiles);
 		 Iter--)
 	{
 		if ((Iter->Flags & EntityFlags_Destroyed) != 0) {
@@ -260,10 +251,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	DebugPrintf(
-		"Pos: %0.1f, %0.1f",
-		GGame.State.CometShips[0].Position.X,
-		GGame.State.CometShips[0].Position.Y);
+	DebugPrintf("Pos: %0.1f, %0.1f", GGame.State.CometShips[0].Position.X, GGame.State.CometShips[0].Position.Y);
 	int FramesPerSecond = (int)round(1.0 / gameTime->DeltaTime);
 	DebugPrintf("FPS: %d, SIM: %0.3fms", FramesPerSecond, gameTime->SimTimeMS);
 
@@ -304,15 +292,13 @@ void GameRender(const GameTime* gameTime)
 	// Cycling through big sprite sheet
 	DrawSprite(&(SpriteDraw){
 		.Position = V2(270, 90),
-		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects,
-			(GGame.Frame / 15) % GGame.ShipObjectsSheet->Data->Frames.Count),
+		.SpriteId =
+			SPRITE_ID(SpriteSheetId_ShipObjects, (GGame.Frame / 15) % GGame.ShipObjectsSheet->Data->Frames.Count),
 	});
 
 	int32 SpriteIndex = FindSpriteByName(GGame.ShipObjectsSheet->Data, GProjectileSpriteName);
 	// Projectiles
-	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles);
-		 Iter != FixedListEnd(GGame.State.Projectiles);
+	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles); Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
 	{
 		DrawSprite(&(SpriteDraw){
