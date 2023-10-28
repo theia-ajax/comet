@@ -14,6 +14,7 @@
     - Translate -> TranslateV3
     - Added Abs/Min/Max Scalar and Vectors ops, keeping old preprocessors ones
     - Added IsFinite F/V2/V3/V4
+    - Changed field name 'Elements' -> 'Data'
 
   This is a single header file with a bunch of useful types and functions for
   games and graphics. Consider it a lightweight alternative to GLM that works
@@ -270,12 +271,12 @@ extern "C"
             Float Width, Height;
         };
 
-        Float Elements[2];
+        Float Data[2];
 
 #ifdef __cplusplus
         inline Float &operator[](int Index)
         {
-            return Elements[Index];
+            return Data[Index];
         }
 #endif
     } Vec2;
@@ -321,12 +322,12 @@ extern "C"
             Vec2 VW;
         };
 
-        Float Elements[3];
+        Float Data[3];
 
 #ifdef __cplusplus
         inline Float &operator[](int Index)
         {
-            return Elements[Index];
+            return Data[Index];
         }
 #endif
     } Vec3;
@@ -381,7 +382,7 @@ extern "C"
             Vec2 ZW;
         };
 
-        Float Elements[4];
+        Float Data[4];
 
 #ifdef HANDMADE_MATH__USE_SSE
         __m128 SSE;
@@ -390,14 +391,14 @@ extern "C"
 #ifdef __cplusplus
         inline Float &operator[](int Index)
         {
-            return Elements[Index];
+            return Data[Index];
         }
 #endif
     } Vec4;
 
     typedef union Mat2
     {
-        Float Elements[2][2];
+        Float Data[2][2];
         Vec2 Columns[2];
 
 #ifdef __cplusplus
@@ -410,7 +411,7 @@ extern "C"
 
     typedef union Mat3
     {
-        Float Elements[3][3];
+        Float Data[3][3];
         Vec3 Columns[3];
 
 #ifdef __cplusplus
@@ -423,7 +424,7 @@ extern "C"
 
     typedef union Mat4
     {
-        Float Elements[4][4];
+        Float Data[4][4];
         Vec4 Columns[4];
 
 #ifdef __cplusplus
@@ -450,7 +451,7 @@ extern "C"
             Float W;
         };
 
-        Float Elements[4];
+        Float Data[4];
 
 #ifdef HANDMADE_MATH__USE_SSE
         __m128 SSE;
@@ -1231,25 +1232,25 @@ extern "C"
         Result.SSE = _mm_add_ps(Result.SSE, _mm_mul_ps(_mm_shuffle_ps(Left.SSE, Left.SSE, 0xaa), Right.Columns[2].SSE));
         Result.SSE = _mm_add_ps(Result.SSE, _mm_mul_ps(_mm_shuffle_ps(Left.SSE, Left.SSE, 0xff), Right.Columns[3].SSE));
 #else
-    Result.X = Left.Elements[0] * Right.Columns[0].X;
-    Result.Y = Left.Elements[0] * Right.Columns[0].Y;
-    Result.Z = Left.Elements[0] * Right.Columns[0].Z;
-    Result.W = Left.Elements[0] * Right.Columns[0].W;
+    Result.X = Left.Data[0] * Right.Columns[0].X;
+    Result.Y = Left.Data[0] * Right.Columns[0].Y;
+    Result.Z = Left.Data[0] * Right.Columns[0].Z;
+    Result.W = Left.Data[0] * Right.Columns[0].W;
 
-    Result.X += Left.Elements[1] * Right.Columns[1].X;
-    Result.Y += Left.Elements[1] * Right.Columns[1].Y;
-    Result.Z += Left.Elements[1] * Right.Columns[1].Z;
-    Result.W += Left.Elements[1] * Right.Columns[1].W;
+    Result.X += Left.Data[1] * Right.Columns[1].X;
+    Result.Y += Left.Data[1] * Right.Columns[1].Y;
+    Result.Z += Left.Data[1] * Right.Columns[1].Z;
+    Result.W += Left.Data[1] * Right.Columns[1].W;
 
-    Result.X += Left.Elements[2] * Right.Columns[2].X;
-    Result.Y += Left.Elements[2] * Right.Columns[2].Y;
-    Result.Z += Left.Elements[2] * Right.Columns[2].Z;
-    Result.W += Left.Elements[2] * Right.Columns[2].W;
+    Result.X += Left.Data[2] * Right.Columns[2].X;
+    Result.Y += Left.Data[2] * Right.Columns[2].Y;
+    Result.Z += Left.Data[2] * Right.Columns[2].Z;
+    Result.W += Left.Data[2] * Right.Columns[2].W;
 
-    Result.X += Left.Elements[3] * Right.Columns[3].X;
-    Result.Y += Left.Elements[3] * Right.Columns[3].Y;
-    Result.Z += Left.Elements[3] * Right.Columns[3].Z;
-    Result.W += Left.Elements[3] * Right.Columns[3].W;
+    Result.X += Left.Data[3] * Right.Columns[3].X;
+    Result.Y += Left.Data[3] * Right.Columns[3].Y;
+    Result.Z += Left.Data[3] * Right.Columns[3].Z;
+    Result.W += Left.Data[3] * Right.Columns[3].W;
 #endif
 
         return Result;
@@ -1273,8 +1274,8 @@ extern "C"
         ASSERT_COVERED(M2D);
 
         Mat2 Result = {0};
-        Result.Elements[0][0] = Diagonal;
-        Result.Elements[1][1] = Diagonal;
+        Result.Data[0][0] = Diagonal;
+        Result.Data[1][1] = Diagonal;
 
         return Result;
     }
@@ -1286,8 +1287,8 @@ extern "C"
 
         Mat2 Result = Matrix;
 
-        Result.Elements[0][1] = Matrix.Elements[1][0];
-        Result.Elements[1][0] = Matrix.Elements[0][1];
+        Result.Data[0][1] = Matrix.Data[1][0];
+        Result.Data[1][0] = Matrix.Data[0][1];
 
         return Result;
     }
@@ -1299,10 +1300,10 @@ extern "C"
 
         Mat2 Result;
 
-        Result.Elements[0][0] = Left.Elements[0][0] + Right.Elements[0][0];
-        Result.Elements[0][1] = Left.Elements[0][1] + Right.Elements[0][1];
-        Result.Elements[1][0] = Left.Elements[1][0] + Right.Elements[1][0];
-        Result.Elements[1][1] = Left.Elements[1][1] + Right.Elements[1][1];
+        Result.Data[0][0] = Left.Data[0][0] + Right.Data[0][0];
+        Result.Data[0][1] = Left.Data[0][1] + Right.Data[0][1];
+        Result.Data[1][0] = Left.Data[1][0] + Right.Data[1][0];
+        Result.Data[1][1] = Left.Data[1][1] + Right.Data[1][1];
 
         return Result;
     }
@@ -1314,10 +1315,10 @@ extern "C"
 
         Mat2 Result;
 
-        Result.Elements[0][0] = Left.Elements[0][0] - Right.Elements[0][0];
-        Result.Elements[0][1] = Left.Elements[0][1] - Right.Elements[0][1];
-        Result.Elements[1][0] = Left.Elements[1][0] - Right.Elements[1][0];
-        Result.Elements[1][1] = Left.Elements[1][1] - Right.Elements[1][1];
+        Result.Data[0][0] = Left.Data[0][0] - Right.Data[0][0];
+        Result.Data[0][1] = Left.Data[0][1] - Right.Data[0][1];
+        Result.Data[1][0] = Left.Data[1][0] - Right.Data[1][0];
+        Result.Data[1][1] = Left.Data[1][1] - Right.Data[1][1];
 
         return Result;
     }
@@ -1329,11 +1330,11 @@ extern "C"
 
         Vec2 Result;
 
-        Result.X = Vector.Elements[0] * Matrix.Columns[0].X;
-        Result.Y = Vector.Elements[0] * Matrix.Columns[0].Y;
+        Result.X = Vector.Data[0] * Matrix.Columns[0].X;
+        Result.Y = Vector.Data[0] * Matrix.Columns[0].Y;
 
-        Result.X += Vector.Elements[1] * Matrix.Columns[1].X;
-        Result.Y += Vector.Elements[1] * Matrix.Columns[1].Y;
+        Result.X += Vector.Data[1] * Matrix.Columns[1].X;
+        Result.Y += Vector.Data[1] * Matrix.Columns[1].Y;
 
         return Result;
     }
@@ -1357,10 +1358,10 @@ extern "C"
 
         Mat2 Result;
 
-        Result.Elements[0][0] = Matrix.Elements[0][0] * Scalar;
-        Result.Elements[0][1] = Matrix.Elements[0][1] * Scalar;
-        Result.Elements[1][0] = Matrix.Elements[1][0] * Scalar;
-        Result.Elements[1][1] = Matrix.Elements[1][1] * Scalar;
+        Result.Data[0][0] = Matrix.Data[0][0] * Scalar;
+        Result.Data[0][1] = Matrix.Data[0][1] * Scalar;
+        Result.Data[1][0] = Matrix.Data[1][0] * Scalar;
+        Result.Data[1][1] = Matrix.Data[1][1] * Scalar;
 
         return Result;
     }
@@ -1372,10 +1373,10 @@ extern "C"
 
         Mat2 Result;
 
-        Result.Elements[0][0] = Matrix.Elements[0][0] / Scalar;
-        Result.Elements[0][1] = Matrix.Elements[0][1] / Scalar;
-        Result.Elements[1][0] = Matrix.Elements[1][0] / Scalar;
-        Result.Elements[1][1] = Matrix.Elements[1][1] / Scalar;
+        Result.Data[0][0] = Matrix.Data[0][0] / Scalar;
+        Result.Data[0][1] = Matrix.Data[0][1] / Scalar;
+        Result.Data[1][0] = Matrix.Data[1][0] / Scalar;
+        Result.Data[1][1] = Matrix.Data[1][1] / Scalar;
 
         return Result;
     }
@@ -1384,7 +1385,7 @@ extern "C"
     static inline Float DeterminantM2(Mat2 Matrix)
     {
         ASSERT_COVERED(DeterminantM2);
-        return Matrix.Elements[0][0] * Matrix.Elements[1][1] - Matrix.Elements[0][1] * Matrix.Elements[1][0];
+        return Matrix.Data[0][0] * Matrix.Data[1][1] - Matrix.Data[0][1] * Matrix.Data[1][0];
     }
 
     COVERAGE(InvGeneralM2, 1)
@@ -1394,10 +1395,10 @@ extern "C"
 
         Mat2 Result;
         Float InvDeterminant = 1.0f / DeterminantM2(Matrix);
-        Result.Elements[0][0] = InvDeterminant * +Matrix.Elements[1][1];
-        Result.Elements[1][1] = InvDeterminant * +Matrix.Elements[0][0];
-        Result.Elements[0][1] = InvDeterminant * -Matrix.Elements[0][1];
-        Result.Elements[1][0] = InvDeterminant * -Matrix.Elements[1][0];
+        Result.Data[0][0] = InvDeterminant * +Matrix.Data[1][1];
+        Result.Data[1][1] = InvDeterminant * +Matrix.Data[0][0];
+        Result.Data[0][1] = InvDeterminant * -Matrix.Data[0][1];
+        Result.Data[1][0] = InvDeterminant * -Matrix.Data[1][0];
 
         return Result;
     }
@@ -1420,9 +1421,9 @@ extern "C"
         ASSERT_COVERED(M3D);
 
         Mat3 Result = {0};
-        Result.Elements[0][0] = Diagonal;
-        Result.Elements[1][1] = Diagonal;
-        Result.Elements[2][2] = Diagonal;
+        Result.Data[0][0] = Diagonal;
+        Result.Data[1][1] = Diagonal;
+        Result.Data[2][2] = Diagonal;
 
         return Result;
     }
@@ -1434,12 +1435,12 @@ extern "C"
 
         Mat3 Result = Matrix;
 
-        Result.Elements[0][1] = Matrix.Elements[1][0];
-        Result.Elements[0][2] = Matrix.Elements[2][0];
-        Result.Elements[1][0] = Matrix.Elements[0][1];
-        Result.Elements[1][2] = Matrix.Elements[2][1];
-        Result.Elements[2][1] = Matrix.Elements[1][2];
-        Result.Elements[2][0] = Matrix.Elements[0][2];
+        Result.Data[0][1] = Matrix.Data[1][0];
+        Result.Data[0][2] = Matrix.Data[2][0];
+        Result.Data[1][0] = Matrix.Data[0][1];
+        Result.Data[1][2] = Matrix.Data[2][1];
+        Result.Data[2][1] = Matrix.Data[1][2];
+        Result.Data[2][0] = Matrix.Data[0][2];
 
         return Result;
     }
@@ -1451,15 +1452,15 @@ extern "C"
 
         Mat3 Result;
 
-        Result.Elements[0][0] = Left.Elements[0][0] + Right.Elements[0][0];
-        Result.Elements[0][1] = Left.Elements[0][1] + Right.Elements[0][1];
-        Result.Elements[0][2] = Left.Elements[0][2] + Right.Elements[0][2];
-        Result.Elements[1][0] = Left.Elements[1][0] + Right.Elements[1][0];
-        Result.Elements[1][1] = Left.Elements[1][1] + Right.Elements[1][1];
-        Result.Elements[1][2] = Left.Elements[1][2] + Right.Elements[1][2];
-        Result.Elements[2][0] = Left.Elements[2][0] + Right.Elements[2][0];
-        Result.Elements[2][1] = Left.Elements[2][1] + Right.Elements[2][1];
-        Result.Elements[2][2] = Left.Elements[2][2] + Right.Elements[2][2];
+        Result.Data[0][0] = Left.Data[0][0] + Right.Data[0][0];
+        Result.Data[0][1] = Left.Data[0][1] + Right.Data[0][1];
+        Result.Data[0][2] = Left.Data[0][2] + Right.Data[0][2];
+        Result.Data[1][0] = Left.Data[1][0] + Right.Data[1][0];
+        Result.Data[1][1] = Left.Data[1][1] + Right.Data[1][1];
+        Result.Data[1][2] = Left.Data[1][2] + Right.Data[1][2];
+        Result.Data[2][0] = Left.Data[2][0] + Right.Data[2][0];
+        Result.Data[2][1] = Left.Data[2][1] + Right.Data[2][1];
+        Result.Data[2][2] = Left.Data[2][2] + Right.Data[2][2];
 
         return Result;
     }
@@ -1471,15 +1472,15 @@ extern "C"
 
         Mat3 Result;
 
-        Result.Elements[0][0] = Left.Elements[0][0] - Right.Elements[0][0];
-        Result.Elements[0][1] = Left.Elements[0][1] - Right.Elements[0][1];
-        Result.Elements[0][2] = Left.Elements[0][2] - Right.Elements[0][2];
-        Result.Elements[1][0] = Left.Elements[1][0] - Right.Elements[1][0];
-        Result.Elements[1][1] = Left.Elements[1][1] - Right.Elements[1][1];
-        Result.Elements[1][2] = Left.Elements[1][2] - Right.Elements[1][2];
-        Result.Elements[2][0] = Left.Elements[2][0] - Right.Elements[2][0];
-        Result.Elements[2][1] = Left.Elements[2][1] - Right.Elements[2][1];
-        Result.Elements[2][2] = Left.Elements[2][2] - Right.Elements[2][2];
+        Result.Data[0][0] = Left.Data[0][0] - Right.Data[0][0];
+        Result.Data[0][1] = Left.Data[0][1] - Right.Data[0][1];
+        Result.Data[0][2] = Left.Data[0][2] - Right.Data[0][2];
+        Result.Data[1][0] = Left.Data[1][0] - Right.Data[1][0];
+        Result.Data[1][1] = Left.Data[1][1] - Right.Data[1][1];
+        Result.Data[1][2] = Left.Data[1][2] - Right.Data[1][2];
+        Result.Data[2][0] = Left.Data[2][0] - Right.Data[2][0];
+        Result.Data[2][1] = Left.Data[2][1] - Right.Data[2][1];
+        Result.Data[2][2] = Left.Data[2][2] - Right.Data[2][2];
 
         return Result;
     }
@@ -1491,17 +1492,17 @@ extern "C"
 
         Vec3 Result;
 
-        Result.X = Vector.Elements[0] * Matrix.Columns[0].X;
-        Result.Y = Vector.Elements[0] * Matrix.Columns[0].Y;
-        Result.Z = Vector.Elements[0] * Matrix.Columns[0].Z;
+        Result.X = Vector.Data[0] * Matrix.Columns[0].X;
+        Result.Y = Vector.Data[0] * Matrix.Columns[0].Y;
+        Result.Z = Vector.Data[0] * Matrix.Columns[0].Z;
 
-        Result.X += Vector.Elements[1] * Matrix.Columns[1].X;
-        Result.Y += Vector.Elements[1] * Matrix.Columns[1].Y;
-        Result.Z += Vector.Elements[1] * Matrix.Columns[1].Z;
+        Result.X += Vector.Data[1] * Matrix.Columns[1].X;
+        Result.Y += Vector.Data[1] * Matrix.Columns[1].Y;
+        Result.Z += Vector.Data[1] * Matrix.Columns[1].Z;
 
-        Result.X += Vector.Elements[2] * Matrix.Columns[2].X;
-        Result.Y += Vector.Elements[2] * Matrix.Columns[2].Y;
-        Result.Z += Vector.Elements[2] * Matrix.Columns[2].Z;
+        Result.X += Vector.Data[2] * Matrix.Columns[2].X;
+        Result.Y += Vector.Data[2] * Matrix.Columns[2].Y;
+        Result.Z += Vector.Data[2] * Matrix.Columns[2].Z;
 
         return Result;
     }
@@ -1526,15 +1527,15 @@ extern "C"
 
         Mat3 Result;
 
-        Result.Elements[0][0] = Matrix.Elements[0][0] * Scalar;
-        Result.Elements[0][1] = Matrix.Elements[0][1] * Scalar;
-        Result.Elements[0][2] = Matrix.Elements[0][2] * Scalar;
-        Result.Elements[1][0] = Matrix.Elements[1][0] * Scalar;
-        Result.Elements[1][1] = Matrix.Elements[1][1] * Scalar;
-        Result.Elements[1][2] = Matrix.Elements[1][2] * Scalar;
-        Result.Elements[2][0] = Matrix.Elements[2][0] * Scalar;
-        Result.Elements[2][1] = Matrix.Elements[2][1] * Scalar;
-        Result.Elements[2][2] = Matrix.Elements[2][2] * Scalar;
+        Result.Data[0][0] = Matrix.Data[0][0] * Scalar;
+        Result.Data[0][1] = Matrix.Data[0][1] * Scalar;
+        Result.Data[0][2] = Matrix.Data[0][2] * Scalar;
+        Result.Data[1][0] = Matrix.Data[1][0] * Scalar;
+        Result.Data[1][1] = Matrix.Data[1][1] * Scalar;
+        Result.Data[1][2] = Matrix.Data[1][2] * Scalar;
+        Result.Data[2][0] = Matrix.Data[2][0] * Scalar;
+        Result.Data[2][1] = Matrix.Data[2][1] * Scalar;
+        Result.Data[2][2] = Matrix.Data[2][2] * Scalar;
 
         return Result;
     }
@@ -1546,15 +1547,15 @@ extern "C"
 
         Mat3 Result;
 
-        Result.Elements[0][0] = Matrix.Elements[0][0] / Scalar;
-        Result.Elements[0][1] = Matrix.Elements[0][1] / Scalar;
-        Result.Elements[0][2] = Matrix.Elements[0][2] / Scalar;
-        Result.Elements[1][0] = Matrix.Elements[1][0] / Scalar;
-        Result.Elements[1][1] = Matrix.Elements[1][1] / Scalar;
-        Result.Elements[1][2] = Matrix.Elements[1][2] / Scalar;
-        Result.Elements[2][0] = Matrix.Elements[2][0] / Scalar;
-        Result.Elements[2][1] = Matrix.Elements[2][1] / Scalar;
-        Result.Elements[2][2] = Matrix.Elements[2][2] / Scalar;
+        Result.Data[0][0] = Matrix.Data[0][0] / Scalar;
+        Result.Data[0][1] = Matrix.Data[0][1] / Scalar;
+        Result.Data[0][2] = Matrix.Data[0][2] / Scalar;
+        Result.Data[1][0] = Matrix.Data[1][0] / Scalar;
+        Result.Data[1][1] = Matrix.Data[1][1] / Scalar;
+        Result.Data[1][2] = Matrix.Data[1][2] / Scalar;
+        Result.Data[2][0] = Matrix.Data[2][0] / Scalar;
+        Result.Data[2][1] = Matrix.Data[2][1] / Scalar;
+        Result.Data[2][2] = Matrix.Data[2][2] / Scalar;
 
         return Result;
     }
@@ -1610,10 +1611,10 @@ extern "C"
         ASSERT_COVERED(M4D);
 
         Mat4 Result = {0};
-        Result.Elements[0][0] = Diagonal;
-        Result.Elements[1][1] = Diagonal;
-        Result.Elements[2][2] = Diagonal;
-        Result.Elements[3][3] = Diagonal;
+        Result.Data[0][0] = Diagonal;
+        Result.Data[1][1] = Diagonal;
+        Result.Data[2][2] = Diagonal;
+        Result.Data[3][3] = Diagonal;
 
         return Result;
     }
@@ -1627,18 +1628,18 @@ extern "C"
 #ifdef HANDMADE_MATH__USE_SSE
         _MM_TRANSPOSE4_PS(Result.Columns[0].SSE, Result.Columns[1].SSE, Result.Columns[2].SSE, Result.Columns[3].SSE);
 #else
-    Result.Elements[0][1] = Matrix.Elements[1][0];
-    Result.Elements[0][2] = Matrix.Elements[2][0];
-    Result.Elements[0][3] = Matrix.Elements[3][0];
-    Result.Elements[1][0] = Matrix.Elements[0][1];
-    Result.Elements[1][2] = Matrix.Elements[2][1];
-    Result.Elements[1][3] = Matrix.Elements[3][1];
-    Result.Elements[2][1] = Matrix.Elements[1][2];
-    Result.Elements[2][0] = Matrix.Elements[0][2];
-    Result.Elements[2][3] = Matrix.Elements[3][2];
-    Result.Elements[3][1] = Matrix.Elements[1][3];
-    Result.Elements[3][2] = Matrix.Elements[2][3];
-    Result.Elements[3][0] = Matrix.Elements[0][3];
+    Result.Data[0][1] = Matrix.Data[1][0];
+    Result.Data[0][2] = Matrix.Data[2][0];
+    Result.Data[0][3] = Matrix.Data[3][0];
+    Result.Data[1][0] = Matrix.Data[0][1];
+    Result.Data[1][2] = Matrix.Data[2][1];
+    Result.Data[1][3] = Matrix.Data[3][1];
+    Result.Data[2][1] = Matrix.Data[1][2];
+    Result.Data[2][0] = Matrix.Data[0][2];
+    Result.Data[2][3] = Matrix.Data[3][2];
+    Result.Data[3][1] = Matrix.Data[1][3];
+    Result.Data[3][2] = Matrix.Data[2][3];
+    Result.Data[3][0] = Matrix.Data[0][3];
 #endif
 
         return Result;
@@ -1657,22 +1658,22 @@ extern "C"
         Result.Columns[2].SSE = _mm_add_ps(Left.Columns[2].SSE, Right.Columns[2].SSE);
         Result.Columns[3].SSE = _mm_add_ps(Left.Columns[3].SSE, Right.Columns[3].SSE);
 #else
-    Result.Elements[0][0] = Left.Elements[0][0] + Right.Elements[0][0];
-    Result.Elements[0][1] = Left.Elements[0][1] + Right.Elements[0][1];
-    Result.Elements[0][2] = Left.Elements[0][2] + Right.Elements[0][2];
-    Result.Elements[0][3] = Left.Elements[0][3] + Right.Elements[0][3];
-    Result.Elements[1][0] = Left.Elements[1][0] + Right.Elements[1][0];
-    Result.Elements[1][1] = Left.Elements[1][1] + Right.Elements[1][1];
-    Result.Elements[1][2] = Left.Elements[1][2] + Right.Elements[1][2];
-    Result.Elements[1][3] = Left.Elements[1][3] + Right.Elements[1][3];
-    Result.Elements[2][0] = Left.Elements[2][0] + Right.Elements[2][0];
-    Result.Elements[2][1] = Left.Elements[2][1] + Right.Elements[2][1];
-    Result.Elements[2][2] = Left.Elements[2][2] + Right.Elements[2][2];
-    Result.Elements[2][3] = Left.Elements[2][3] + Right.Elements[2][3];
-    Result.Elements[3][0] = Left.Elements[3][0] + Right.Elements[3][0];
-    Result.Elements[3][1] = Left.Elements[3][1] + Right.Elements[3][1];
-    Result.Elements[3][2] = Left.Elements[3][2] + Right.Elements[3][2];
-    Result.Elements[3][3] = Left.Elements[3][3] + Right.Elements[3][3];
+    Result.Data[0][0] = Left.Data[0][0] + Right.Data[0][0];
+    Result.Data[0][1] = Left.Data[0][1] + Right.Data[0][1];
+    Result.Data[0][2] = Left.Data[0][2] + Right.Data[0][2];
+    Result.Data[0][3] = Left.Data[0][3] + Right.Data[0][3];
+    Result.Data[1][0] = Left.Data[1][0] + Right.Data[1][0];
+    Result.Data[1][1] = Left.Data[1][1] + Right.Data[1][1];
+    Result.Data[1][2] = Left.Data[1][2] + Right.Data[1][2];
+    Result.Data[1][3] = Left.Data[1][3] + Right.Data[1][3];
+    Result.Data[2][0] = Left.Data[2][0] + Right.Data[2][0];
+    Result.Data[2][1] = Left.Data[2][1] + Right.Data[2][1];
+    Result.Data[2][2] = Left.Data[2][2] + Right.Data[2][2];
+    Result.Data[2][3] = Left.Data[2][3] + Right.Data[2][3];
+    Result.Data[3][0] = Left.Data[3][0] + Right.Data[3][0];
+    Result.Data[3][1] = Left.Data[3][1] + Right.Data[3][1];
+    Result.Data[3][2] = Left.Data[3][2] + Right.Data[3][2];
+    Result.Data[3][3] = Left.Data[3][3] + Right.Data[3][3];
 #endif
 
         return Result;
@@ -1691,22 +1692,22 @@ extern "C"
         Result.Columns[2].SSE = _mm_sub_ps(Left.Columns[2].SSE, Right.Columns[2].SSE);
         Result.Columns[3].SSE = _mm_sub_ps(Left.Columns[3].SSE, Right.Columns[3].SSE);
 #else
-    Result.Elements[0][0] = Left.Elements[0][0] - Right.Elements[0][0];
-    Result.Elements[0][1] = Left.Elements[0][1] - Right.Elements[0][1];
-    Result.Elements[0][2] = Left.Elements[0][2] - Right.Elements[0][2];
-    Result.Elements[0][3] = Left.Elements[0][3] - Right.Elements[0][3];
-    Result.Elements[1][0] = Left.Elements[1][0] - Right.Elements[1][0];
-    Result.Elements[1][1] = Left.Elements[1][1] - Right.Elements[1][1];
-    Result.Elements[1][2] = Left.Elements[1][2] - Right.Elements[1][2];
-    Result.Elements[1][3] = Left.Elements[1][3] - Right.Elements[1][3];
-    Result.Elements[2][0] = Left.Elements[2][0] - Right.Elements[2][0];
-    Result.Elements[2][1] = Left.Elements[2][1] - Right.Elements[2][1];
-    Result.Elements[2][2] = Left.Elements[2][2] - Right.Elements[2][2];
-    Result.Elements[2][3] = Left.Elements[2][3] - Right.Elements[2][3];
-    Result.Elements[3][0] = Left.Elements[3][0] - Right.Elements[3][0];
-    Result.Elements[3][1] = Left.Elements[3][1] - Right.Elements[3][1];
-    Result.Elements[3][2] = Left.Elements[3][2] - Right.Elements[3][2];
-    Result.Elements[3][3] = Left.Elements[3][3] - Right.Elements[3][3];
+    Result.Data[0][0] = Left.Data[0][0] - Right.Data[0][0];
+    Result.Data[0][1] = Left.Data[0][1] - Right.Data[0][1];
+    Result.Data[0][2] = Left.Data[0][2] - Right.Data[0][2];
+    Result.Data[0][3] = Left.Data[0][3] - Right.Data[0][3];
+    Result.Data[1][0] = Left.Data[1][0] - Right.Data[1][0];
+    Result.Data[1][1] = Left.Data[1][1] - Right.Data[1][1];
+    Result.Data[1][2] = Left.Data[1][2] - Right.Data[1][2];
+    Result.Data[1][3] = Left.Data[1][3] - Right.Data[1][3];
+    Result.Data[2][0] = Left.Data[2][0] - Right.Data[2][0];
+    Result.Data[2][1] = Left.Data[2][1] - Right.Data[2][1];
+    Result.Data[2][2] = Left.Data[2][2] - Right.Data[2][2];
+    Result.Data[2][3] = Left.Data[2][3] - Right.Data[2][3];
+    Result.Data[3][0] = Left.Data[3][0] - Right.Data[3][0];
+    Result.Data[3][1] = Left.Data[3][1] - Right.Data[3][1];
+    Result.Data[3][2] = Left.Data[3][2] - Right.Data[3][2];
+    Result.Data[3][3] = Left.Data[3][3] - Right.Data[3][3];
 #endif
 
         return Result;
@@ -1740,22 +1741,22 @@ extern "C"
         Result.Columns[2].SSE = _mm_mul_ps(Matrix.Columns[2].SSE, SSEScalar);
         Result.Columns[3].SSE = _mm_mul_ps(Matrix.Columns[3].SSE, SSEScalar);
 #else
-    Result.Elements[0][0] = Matrix.Elements[0][0] * Scalar;
-    Result.Elements[0][1] = Matrix.Elements[0][1] * Scalar;
-    Result.Elements[0][2] = Matrix.Elements[0][2] * Scalar;
-    Result.Elements[0][3] = Matrix.Elements[0][3] * Scalar;
-    Result.Elements[1][0] = Matrix.Elements[1][0] * Scalar;
-    Result.Elements[1][1] = Matrix.Elements[1][1] * Scalar;
-    Result.Elements[1][2] = Matrix.Elements[1][2] * Scalar;
-    Result.Elements[1][3] = Matrix.Elements[1][3] * Scalar;
-    Result.Elements[2][0] = Matrix.Elements[2][0] * Scalar;
-    Result.Elements[2][1] = Matrix.Elements[2][1] * Scalar;
-    Result.Elements[2][2] = Matrix.Elements[2][2] * Scalar;
-    Result.Elements[2][3] = Matrix.Elements[2][3] * Scalar;
-    Result.Elements[3][0] = Matrix.Elements[3][0] * Scalar;
-    Result.Elements[3][1] = Matrix.Elements[3][1] * Scalar;
-    Result.Elements[3][2] = Matrix.Elements[3][2] * Scalar;
-    Result.Elements[3][3] = Matrix.Elements[3][3] * Scalar;
+    Result.Data[0][0] = Matrix.Data[0][0] * Scalar;
+    Result.Data[0][1] = Matrix.Data[0][1] * Scalar;
+    Result.Data[0][2] = Matrix.Data[0][2] * Scalar;
+    Result.Data[0][3] = Matrix.Data[0][3] * Scalar;
+    Result.Data[1][0] = Matrix.Data[1][0] * Scalar;
+    Result.Data[1][1] = Matrix.Data[1][1] * Scalar;
+    Result.Data[1][2] = Matrix.Data[1][2] * Scalar;
+    Result.Data[1][3] = Matrix.Data[1][3] * Scalar;
+    Result.Data[2][0] = Matrix.Data[2][0] * Scalar;
+    Result.Data[2][1] = Matrix.Data[2][1] * Scalar;
+    Result.Data[2][2] = Matrix.Data[2][2] * Scalar;
+    Result.Data[2][3] = Matrix.Data[2][3] * Scalar;
+    Result.Data[3][0] = Matrix.Data[3][0] * Scalar;
+    Result.Data[3][1] = Matrix.Data[3][1] * Scalar;
+    Result.Data[3][2] = Matrix.Data[3][2] * Scalar;
+    Result.Data[3][3] = Matrix.Data[3][3] * Scalar;
 #endif
 
         return Result;
@@ -1782,22 +1783,22 @@ extern "C"
         Result.Columns[2].SSE = _mm_div_ps(Matrix.Columns[2].SSE, SSEScalar);
         Result.Columns[3].SSE = _mm_div_ps(Matrix.Columns[3].SSE, SSEScalar);
 #else
-    Result.Elements[0][0] = Matrix.Elements[0][0] / Scalar;
-    Result.Elements[0][1] = Matrix.Elements[0][1] / Scalar;
-    Result.Elements[0][2] = Matrix.Elements[0][2] / Scalar;
-    Result.Elements[0][3] = Matrix.Elements[0][3] / Scalar;
-    Result.Elements[1][0] = Matrix.Elements[1][0] / Scalar;
-    Result.Elements[1][1] = Matrix.Elements[1][1] / Scalar;
-    Result.Elements[1][2] = Matrix.Elements[1][2] / Scalar;
-    Result.Elements[1][3] = Matrix.Elements[1][3] / Scalar;
-    Result.Elements[2][0] = Matrix.Elements[2][0] / Scalar;
-    Result.Elements[2][1] = Matrix.Elements[2][1] / Scalar;
-    Result.Elements[2][2] = Matrix.Elements[2][2] / Scalar;
-    Result.Elements[2][3] = Matrix.Elements[2][3] / Scalar;
-    Result.Elements[3][0] = Matrix.Elements[3][0] / Scalar;
-    Result.Elements[3][1] = Matrix.Elements[3][1] / Scalar;
-    Result.Elements[3][2] = Matrix.Elements[3][2] / Scalar;
-    Result.Elements[3][3] = Matrix.Elements[3][3] / Scalar;
+    Result.Data[0][0] = Matrix.Data[0][0] / Scalar;
+    Result.Data[0][1] = Matrix.Data[0][1] / Scalar;
+    Result.Data[0][2] = Matrix.Data[0][2] / Scalar;
+    Result.Data[0][3] = Matrix.Data[0][3] / Scalar;
+    Result.Data[1][0] = Matrix.Data[1][0] / Scalar;
+    Result.Data[1][1] = Matrix.Data[1][1] / Scalar;
+    Result.Data[1][2] = Matrix.Data[1][2] / Scalar;
+    Result.Data[1][3] = Matrix.Data[1][3] / Scalar;
+    Result.Data[2][0] = Matrix.Data[2][0] / Scalar;
+    Result.Data[2][1] = Matrix.Data[2][1] / Scalar;
+    Result.Data[2][2] = Matrix.Data[2][2] / Scalar;
+    Result.Data[2][3] = Matrix.Data[2][3] / Scalar;
+    Result.Data[3][0] = Matrix.Data[3][0] / Scalar;
+    Result.Data[3][1] = Matrix.Data[3][1] / Scalar;
+    Result.Data[3][2] = Matrix.Data[3][2] / Scalar;
+    Result.Data[3][3] = Matrix.Data[3][3] / Scalar;
 #endif
 
         return Result;
@@ -1857,14 +1858,14 @@ extern "C"
 
         Mat4 Result = {0};
 
-        Result.Elements[0][0] = 2.0f / (Right - Left);
-        Result.Elements[1][1] = 2.0f / (Top - Bottom);
-        Result.Elements[2][2] = 2.0f / (Near - Far);
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[0][0] = 2.0f / (Right - Left);
+        Result.Data[1][1] = 2.0f / (Top - Bottom);
+        Result.Data[2][2] = 2.0f / (Near - Far);
+        Result.Data[3][3] = 1.0f;
 
-        Result.Elements[3][0] = (Left + Right) / (Left - Right);
-        Result.Elements[3][1] = (Bottom + Top) / (Bottom - Top);
-        Result.Elements[3][2] = (Near + Far) / (Near - Far);
+        Result.Data[3][0] = (Left + Right) / (Left - Right);
+        Result.Data[3][1] = (Bottom + Top) / (Bottom - Top);
+        Result.Data[3][2] = (Near + Far) / (Near - Far);
 
         return Result;
     }
@@ -1879,14 +1880,14 @@ extern "C"
 
         Mat4 Result = {0};
 
-        Result.Elements[0][0] = 2.0f / (Right - Left);
-        Result.Elements[1][1] = 2.0f / (Top - Bottom);
-        Result.Elements[2][2] = 1.0f / (Near - Far);
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[0][0] = 2.0f / (Right - Left);
+        Result.Data[1][1] = 2.0f / (Top - Bottom);
+        Result.Data[2][2] = 1.0f / (Near - Far);
+        Result.Data[3][3] = 1.0f;
 
-        Result.Elements[3][0] = (Left + Right) / (Left - Right);
-        Result.Elements[3][1] = (Bottom + Top) / (Bottom - Top);
-        Result.Elements[3][2] = (Near) / (Near - Far);
+        Result.Data[3][0] = (Left + Right) / (Left - Right);
+        Result.Data[3][1] = (Bottom + Top) / (Bottom - Top);
+        Result.Data[3][2] = (Near) / (Near - Far);
 
         return Result;
     }
@@ -1900,7 +1901,7 @@ extern "C"
         ASSERT_COVERED(Orthographic_LH_NO);
 
         Mat4 Result = Orthographic_RH_NO(Left, Right, Bottom, Top, Near, Far);
-        Result.Elements[2][2] = -Result.Elements[2][2];
+        Result.Data[2][2] = -Result.Data[2][2];
 
         return Result;
     }
@@ -1914,7 +1915,7 @@ extern "C"
         ASSERT_COVERED(Orthographic_LH_ZO);
 
         Mat4 Result = Orthographic_RH_ZO(Left, Right, Bottom, Top, Near, Far);
-        Result.Elements[2][2] = -Result.Elements[2][2];
+        Result.Data[2][2] = -Result.Data[2][2];
 
         return Result;
     }
@@ -1927,14 +1928,14 @@ extern "C"
         ASSERT_COVERED(InvOrthographic);
 
         Mat4 Result = {0};
-        Result.Elements[0][0] = 1.0f / OrthoMatrix.Elements[0][0];
-        Result.Elements[1][1] = 1.0f / OrthoMatrix.Elements[1][1];
-        Result.Elements[2][2] = 1.0f / OrthoMatrix.Elements[2][2];
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[0][0] = 1.0f / OrthoMatrix.Data[0][0];
+        Result.Data[1][1] = 1.0f / OrthoMatrix.Data[1][1];
+        Result.Data[2][2] = 1.0f / OrthoMatrix.Data[2][2];
+        Result.Data[3][3] = 1.0f;
 
-        Result.Elements[3][0] = -OrthoMatrix.Elements[3][0] * Result.Elements[0][0];
-        Result.Elements[3][1] = -OrthoMatrix.Elements[3][1] * Result.Elements[1][1];
-        Result.Elements[3][2] = -OrthoMatrix.Elements[3][2] * Result.Elements[2][2];
+        Result.Data[3][0] = -OrthoMatrix.Data[3][0] * Result.Data[0][0];
+        Result.Data[3][1] = -OrthoMatrix.Data[3][1] * Result.Data[1][1];
+        Result.Data[3][2] = -OrthoMatrix.Data[3][2] * Result.Data[2][2];
 
         return Result;
     }
@@ -1949,12 +1950,12 @@ extern "C"
         // See https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
 
         Float Cotangent = 1.0f / TanF(FOV / 2.0f);
-        Result.Elements[0][0] = Cotangent / AspectRatio;
-        Result.Elements[1][1] = Cotangent;
-        Result.Elements[2][3] = -1.0f;
+        Result.Data[0][0] = Cotangent / AspectRatio;
+        Result.Data[1][1] = Cotangent;
+        Result.Data[2][3] = -1.0f;
 
-        Result.Elements[2][2] = (Near + Far) / (Near - Far);
-        Result.Elements[3][2] = (2.0f * Near * Far) / (Near - Far);
+        Result.Data[2][2] = (Near + Far) / (Near - Far);
+        Result.Data[3][2] = (2.0f * Near * Far) / (Near - Far);
 
         return Result;
     }
@@ -1969,12 +1970,12 @@ extern "C"
         // See https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
 
         Float Cotangent = 1.0f / TanF(FOV / 2.0f);
-        Result.Elements[0][0] = Cotangent / AspectRatio;
-        Result.Elements[1][1] = Cotangent;
-        Result.Elements[2][3] = -1.0f;
+        Result.Data[0][0] = Cotangent / AspectRatio;
+        Result.Data[1][1] = Cotangent;
+        Result.Data[2][3] = -1.0f;
 
-        Result.Elements[2][2] = (Far) / (Near - Far);
-        Result.Elements[3][2] = (Near * Far) / (Near - Far);
+        Result.Data[2][2] = (Far) / (Near - Far);
+        Result.Data[3][2] = (Near * Far) / (Near - Far);
 
         return Result;
     }
@@ -1985,8 +1986,8 @@ extern "C"
         ASSERT_COVERED(Perspective_LH_NO);
 
         Mat4 Result = Perspective_RH_NO(FOV, AspectRatio, Near, Far);
-        Result.Elements[2][2] = -Result.Elements[2][2];
-        Result.Elements[2][3] = -Result.Elements[2][3];
+        Result.Data[2][2] = -Result.Data[2][2];
+        Result.Data[2][3] = -Result.Data[2][3];
 
         return Result;
     }
@@ -1997,8 +1998,8 @@ extern "C"
         ASSERT_COVERED(Perspective_LH_ZO);
 
         Mat4 Result = Perspective_RH_ZO(FOV, AspectRatio, Near, Far);
-        Result.Elements[2][2] = -Result.Elements[2][2];
-        Result.Elements[2][3] = -Result.Elements[2][3];
+        Result.Data[2][2] = -Result.Data[2][2];
+        Result.Data[2][3] = -Result.Data[2][3];
 
         return Result;
     }
@@ -2009,13 +2010,13 @@ extern "C"
         ASSERT_COVERED(InvPerspective_RH);
 
         Mat4 Result = {0};
-        Result.Elements[0][0] = 1.0f / PerspectiveMatrix.Elements[0][0];
-        Result.Elements[1][1] = 1.0f / PerspectiveMatrix.Elements[1][1];
-        Result.Elements[2][2] = 0.0f;
+        Result.Data[0][0] = 1.0f / PerspectiveMatrix.Data[0][0];
+        Result.Data[1][1] = 1.0f / PerspectiveMatrix.Data[1][1];
+        Result.Data[2][2] = 0.0f;
 
-        Result.Elements[2][3] = 1.0f / PerspectiveMatrix.Elements[3][2];
-        Result.Elements[3][3] = PerspectiveMatrix.Elements[2][2] * Result.Elements[2][3];
-        Result.Elements[3][2] = PerspectiveMatrix.Elements[2][3];
+        Result.Data[2][3] = 1.0f / PerspectiveMatrix.Data[3][2];
+        Result.Data[3][3] = PerspectiveMatrix.Data[2][2] * Result.Data[2][3];
+        Result.Data[3][2] = PerspectiveMatrix.Data[2][3];
 
         return Result;
     }
@@ -2026,13 +2027,13 @@ extern "C"
         ASSERT_COVERED(InvPerspective_LH);
 
         Mat4 Result = {0};
-        Result.Elements[0][0] = 1.0f / PerspectiveMatrix.Elements[0][0];
-        Result.Elements[1][1] = 1.0f / PerspectiveMatrix.Elements[1][1];
-        Result.Elements[2][2] = 0.0f;
+        Result.Data[0][0] = 1.0f / PerspectiveMatrix.Data[0][0];
+        Result.Data[1][1] = 1.0f / PerspectiveMatrix.Data[1][1];
+        Result.Data[2][2] = 0.0f;
 
-        Result.Elements[2][3] = 1.0f / PerspectiveMatrix.Elements[3][2];
-        Result.Elements[3][3] = PerspectiveMatrix.Elements[2][2] * -Result.Elements[2][3];
-        Result.Elements[3][2] = PerspectiveMatrix.Elements[2][3];
+        Result.Data[2][3] = 1.0f / PerspectiveMatrix.Data[3][2];
+        Result.Data[3][3] = PerspectiveMatrix.Data[2][2] * -Result.Data[2][3];
+        Result.Data[3][2] = PerspectiveMatrix.Data[2][3];
 
         return Result;
     }
@@ -2043,9 +2044,9 @@ extern "C"
         ASSERT_COVERED(TranslateV3);
 
         Mat4 Result = M4D(1.0f);
-        Result.Elements[3][0] = Translation.X;
-        Result.Elements[3][1] = Translation.Y;
-        Result.Elements[3][2] = Translation.Z;
+        Result.Data[3][0] = Translation.X;
+        Result.Data[3][1] = Translation.Y;
+        Result.Data[3][2] = Translation.Z;
 
         return Result;
     }
@@ -2056,9 +2057,9 @@ extern "C"
         ASSERT_COVERED(InvTranslate);
 
         Mat4 Result = TranslationMatrix;
-        Result.Elements[3][0] = -Result.Elements[3][0];
-        Result.Elements[3][1] = -Result.Elements[3][1];
-        Result.Elements[3][2] = -Result.Elements[3][2];
+        Result.Data[3][0] = -Result.Data[3][0];
+        Result.Data[3][1] = -Result.Data[3][1];
+        Result.Data[3][2] = -Result.Data[3][2];
 
         return Result;
     }
@@ -2076,17 +2077,17 @@ extern "C"
         Float CosTheta = CosF(Angle);
         Float CosValue = 1.0f - CosTheta;
 
-        Result.Elements[0][0] = (Axis.X * Axis.X * CosValue) + CosTheta;
-        Result.Elements[0][1] = (Axis.X * Axis.Y * CosValue) + (Axis.Z * SinTheta);
-        Result.Elements[0][2] = (Axis.X * Axis.Z * CosValue) - (Axis.Y * SinTheta);
+        Result.Data[0][0] = (Axis.X * Axis.X * CosValue) + CosTheta;
+        Result.Data[0][1] = (Axis.X * Axis.Y * CosValue) + (Axis.Z * SinTheta);
+        Result.Data[0][2] = (Axis.X * Axis.Z * CosValue) - (Axis.Y * SinTheta);
 
-        Result.Elements[1][0] = (Axis.Y * Axis.X * CosValue) - (Axis.Z * SinTheta);
-        Result.Elements[1][1] = (Axis.Y * Axis.Y * CosValue) + CosTheta;
-        Result.Elements[1][2] = (Axis.Y * Axis.Z * CosValue) + (Axis.X * SinTheta);
+        Result.Data[1][0] = (Axis.Y * Axis.X * CosValue) - (Axis.Z * SinTheta);
+        Result.Data[1][1] = (Axis.Y * Axis.Y * CosValue) + CosTheta;
+        Result.Data[1][2] = (Axis.Y * Axis.Z * CosValue) + (Axis.X * SinTheta);
 
-        Result.Elements[2][0] = (Axis.Z * Axis.X * CosValue) + (Axis.Y * SinTheta);
-        Result.Elements[2][1] = (Axis.Z * Axis.Y * CosValue) - (Axis.X * SinTheta);
-        Result.Elements[2][2] = (Axis.Z * Axis.Z * CosValue) + CosTheta;
+        Result.Data[2][0] = (Axis.Z * Axis.X * CosValue) + (Axis.Y * SinTheta);
+        Result.Data[2][1] = (Axis.Z * Axis.Y * CosValue) - (Axis.X * SinTheta);
+        Result.Data[2][2] = (Axis.Z * Axis.Z * CosValue) + CosTheta;
 
         return Result;
     }
@@ -2112,9 +2113,9 @@ extern "C"
         ASSERT_COVERED(ScaleV3);
 
         Mat4 Result = M4D(1.0f);
-        Result.Elements[0][0] = Scale.X;
-        Result.Elements[1][1] = Scale.Y;
-        Result.Elements[2][2] = Scale.Z;
+        Result.Data[0][0] = Scale.X;
+        Result.Data[1][1] = Scale.Y;
+        Result.Data[2][2] = Scale.Z;
 
         return Result;
     }
@@ -2125,9 +2126,9 @@ extern "C"
         ASSERT_COVERED(InvScale);
 
         Mat4 Result = ScaleMatrix;
-        Result.Elements[0][0] = 1.0f / Result.Elements[0][0];
-        Result.Elements[1][1] = 1.0f / Result.Elements[1][1];
-        Result.Elements[2][2] = 1.0f / Result.Elements[2][2];
+        Result.Data[0][0] = 1.0f / Result.Data[0][0];
+        Result.Data[1][1] = 1.0f / Result.Data[1][1];
+        Result.Data[2][2] = 1.0f / Result.Data[2][2];
 
         return Result;
     }
@@ -2136,25 +2137,25 @@ extern "C"
     {
         Mat4 Result;
 
-        Result.Elements[0][0] = S.X;
-        Result.Elements[0][1] = U.X;
-        Result.Elements[0][2] = -F.X;
-        Result.Elements[0][3] = 0.0f;
+        Result.Data[0][0] = S.X;
+        Result.Data[0][1] = U.X;
+        Result.Data[0][2] = -F.X;
+        Result.Data[0][3] = 0.0f;
 
-        Result.Elements[1][0] = S.Y;
-        Result.Elements[1][1] = U.Y;
-        Result.Elements[1][2] = -F.Y;
-        Result.Elements[1][3] = 0.0f;
+        Result.Data[1][0] = S.Y;
+        Result.Data[1][1] = U.Y;
+        Result.Data[1][2] = -F.Y;
+        Result.Data[1][3] = 0.0f;
 
-        Result.Elements[2][0] = S.Z;
-        Result.Elements[2][1] = U.Z;
-        Result.Elements[2][2] = -F.Z;
-        Result.Elements[2][3] = 0.0f;
+        Result.Data[2][0] = S.Z;
+        Result.Data[2][1] = U.Z;
+        Result.Data[2][2] = -F.Z;
+        Result.Data[2][3] = 0.0f;
 
-        Result.Elements[3][0] = -DotV3(S, Eye);
-        Result.Elements[3][1] = -DotV3(U, Eye);
-        Result.Elements[3][2] = DotV3(F, Eye);
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[3][0] = -DotV3(S, Eye);
+        Result.Data[3][1] = -DotV3(U, Eye);
+        Result.Data[3][2] = DotV3(F, Eye);
+        Result.Data[3][3] = 1.0f;
 
         return Result;
     }
@@ -2199,13 +2200,13 @@ extern "C"
         Result.Columns[1] = V4V(Rotation.Columns[1], 0.0f);
         Result.Columns[2] = V4V(Rotation.Columns[2], 0.0f);
         Result.Columns[3] = MulV4F(Matrix.Columns[3], -1.0f);
-        Result.Elements[3][0] = -1.0f * Matrix.Elements[3][0] /
-                                (Rotation.Elements[0][0] + Rotation.Elements[0][1] + Rotation.Elements[0][2]);
-        Result.Elements[3][1] = -1.0f * Matrix.Elements[3][1] /
-                                (Rotation.Elements[1][0] + Rotation.Elements[1][1] + Rotation.Elements[1][2]);
-        Result.Elements[3][2] = -1.0f * Matrix.Elements[3][2] /
-                                (Rotation.Elements[2][0] + Rotation.Elements[2][1] + Rotation.Elements[2][2]);
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[3][0] = -1.0f * Matrix.Data[3][0] /
+                                (Rotation.Data[0][0] + Rotation.Data[0][1] + Rotation.Data[0][2]);
+        Result.Data[3][1] = -1.0f * Matrix.Data[3][1] /
+                                (Rotation.Data[1][0] + Rotation.Data[1][1] + Rotation.Data[1][2]);
+        Result.Data[3][2] = -1.0f * Matrix.Data[3][2] /
+                                (Rotation.Data[2][0] + Rotation.Data[2][1] + Rotation.Data[2][2]);
+        Result.Data[3][3] = 1.0f;
 
         return Result;
     }
@@ -2315,25 +2316,25 @@ extern "C"
         SSEResultTwo = _mm_shuffle_ps(Right.SSE, Right.SSE, _MM_SHUFFLE(3, 2, 1, 0));
         Result.SSE = _mm_add_ps(SSEResultThree, _mm_mul_ps(SSEResultTwo, SSEResultOne));
 #else
-    Result.X = Right.Elements[3] * +Left.Elements[0];
-    Result.Y = Right.Elements[2] * -Left.Elements[0];
-    Result.Z = Right.Elements[1] * +Left.Elements[0];
-    Result.W = Right.Elements[0] * -Left.Elements[0];
+    Result.X = Right.Data[3] * +Left.Data[0];
+    Result.Y = Right.Data[2] * -Left.Data[0];
+    Result.Z = Right.Data[1] * +Left.Data[0];
+    Result.W = Right.Data[0] * -Left.Data[0];
 
-    Result.X += Right.Elements[2] * +Left.Elements[1];
-    Result.Y += Right.Elements[3] * +Left.Elements[1];
-    Result.Z += Right.Elements[0] * -Left.Elements[1];
-    Result.W += Right.Elements[1] * -Left.Elements[1];
+    Result.X += Right.Data[2] * +Left.Data[1];
+    Result.Y += Right.Data[3] * +Left.Data[1];
+    Result.Z += Right.Data[0] * -Left.Data[1];
+    Result.W += Right.Data[1] * -Left.Data[1];
 
-    Result.X += Right.Elements[1] * -Left.Elements[2];
-    Result.Y += Right.Elements[0] * +Left.Elements[2];
-    Result.Z += Right.Elements[3] * +Left.Elements[2];
-    Result.W += Right.Elements[2] * -Left.Elements[2];
+    Result.X += Right.Data[1] * -Left.Data[2];
+    Result.Y += Right.Data[0] * +Left.Data[2];
+    Result.Z += Right.Data[3] * +Left.Data[2];
+    Result.W += Right.Data[2] * -Left.Data[2];
 
-    Result.X += Right.Elements[0] * +Left.Elements[3];
-    Result.Y += Right.Elements[1] * +Left.Elements[3];
-    Result.Z += Right.Elements[2] * +Left.Elements[3];
-    Result.W += Right.Elements[3] * +Left.Elements[3];
+    Result.X += Right.Data[0] * +Left.Data[3];
+    Result.Y += Right.Data[1] * +Left.Data[3];
+    Result.Z += Right.Data[2] * +Left.Data[3];
+    Result.W += Right.Data[3] * +Left.Data[3];
 #endif
 
         return Result;
@@ -2514,25 +2515,25 @@ extern "C"
         WY = NormalizedQ.W * NormalizedQ.Y;
         WZ = NormalizedQ.W * NormalizedQ.Z;
 
-        Result.Elements[0][0] = 1.0f - 2.0f * (YY + ZZ);
-        Result.Elements[0][1] = 2.0f * (XY + WZ);
-        Result.Elements[0][2] = 2.0f * (XZ - WY);
-        Result.Elements[0][3] = 0.0f;
+        Result.Data[0][0] = 1.0f - 2.0f * (YY + ZZ);
+        Result.Data[0][1] = 2.0f * (XY + WZ);
+        Result.Data[0][2] = 2.0f * (XZ - WY);
+        Result.Data[0][3] = 0.0f;
 
-        Result.Elements[1][0] = 2.0f * (XY - WZ);
-        Result.Elements[1][1] = 1.0f - 2.0f * (XX + ZZ);
-        Result.Elements[1][2] = 2.0f * (YZ + WX);
-        Result.Elements[1][3] = 0.0f;
+        Result.Data[1][0] = 2.0f * (XY - WZ);
+        Result.Data[1][1] = 1.0f - 2.0f * (XX + ZZ);
+        Result.Data[1][2] = 2.0f * (YZ + WX);
+        Result.Data[1][3] = 0.0f;
 
-        Result.Elements[2][0] = 2.0f * (XZ + WY);
-        Result.Elements[2][1] = 2.0f * (YZ - WX);
-        Result.Elements[2][2] = 1.0f - 2.0f * (XX + YY);
-        Result.Elements[2][3] = 0.0f;
+        Result.Data[2][0] = 2.0f * (XZ + WY);
+        Result.Data[2][1] = 2.0f * (YZ - WX);
+        Result.Data[2][2] = 1.0f - 2.0f * (XX + YY);
+        Result.Data[2][3] = 0.0f;
 
-        Result.Elements[3][0] = 0.0f;
-        Result.Elements[3][1] = 0.0f;
-        Result.Elements[3][2] = 0.0f;
-        Result.Elements[3][3] = 1.0f;
+        Result.Data[3][0] = 0.0f;
+        Result.Data[3][1] = 0.0f;
+        Result.Data[3][2] = 0.0f;
+        Result.Data[3][3] = 1.0f;
 
         return Result;
     }
@@ -2547,7 +2548,7 @@ extern "C"
     //
     // For example, m12 in the paper is row 1, column 2. We need to transpose it to
     // row 2, column 1. But, because the column comes first when referencing
-    // elements, it looks like M.Elements[1][2].
+    // elements, it looks like M.Data[1][2].
     //
     // Don't be confused! Or if you must be confused, at least trust this
     // comment. :)
@@ -2557,53 +2558,53 @@ extern "C"
         Float T;
         Quat Result;
 
-        if (M.Elements[2][2] < 0.0f)
+        if (M.Data[2][2] < 0.0f)
         {
-            if (M.Elements[0][0] > M.Elements[1][1])
+            if (M.Data[0][0] > M.Data[1][1])
             {
                 ASSERT_COVERED(M4ToQ_RH);
 
-                T = 1 + M.Elements[0][0] - M.Elements[1][1] - M.Elements[2][2];
+                T = 1 + M.Data[0][0] - M.Data[1][1] - M.Data[2][2];
                 Result = Q(
                     T,
-                    M.Elements[0][1] + M.Elements[1][0],
-                    M.Elements[2][0] + M.Elements[0][2],
-                    M.Elements[1][2] - M.Elements[2][1]);
+                    M.Data[0][1] + M.Data[1][0],
+                    M.Data[2][0] + M.Data[0][2],
+                    M.Data[1][2] - M.Data[2][1]);
             }
             else
             {
                 ASSERT_COVERED(M4ToQ_RH);
 
-                T = 1 - M.Elements[0][0] + M.Elements[1][1] - M.Elements[2][2];
+                T = 1 - M.Data[0][0] + M.Data[1][1] - M.Data[2][2];
                 Result = Q(
-                    M.Elements[0][1] + M.Elements[1][0],
+                    M.Data[0][1] + M.Data[1][0],
                     T,
-                    M.Elements[1][2] + M.Elements[2][1],
-                    M.Elements[2][0] - M.Elements[0][2]);
+                    M.Data[1][2] + M.Data[2][1],
+                    M.Data[2][0] - M.Data[0][2]);
             }
         }
         else
         {
-            if (M.Elements[0][0] < -M.Elements[1][1])
+            if (M.Data[0][0] < -M.Data[1][1])
             {
                 ASSERT_COVERED(M4ToQ_RH);
 
-                T = 1 - M.Elements[0][0] - M.Elements[1][1] + M.Elements[2][2];
+                T = 1 - M.Data[0][0] - M.Data[1][1] + M.Data[2][2];
                 Result = Q(
-                    M.Elements[2][0] + M.Elements[0][2],
-                    M.Elements[1][2] + M.Elements[2][1],
+                    M.Data[2][0] + M.Data[0][2],
+                    M.Data[1][2] + M.Data[2][1],
                     T,
-                    M.Elements[0][1] - M.Elements[1][0]);
+                    M.Data[0][1] - M.Data[1][0]);
             }
             else
             {
                 ASSERT_COVERED(M4ToQ_RH);
 
-                T = 1 + M.Elements[0][0] + M.Elements[1][1] + M.Elements[2][2];
+                T = 1 + M.Data[0][0] + M.Data[1][1] + M.Data[2][2];
                 Result = Q(
-                    M.Elements[1][2] - M.Elements[2][1],
-                    M.Elements[2][0] - M.Elements[0][2],
-                    M.Elements[0][1] - M.Elements[1][0],
+                    M.Data[1][2] - M.Data[2][1],
+                    M.Data[2][0] - M.Data[0][2],
+                    M.Data[0][1] - M.Data[1][0],
                     T);
             }
         }
@@ -2619,53 +2620,53 @@ extern "C"
         Float T;
         Quat Result;
 
-        if (M.Elements[2][2] < 0.0f)
+        if (M.Data[2][2] < 0.0f)
         {
-            if (M.Elements[0][0] > M.Elements[1][1])
+            if (M.Data[0][0] > M.Data[1][1])
             {
                 ASSERT_COVERED(M4ToQ_LH);
 
-                T = 1 + M.Elements[0][0] - M.Elements[1][1] - M.Elements[2][2];
+                T = 1 + M.Data[0][0] - M.Data[1][1] - M.Data[2][2];
                 Result = Q(
                     T,
-                    M.Elements[0][1] + M.Elements[1][0],
-                    M.Elements[2][0] + M.Elements[0][2],
-                    M.Elements[2][1] - M.Elements[1][2]);
+                    M.Data[0][1] + M.Data[1][0],
+                    M.Data[2][0] + M.Data[0][2],
+                    M.Data[2][1] - M.Data[1][2]);
             }
             else
             {
                 ASSERT_COVERED(M4ToQ_LH);
 
-                T = 1 - M.Elements[0][0] + M.Elements[1][1] - M.Elements[2][2];
+                T = 1 - M.Data[0][0] + M.Data[1][1] - M.Data[2][2];
                 Result = Q(
-                    M.Elements[0][1] + M.Elements[1][0],
+                    M.Data[0][1] + M.Data[1][0],
                     T,
-                    M.Elements[1][2] + M.Elements[2][1],
-                    M.Elements[0][2] - M.Elements[2][0]);
+                    M.Data[1][2] + M.Data[2][1],
+                    M.Data[0][2] - M.Data[2][0]);
             }
         }
         else
         {
-            if (M.Elements[0][0] < -M.Elements[1][1])
+            if (M.Data[0][0] < -M.Data[1][1])
             {
                 ASSERT_COVERED(M4ToQ_LH);
 
-                T = 1 - M.Elements[0][0] - M.Elements[1][1] + M.Elements[2][2];
+                T = 1 - M.Data[0][0] - M.Data[1][1] + M.Data[2][2];
                 Result = Q(
-                    M.Elements[2][0] + M.Elements[0][2],
-                    M.Elements[1][2] + M.Elements[2][1],
+                    M.Data[2][0] + M.Data[0][2],
+                    M.Data[1][2] + M.Data[2][1],
                     T,
-                    M.Elements[1][0] - M.Elements[0][1]);
+                    M.Data[1][0] - M.Data[0][1]);
             }
             else
             {
                 ASSERT_COVERED(M4ToQ_LH);
 
-                T = 1 + M.Elements[0][0] + M.Elements[1][1] + M.Elements[2][2];
+                T = 1 + M.Data[0][0] + M.Data[1][1] + M.Data[2][2];
                 Result = Q(
-                    M.Elements[2][1] - M.Elements[1][2],
-                    M.Elements[0][2] - M.Elements[2][0],
-                    M.Elements[1][0] - M.Elements[0][2],
+                    M.Data[2][1] - M.Data[1][2],
+                    M.Data[0][2] - M.Data[2][0],
+                    M.Data[1][0] - M.Data[0][2],
                     T);
             }
         }
@@ -4037,7 +4038,7 @@ static inline Vec4 operator-(Vec4 In)
     Vec3: MaxV3,                \
     Vec4: MaxV4)(A, B)
 
-#define Abs(V) _Generic((A), \
+#define Abs(V) _Generic((V), \
     Float: Abs,              \
     Vec2: AbsV2,             \
     Vec3: AbsV3,             \

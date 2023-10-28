@@ -16,6 +16,14 @@ AABB AABBEnvelop(AABB Self, Vec2 Point)
 	};
 }
 
+AABB AABBTranslate(AABB Self, Vec2 Translation)
+{
+	return (AABB){
+		.MinBound = Add(Self.MinBound, Translation),
+		.MaxBound = Add(Self.MaxBound, Translation),
+	};
+}
+
 bool AABBIsValid(AABB Self)
 {
 	Vec2 Size = Sub(Self.MaxBound, Self.MinBound);
@@ -63,6 +71,80 @@ bool AABBTestOverlap(AABB A, AABB B)
 	Vec2 D2 = Sub(A.MinBound, B.MaxBound);
 	bool Result = D1.X <= 0 && D1.Y <= 0 && D2.X <= 0 && D2.Y <= 0;
 	return Result;
+}
+
+bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
+{
+	ASSERT(In != NULL);
+	ASSERT(Out != NULL);
+
+	real32 TMin = -KMaxFloat32;
+	real32 TMax = KMaxFloat32;
+	Vec2 Normal = V2(0, 0);
+	ZERO_STRUCT(Out);
+
+	Vec2 Point = In->Start;
+	Vec2 Dir = Sub(In->End, In->Start);
+	Vec2 AbsDir = Abs(Dir);
+
+	if (AbsDir.X < KEpsilonFloat32) {
+		if (Point.X < Self.MinBound.X || Point.X > Self.MaxBound.X) {
+			return false;
+		}
+	} else {
+		real32 InvDirX = 1.0f / Dir.X;
+		real32 T1 = (Self.MinBound.X - Point.X) * InvDirX;
+		real32 T2 = (Self.MaxBound.X - Point.X) * InvDirX;
+		real32 S = -1.0f;
+
+		if (T1 > T2) {
+			Swap(T1, T2);
+			S = 1.0f;
+		}
+
+		if (T1 > TMin) {
+			Normal.X = S;
+		}
+
+		TMax = Min(TMax, T2);
+		if (TMin > TMax) {
+			return false;
+		}
+	}
+
+	if (AbsDir.Y < KEpsilonFloat32) {
+		if (Point.Y < Self.MinBound.Y || Point.Y > Self.MaxBound.Y) {
+			return false;
+		}
+	} else {
+		real32 InvDirY = 1.0f / Dir.Y;
+		real32 T1 = (Self.MinBound.Y - Point.Y) * InvDirY;
+		real32 T2 = (Self.MaxBound.Y - Point.Y) * InvDirY;
+		real32 S = -1.0f;
+
+		if (T1 > T2) {
+			Swap(T1, T2);
+			S = 1.0f;
+		}
+
+		if (T1 > TMin) {
+			Normal.X = 0;
+			Normal.Y = S;
+		}
+
+		TMax = Min(TMax, T2);
+		if (TMin > TMax) {
+			return false;
+		}
+	}
+
+	if (TMin < 0.0f || In->Fraction < TMin) {
+		return false;
+	}
+
+	Out->Fraction = TMin;
+	Out->Normal = Normal;
+	return true;
 }
 
 Vec2 R2(real32 Angle)
@@ -124,51 +206,4 @@ Vec2 TransformV2(Vec2 Point, Rot2 Rotation, Vec2 Translation)
 Vec2 InvTransformV2(Vec2 Point, Rot2 Rotation, Vec2 Translation)
 {
 	return R2InvRotate(Rotation, Sub(Point, Translation));
-}
-
-PhysShapeHandle PhysCreateCircleShape(Vec2 Center, real32 Radius);
-PhysShapeHandle PhysCreatePolygonShape(Vec2* Points, size_t PointsCount);
-PhysShapeHandle PhysCreateBoxShape(Vec2 HalfSize);
-
-PhysCircleShape* PhysTryGetCircleShape(PhysShapeHandle HShape);
-PhysPolygonShape* PhysTryGetPolygonShape(PhysShapeHandle HShape);
-
-bool PhysShapeTestPoint(Vec2 TxPos, PhysShapeHandle HShape, Rot2 TxRot, Vec2 TestPoint)
-{
-	switch (Shape->Type) {
-		case ShapeType_Circle:
-
-		case ShapeType_Box:
-
-			break;
-
-		default:
-		case ShapeType_None:
-			unreachable();
-			break;
-	}
-}
-
-bool PhysCircleShapeTestPoint(Vec2 TestPoint, const PhysCircleShape* CircleShape, Vec2 TxPos, Rot2 TxRot)
-{
-	Vec2 TransformedCenter = TransformV2(CircleShape->Center, TxRot, TxPos);
-	Vec2 Delta = Sub(TestPoint, TransformedCenter);
-	return Dot(Delta, Delta) <= CircleShape->Radius * CircleShape->Radius;
-}
-
-bool PhysPolygonShapeTestPoint(Vec2 TestPoint, const PhysPolygonShape* PolygonShape, Vec2 TxPos, Rot2 TxRot)
-{
-	bool Result = true;
-	Vec2 LocalPoint = InvTransformV2(TestPoint, TxRot, TxPos);
-
-	for (int32 VertIndex = 0; VertIndex < PolygonShape->VertexCount; VertIndex++) {
-		Vec2 Delta = Sub(LocalPoint, PolygonShape->Vertices[VertIndex]);
-		real32 D = Dot(PolygonShape->Normals[VertIndex], Delta);
-		if (D > 0.0f) {
-			Result = false;
-			break;
-		}
-	}
-
-	return Result;
 }
