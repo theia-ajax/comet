@@ -1,8 +1,7 @@
 #pragma once
 
 #include "AssetTypes.h"
-#include "Math.h"
-#include "PhysMath.h"
+#include "Math2D.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "Types.h"
 
 typedef union SDL_Event SDL_Event;
 typedef struct SDL_Window SDL_Window;

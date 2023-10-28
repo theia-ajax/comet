@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PhysMath.h"
+#include "Math2D.h"
 
 typedef struct PhysWorld PhysWorld;
 

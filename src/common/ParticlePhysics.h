@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Math.h"
+#include "Math2D.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 

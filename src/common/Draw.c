@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 #include <json.h>
 
-#include "PhysMath.h"
+#include "Math2D.h"
 
 // Constants
 

@@ -1,4 +1,4 @@
-#include "PhysMath.h"
+#include "Math2D.h"
 
 AABB AABBCreateCenterExtents(Vec2 Center, Vec2 Extents)
 {
@@ -195,6 +195,7 @@ flt32 CrossV2(Vec2 A, Vec2 B)
 {
 	return A.X * B.Y - B.X * A.Y;
 }
+
 // Produces a vector perpendicular to A and with magnitude |A|*S
 // If S == 1 simply produces perpendicular vector
 Vec2 CrossV2F(Vec2 A, flt32 S)

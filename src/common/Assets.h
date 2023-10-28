@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Math.h"
+#include "Math2D.h"
 #include "StringId.h"
-#include "types.h"
+#include "Types.h"
 
 typedef struct SDL_Surface SDL_Surface;
 

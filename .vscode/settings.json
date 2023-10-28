@@ -55,7 +55,8 @@
         "math.h": "c",
         "jsonhelpers.h": "c",
         "assets.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "draw.h": "c"
     },
     "game_target": "comet"
 }

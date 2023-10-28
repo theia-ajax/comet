@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "types.h"
+#include "Types.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 

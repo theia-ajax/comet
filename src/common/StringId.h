@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "Types.h"
 
 typedef struct StringId {
 	uint32 Id;

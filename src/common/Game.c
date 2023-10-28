@@ -8,8 +8,7 @@
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
-#include "Math.h"
-#include "PhysMath.h"
+#include "Math2D.h"
 #include "Random.h"
 #include "StringId.h"
 

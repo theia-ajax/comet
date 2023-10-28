@@ -208,6 +208,10 @@ extern "C"
 #define DegToTurn ((Float)(KTurnHalf / KDeg180))
 #define TurnToRad ((Float)(KPi / KTurnHalf))
 #define TurnToDeg ((Float)(KDeg180 / KTurnHalf))
+#define KEpsilonFloat64 0.000000001
+#define KEpsilonFloat32 0.00001f
+#define KMaxFloat32 FLT_MAX
+#define KMaxFloat64 DBL_MAX
 
 #if defined(HANDMADE_MATH_USE_RADIANS)
 #define AngleRad(a) (a)
@@ -618,6 +622,14 @@ extern "C"
     {
         ASSERT_COVERED(IsFinite)
         return ISFINITE(Value);
+    }
+
+    // TODO: V2/3/4 versions? Quat? Mat2/3/4?
+    COVERAGE(Approx, 1)
+    static inline bool Approx(Float a, Float b)
+    {
+        ASSERT_COVERED(Approx)
+        return fabs(a - b) <= KEpsilonFloat32;
     }
 
     /*

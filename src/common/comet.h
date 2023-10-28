@@ -1,7 +1,7 @@
 #pragma once
 
 // #include "config.h"
-// #include "types.h"
+// #include "Types.h"
 // #include "util.h"
 // #include <SDL2/SDL_rect.h>
 

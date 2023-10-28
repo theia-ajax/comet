@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "Types.h"
 
 typedef enum AssetTypeId {
 	AssetTypeId_Invalid,
