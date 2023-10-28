@@ -192,10 +192,16 @@ extern "C"
 
 #define KPi 3.14159265358979323846
 #define KPi32 3.14159265359f
+#define KTau 6.28318530717958647692
+#define KTau32 6.28318530718f
 #define KDeg180 180.0
 #define KDeg18032 180.0f
+#define KDeg360 360.0
+#define KDeg36032 360.0f
 #define KTurnHalf 0.5
 #define KTurnHalf32 0.5f
+#define KTurnFull 1.0
+#define KTurnFull32 1.0f
 #define RadToDeg ((Float)(KDeg180 / KPi))
 #define RadToTurn ((Float)(KTurnHalf / KPi))
 #define DegToRad ((Float)(KPi / KDeg180))
@@ -207,14 +213,20 @@ extern "C"
 #define AngleRad(a) (a)
 #define AngleDeg(a) ((a) * DegToRad)
 #define AngleTurn(a) ((a) * TurnToRad)
+#define KUnitFullTurn KTau
+#define KUnitFullTurn32 KTau32
 #elif defined(HANDMADE_MATH_USE_DEGREES)
 #define AngleRad(a) ((a) * RadToDeg)
 #define AngleDeg(a) (a)
 #define AngleTurn(a) ((a) * TurnToDeg)
+#define KUnitFullTurn KDeg360
+#define KUnitFullTurn32 KDeg36032
 #elif defined(HANDMADE_MATH_USE_TURNS)
 #define AngleRad(a) ((a) * RadToTurn)
 #define AngleDeg(a) ((a) * DegToTurn)
 #define AngleTurn(a) (a)
+#define KUnitFullTurn KTurnFull
+#define KUnitFullTurn32 KTurnFull32
 #endif
 
 #if !defined(HANDMADE_MATH_PROVIDE_MATH_FUNCTIONS)
@@ -3969,42 +3981,38 @@ static inline Vec4 operator-(Vec4 In)
 
 #define Mul(A, B) _Generic((B), \
     Float: _Generic((A),        \
-    Vec2: MulV2F,               \
-    Vec3: MulV3F,               \
-    Vec4: MulV4F,               \
-    Mat2: MulM2F,               \
-    Mat3: MulM3F,               \
-    Mat4: MulM4F,               \
-    Quat: MulQF),               \
-    Mat2: MulM2,                \
-    Mat3: MulM3,                \
-    Mat4: MulM4,                \
-    Quat: MulQ,                 \
+        Vec2: MulV2F,               \
+        Vec3: MulV3F,               \
+        Vec4: MulV4F,               \
+        Mat2: MulM2F,               \
+        Mat3: MulM3F,               \
+        Mat4: MulM4F,               \
+        Quat: MulQF),               \
+        Mat2: MulM2,                \
+        Mat3: MulM3,                \
+        Mat4: MulM4,                \
+        Quat: MulQ,                 \
     default: _Generic((A),      \
-    Vec2: MulV2,                \
-    Vec3: MulV3,                \
-    Vec4: MulV4,                \
-    Mat2: MulM2V2,              \
-    Mat3: MulM3V3,              \
-    Mat4: MulM4V4))(A, B)
+        Vec2: MulV2,                \
+        Vec3: MulV3,                \
+        Vec4: MulV4,                \
+        Mat2: MulM2V2,              \
+        Mat3: MulM3V3,              \
+        Mat4: MulM4V4))(A, B)
 
 #define Div(A, B) _Generic((B), \
     Float: _Generic((A),        \
-    Mat2: DivM2F,               \
-    Mat3: DivM3F,               \
-    Mat4: DivM4F,               \
-    Vec2: DivV2F,               \
-    Vec3: DivV3F,               \
-    Vec4: DivV4F,               \
-    Quat: DivQF),               \
-    Mat2: DivM2,                \
-    Mat3: DivM3,                \
-    Mat4: DivM4,                \
-    Quat: DivQ,                 \
+        Mat2: DivM2F,               \
+        Mat3: DivM3F,               \
+        Mat4: DivM4F,               \
+        Vec2: DivV2F,               \
+        Vec3: DivV3F,               \
+        Vec4: DivV4F,               \
+        Quat: DivQF),               \
     default: _Generic((A),      \
-    Vec2: DivV2,                \
-    Vec3: DivV3,                \
-    Vec4: DivV4))(A, B)
+        Vec2: DivV2,                \
+        Vec3: DivV3,                \
+        Vec4: DivV4))(A, B)
 
 #define Len(A) _Generic((A), \
     Vec2: LenV2,             \

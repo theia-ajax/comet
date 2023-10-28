@@ -9,6 +9,7 @@
 #include "Debug.h"
 #include "Draw.h"
 #include "Math.h"
+#include "PhysMath.h"
 #include "Random.h"
 #include "StringId.h"
 
@@ -37,6 +38,7 @@ typedef enum Affiliation {
 
 typedef struct CometShip {
 	Vec2 Position;
+	flt32 Rotation;
 	int32 SpriteId;
 } CometShip;
 
@@ -44,8 +46,8 @@ typedef struct Projectile {
 	uint32 Flags;
 	Vec2 Position;
 	Vec2 Velocity;
-	real32 Facing;
-	real32 SecondsRemaining;
+	flt32 Facing;
+	flt32 SecondsRemaining;
 	Affiliation Affiliation;
 } Projectile;
 
@@ -59,7 +61,7 @@ typedef struct GameState {
 #define GetImage(Id) GGame.ImageAssets[Id]
 static Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
 static void DestroyProjectile(GameState* gameState, Projectile* projectile);
-static uint32 HsvToArgb8888(real32 H, real32 S, real32 V);
+static uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V);
 
 struct {
 	bool IsRunning;
@@ -73,7 +75,7 @@ struct {
 	SpriteSheetAsset* ShipObjectsSheet;
 	int32 Frame;
 	GameState State;
-	real32 Timer;
+	flt32 Timer;
 	ImageAsset* HeatRampImage;
 	uint32 HeatRampColors[256];
 	int32 HeatRampCount;
@@ -84,6 +86,9 @@ int32 ExplosionsSpriteIds[11] = {0};
 
 StringId GProjectileSpriteName;
 
+Circle GCircles[10];
+Polygon GBox;
+
 bool GameInitialize(const GameInitParams* params)
 {
 	StringIdPoolsInitialize();
@@ -93,13 +98,13 @@ bool GameInitialize(const GameInitParams* params)
 
 	GProjectileSpriteName = GetStringId("projectile01-1");
 
-	int32 GameResWidth = 576;	// 576;
-	int32 GameRestHeight = 324; // 324;
+	int32 GameResWidth = 576;  // 576;
+	int32 GameResHeight = 324; // 324;
 
 	GGame.IsRunning = true;
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, -1, SDL_RENDERER_ACCELERATED);
-	SDL_RenderSetLogicalSize(GGame.Renderer, GameResWidth, GameRestHeight);
+	SDL_RenderSetLogicalSize(GGame.Renderer, GameResWidth, GameResHeight);
 
 	igCreateContext(NULL);
 	GGame.ImGui.IO = igGetIO();
@@ -108,7 +113,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GameResWidth,
-		.CanvasHeight = GameRestHeight,
+		.CanvasHeight = GameResHeight,
 	});
 
 	ImGui_ImplSDL2_InitForSDLRenderer(GGame.Window, GGame.Renderer);
@@ -171,6 +176,17 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	};
 
+	for (int32 Index = 0; Index < ARRAY_COUNT(GCircles); Index++) {
+		Vec2 Pos = V2(rnd_pcg_nextf(&GGame.RandomGen) * GameResWidth, rnd_pcg_nextf(&GGame.RandomGen) * GameResHeight);
+		GCircles[Index] = (Circle){
+			.Center = Pos,
+			.Radius = 16,
+		};
+	}
+	PolygonMakeBox(&GBox, V2(12.0f, 24.0f), V2(0, 0), 0.0f);
+	GBox.Centroid = V2(0, 10);
+	// GBox.Centroid = V2(GameResWidth / 2, GameResHeight / 2);
+
 	return true;
 }
 
@@ -213,11 +229,12 @@ void GameUpdate(const GameTime* gameTime)
 		const float KSpeed = 64.0f;
 		Vec2 Delta = Mul(MoveInput, KSpeed * gameTime->DeltaTimeF);
 		State->CometShips[0].Position = Add(State->CometShips[0].Position, Delta);
+		State->CometShips[0].Rotation += gameTime->DeltaTimeF;
 	}
 
 	if (GGame.Frame % 17 == 0) {
-		real32 yy[] = {-0.1f, -0.05f, 0.0f, 0.05f, 0.1f};
-		real32 speed = 200.0f;
+		flt32 yy[] = {-0.1f, -0.05f, 0.0f, 0.05f, 0.1f};
+		flt32 speed = 200.0f;
 		for (int32 i = 0; i < ARRAY_COUNT(yy); i++) {
 			CreateProjectile(
 				State,
@@ -286,7 +303,7 @@ void GameRender(const GameTime* gameTime)
 		.SpriteId = GGame.State.CometShips[0].SpriteId,
 		.Position = GGame.State.CometShips[0].Position,
 		.SpriteTiles = {2, 1},
-		.Rotation = 0.25f,
+		.Rotation = GGame.State.CometShips[0].Rotation,
 	});
 
 	// Cycling through big sprite sheet
@@ -307,6 +324,16 @@ void GameRender(const GameTime* gameTime)
 			.Rotation = Iter->Facing + 0.25f,
 		});
 	}
+
+	for (int32 Index = 0; Index < ARRAY_COUNT(GCircles); Index++) {
+		DrawCircle(GCircles[Index].Center, GCircles[Index].Radius, 0xFFFFFF00);
+	}
+	DrawPolygon(
+		GGame.State.CometShips[0].Position,
+		R2(GGame.State.CometShips[0].Rotation),
+		GBox.Vertices,
+		GBox.VertexCount,
+		0xFFFF00FF);
 
 	DrawRender();
 
@@ -350,15 +377,15 @@ static void DestroyProjectile(GameState* gameState, Projectile* projectile)
 	FixedListRemoveAt(gameState->Projectiles, ProjectileIndex);
 }
 
-static uint32 HsvToArgb8888(real32 H, real32 S, real32 V)
+static uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
 {
 	H = (H >= 0 ? 0.0f : 1.0f) + fmodf(H, 1.0f);
 	H *= 360.0f;
-	real32 C = V * S;
-	real32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
-	real32 M = V - C;
+	flt32 C = V * S;
+	flt32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
+	flt32 M = V - C;
 
-	real32 RP = 0.0f, GP = 0.0f, BP = 0.0f;
+	flt32 RP = 0.0f, GP = 0.0f, BP = 0.0f;
 	if (H < 60) {
 		RP = C;
 		GP = X;

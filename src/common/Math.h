@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#define HANDMADE_FLOAT real32
+#define HANDMADE_FLOAT flt32
 #define HANDMADE_MATH_USE_TURNS
 #include <HandmadeMath.h>
 
@@ -11,7 +11,7 @@
 #define KMaxFloat32 FLT_MAX
 #define KMaxFloat64 DBL_MAX
 
-static inline bool Approximately(real32 a, real32 b)
+static inline bool Approximately(flt32 a, flt32 b)
 {
 	return fabs(a - b) <= KEpsilonFloat32;
 }
@@ -48,8 +48,15 @@ DEFINE_SWAP(UInt8, uint8);
 DEFINE_SWAP(UInt16, uint16);
 DEFINE_SWAP(UInt32, uint32);
 DEFINE_SWAP(UInt64, uint64);
-DEFINE_SWAP(Float32, real32);
-DEFINE_SWAP(Float64, real64);
+DEFINE_SWAP(Float32, flt32);
+DEFINE_SWAP(Float64, flt64);
+DEFINE_SWAP(V2, Vec2);
+DEFINE_SWAP(V3, Vec3);
+DEFINE_SWAP(V4, Vec4);
+DEFINE_SWAP(Q, Quat);
+DEFINE_SWAP(M2, Mat2);
+DEFINE_SWAP(M3, Mat3);
+DEFINE_SWAP(M4, Mat4);
 
 #define Swap(A, B)                                                                                                     \
 	_Generic(                                                                                                          \
@@ -62,5 +69,12 @@ DEFINE_SWAP(Float64, real64);
 		uint16: SwapUInt16,                                                                                            \
 		uint32: SwapUInt32,                                                                                            \
 		uint64: SwapUInt64,                                                                                            \
-		real32: SwapFloat32,                                                                                           \
-		real64: SwapFloat64)(&A, &B)
+		flt32: SwapFloat32,                                                                                            \
+		flt64: SwapFloat64,                                                                                            \
+		Vec2: SwapV2,                                                                                                  \
+		Vec3: SwapV3,                                                                                                  \
+		Vec4: SwapV4,                                                                                                  \
+		Quat: SwapQ,                                                                                                   \
+		Mat2: SwapM2,                                                                                                  \
+		Mat3: SwapM3,                                                                                                  \
+		Mat4: SwapM4)(&A, &B)

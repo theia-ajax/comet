@@ -2,6 +2,7 @@
 
 #include "AssetTypes.h"
 #include "Math.h"
+#include "PhysMath.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 
@@ -36,7 +37,7 @@ typedef struct SpriteDraw {
 	int32 SpriteId;
 	Vec2 Position;
 	Vec2 Scale;
-	real32 Rotation;
+	flt32 Rotation;
 	int32 SpriteTiles[2];
 	uint32 TintColor;
 	bool UseTint;
@@ -53,4 +54,6 @@ void DrawInitialize(const DrawConfig* config);
 void DrawShutdown(void);
 
 void DrawSprite(const SpriteDraw* spriteDraw);
+void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color);
+void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color);
 void DrawRender(void);

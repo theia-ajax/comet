@@ -3,13 +3,24 @@
 #include <SDL2/SDL.h>
 #include <json.h>
 
+#include "PhysMath.h"
+
 // Constants
 
 enum {
 	KMaxSpriteDrawCalls = 4096 * 16,
+	KMaxPrimitiveDrawCalls = 4096,
 };
 
+enum { KShapeCircle = 0, KShapePolygon = 1 };
+
 // Private Definitions
+typedef struct PrimDrawCmd {
+	uint32 Color;
+	int32 Shape;
+	Circle PrimCircle;
+	Polygon PrimPolygon;
+} PrimDrawCmd;
 
 struct {
 	SDL_Renderer* Renderer;
@@ -17,10 +28,15 @@ struct {
 	SDL_Texture* SpriteSheetTextures[KMaxDrawSpriteSheets];
 	SpriteDraw SpriteQueue[KMaxSpriteDrawCalls];
 	int32 SpriteCount;
+	PrimDrawCmd PrimitiveQueue[KMaxPrimitiveDrawCalls];
+	int32 PrimitiveCount;
 } GDraw;
 
 // Private Prototypes
 static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY);
+
+// Note SDL style naming convention
+static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* center, float radius);
 
 // Public Implementations
 
@@ -93,6 +109,40 @@ void DrawSprite(const SpriteDraw* spriteDraw)
 	}
 }
 
+void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color)
+{
+	if (GDraw.PrimitiveCount < KMaxPrimitiveDrawCalls) {
+		GDraw.PrimitiveQueue[GDraw.PrimitiveCount++] = (PrimDrawCmd){
+			.Shape = KShapeCircle,
+			.Color = Color,
+			.PrimCircle =
+				(Circle){
+					.Center = Center,
+					.Radius = Radius,
+				},
+		};
+	}
+}
+
+void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color)
+{
+	if (GDraw.PrimitiveCount < KMaxPrimitiveDrawCalls) {
+		Polygon P;
+		ASSERT(Count <= ARRAY_COUNT(P.Vertices));
+		memcpy(P.Vertices, Verts, Count * sizeof(Vec2));
+		P.VertexCount = Count;
+		for (int32 Index = 0; Index < P.VertexCount; Index++)
+		{
+			P.Vertices[Index] = TransformV2(P.Vertices[Index], TxRot, TxPos);
+		}
+		GDraw.PrimitiveQueue[GDraw.PrimitiveCount++] = (PrimDrawCmd){
+			.Shape = KShapePolygon,
+			.Color = Color,
+			.PrimPolygon = P,
+		};
+	}
+}
+
 void DrawRender(void)
 {
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
@@ -152,7 +202,34 @@ void DrawRender(void)
 		// SDL_RenderDrawRectF(GDraw.Renderer, &PosRect);
 	}
 
+	for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
+		const PrimDrawCmd* DrawCmd = &GDraw.PrimitiveQueue[PrimIndex];
+		uint32 Color = DrawCmd->Color;
+		uint8 R = (Color >> 0) & 0xFF;
+		uint8 G = (Color >> 8) & 0xFF;
+		uint8 B = (Color >> 16) & 0xFF;
+		uint8 A = (Color >> 24);
+		SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+
+		switch (DrawCmd->Shape) {
+			case KShapeCircle:
+				SDL_RenderDrawCircle(
+					GDraw.Renderer, (SDL_FPoint*)&DrawCmd->PrimCircle.Center, DrawCmd->PrimCircle.Radius);
+				break;
+			case KShapePolygon:
+				SDL_FPoint Points[KPolygonMaxVerts + 1];
+				memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
+				Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
+				SDL_RenderDrawLinesF(
+					GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+				break;
+			default:
+				break;
+		}
+	}
+
 	GDraw.SpriteCount = 0;
+	GDraw.PrimitiveCount = 0;
 }
 
 // Private Implementations
@@ -195,4 +272,21 @@ static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTi
 	}
 
 	return Result;
+}
+
+static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* center, float radius)
+{
+	enum { SDL_RENDER_CIRCLE_SEGMENTS = 11 };
+	SDL_FPoint points[SDL_RENDER_CIRCLE_SEGMENTS + 1];
+
+	const float td = M_PI * 2 / SDL_RENDER_CIRCLE_SEGMENTS;
+	for (int32 i = 0; i < SDL_RENDER_CIRCLE_SEGMENTS; i++) {
+		SDL_FPoint* p = &points[i];
+		float t = i * td;
+		p->x = cosf(t) * radius + center->x;
+		p->y = sinf(t) * radius + center->y;
+	}
+	points[SDL_RENDER_CIRCLE_SEGMENTS] = points[0];
+
+	SDL_RenderDrawLinesF(renderer, points, SDL_RENDER_CIRCLE_SEGMENTS + 1);
 }

@@ -65,8 +65,8 @@ void PhysicsInitialize(const PhysicsConfig* Config)
 	Vec2 WorldMin = GPhysics.Config.Bounds.XY;
 	Vec2 WorldMax = GPhysics.Config.Bounds.ZW;
 
-	real32 WorldWidth = WorldMax.X - WorldMin.X;
-	real32 WorldHeight = WorldMax.Y - WorldMin.Y;
+	flt32 WorldWidth = WorldMax.X - WorldMin.X;
+	flt32 WorldHeight = WorldMax.Y - WorldMin.Y;
 	GPhysics.GridWidth = (int32)ceil(WorldWidth / GPhysics.Config.CellSize);
 	GPhysics.GridHeight = (int32)ceil(WorldHeight / GPhysics.Config.CellSize);
 	arrsetlen(GPhysics.Grid, GPhysics.GridWidth * GPhysics.GridHeight);
@@ -84,7 +84,7 @@ void PhysicsShutdown(void)
 void PhysicsUpdate(float DeltaTime)
 {
 	enum { KSubSteps = 8 };
-	real32 SubDeltaTime = DeltaTime / KSubSteps;
+	flt32 SubDeltaTime = DeltaTime / KSubSteps;
 
 	for (int32 SubStepIndex = 0; SubStepIndex < KSubSteps; SubStepIndex++) {
 		_PhysicsApplyGravity();
@@ -124,7 +124,7 @@ PhysicsConstraintHandle PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec
 PhysicsConstraintHandle PhysicsAddLinkConstraint(
 	PhysicsObjectHandle HObject0,
 	PhysicsObjectHandle HObject1,
-	real32 TargetDistance)
+	flt32 TargetDistance)
 {
 	PhysConstraint Constraint = (PhysConstraint){
 		.Type = PhysConstraintType_Link,
@@ -266,8 +266,8 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Object->Position = Add(Add(Object->Position, Velocity), Mul(Object->Acceleration, DeltaTime * DeltaTime));
 	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
 
-	real32 HeaterDistance = 20.0f;
-	real32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterDistance;
+	flt32 HeaterDistance = 20.0f;
+	flt32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterDistance;
 
 	if (Object->Position.Y > HeaterThreshold) {
 		Object->Heat += 2.0f * DeltaTime;
@@ -302,9 +302,9 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 					PhysicsObject* P0 = PhysicsGetObject(Constraint->Link.HObject0);
 					PhysicsObject* P1 = PhysicsGetObject(Constraint->Link.HObject1);
 					Vec2 Diff = Sub(P0->Position, P1->Position);
-					real32 Dist = Len(Diff);
+					flt32 Dist = Len(Diff);
 					Vec2 Dir = DivV2F(Diff, Dist);
-					real32 Delta = (Constraint->Link.TargetDistance - Dist) * 0.5f;
+					flt32 Delta = (Constraint->Link.TargetDistance - Dist) * 0.5f;
 					Vec2 DeltaV2 = Mul(Dir, Delta);
 					P0->Position = Add(P0->Position, DeltaV2);
 					P1->Position = Sub(P1->Position, DeltaV2);
@@ -327,7 +327,7 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 		if (Object->Position.Y > WorldMax.Y - Object->Radius) Object->Position.Y = WorldMax.Y - Object->Radius;
 		if (Object->Position.Y < WorldMin.Y + Object->Radius) Object->Position.Y = WorldMin.Y + Object->Radius;
 		// Vec2 CenterToObject = Sub(Object->Position, KCenter);
-		// real32 Distance = Len(CenterToObject);
+		// flt32 Distance = Len(CenterToObject);
 		// if (Distance > KRadius - Object->Radius) {
 		// 	Vec2 DirToObject = DivV2F(CenterToObject, Distance);
 		// 	Object->Position = Add(KCenter, Mul(DirToObject, KRadius));
@@ -443,8 +443,8 @@ static void _PhysicsSolveAllCollisions(void)
 static void _PhysicsSolveCollision(PhysicsObject* Object0, PhysicsObject* Object1)
 {
 	const Vec2 CollisionVec = Sub(Object0->Position, Object1->Position);
-	real32 Distance = Len(CollisionVec);
-	real32 ContactDistance = Object0->Radius + Object1->Radius;
+	flt32 Distance = Len(CollisionVec);
+	flt32 ContactDistance = Object0->Radius + Object1->Radius;
 	if (Distance < ContactDistance) {
 		const Vec2 Direction = DivV2F(CollisionVec, Distance);
 		Vec2 Delta = Mul(Direction, (ContactDistance - Distance) * 0.5f);
@@ -453,11 +453,11 @@ static void _PhysicsSolveCollision(PhysicsObject* Object0, PhysicsObject* Object
 		Object1->Position = Sub(Object1->Position, Delta);
 
 		if (Object0->Heat > Object1->Heat) {
-			real32 Transfer = Object0->Heat * 0.05f;
+			flt32 Transfer = Object0->Heat * 0.05f;
 			Object0->Heat -= Transfer;
 			Object1->Heat += Transfer;
 		} else if (Object0->Heat < Object1->Heat) {
-			real32 Transfer = Object1->Heat * 0.05f;
+			flt32 Transfer = Object1->Heat * 0.05f;
 			Object0->Heat += Transfer;
 			Object1->Heat -= Transfer;
 		}

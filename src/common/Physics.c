@@ -4,8 +4,8 @@
 // Private Defintitions
 typedef struct PhysWorld {
 	struct {
-		PhysCircleShape* Circles;
-		PhysPolygonShape* Polygons;
+		Circle* Circles;
+		Polygon* Polygons;
 	} Shapes;
 } PhysWorld;
 
@@ -33,10 +33,10 @@ void PhysDestroyWorld(PhysWorld* World)
 	free(World);
 }
 
-PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, real32 Radius)
+PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, flt32 Radius)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Circle);
-	PhysCircleShape* Circle = PhysTryGetCircleShape(World, HShape);
+	Circle* Circle = PhysTryGetCircleShape(World, HShape);
 	if (Circle != NULL) {
 		Circle->Center = Center;
 		Circle->Radius = Radius;
@@ -47,12 +47,12 @@ PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, real32 Radi
 // Assumes convex hull, validate later
 PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t PointsCount)
 {
-	ASSERT(PointsCount <= KPhysMaxPolygonVerts);
+	ASSERT(PointsCount <= KPolygonMaxVerts);
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Polygon);
-	PhysPolygonShape* Polygon = PhysTryGetPolygonShape(World, HShape);
+	Polygon* Polygon = PhysTryGetPolygonShape(World, HShape);
 	if (Polygon != NULL) {
 		memcpy(Polygon->Vertices, Points, sizeof(*Points) * PointsCount);
-		Polygon->VertexCount = MIN(PointsCount, KPhysMaxPolygonVerts);
+		Polygon->VertexCount = MIN(PointsCount, KPolygonMaxVerts);
 		for (int32 Index1 = 0; Index1 < Polygon->VertexCount; Index1++) {
 			int32 Index2 = (Index1 + 1 < Polygon->VertexCount) ? Index1 + 1 : 0;
 			Vec2 Edge = Sub(Polygon->Vertices[Index2], Polygon->Vertices[Index1]);
@@ -65,7 +65,7 @@ PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t Po
 PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Polygon);
-	PhysPolygonShape* Box = PhysTryGetPolygonShape(World, HShape);
+	Polygon* Box = PhysTryGetPolygonShape(World, HShape);
 	if (Box != NULL) {
 		Box->Vertices[0] = V2(-HalfSize.X, -HalfSize.Y);
 		Box->Vertices[1] = V2(HalfSize.X, -HalfSize.Y);
@@ -80,9 +80,9 @@ PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize)
 	return HShape;
 }
 
-PhysCircleShape* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
+Circle* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 {
-	PhysCircleShape* Result = NULL;
+	Circle* Result = NULL;
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	if (ShapeType == PhysShapeType_Circle) {
 		int32 Index = H_SHAPE_INDEX(HShape);
@@ -90,13 +90,12 @@ PhysCircleShape* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 			Result = &World->Shapes.Circles[Index];
 		}
 	}
-
 	return Result;
 }
 
-PhysPolygonShape* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
+Polygon* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
 {
-	PhysPolygonShape* Result = NULL;
+	Polygon* Result = NULL;
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	if (ShapeType == PhysShapeType_Polygon) {
 		int32 Index = H_SHAPE_INDEX(HShape);
@@ -104,8 +103,25 @@ PhysPolygonShape* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShap
 			Result = &World->Shapes.Polygons[Index];
 		}
 	}
-
 	return Result;
+}
+
+Circle* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
+{
+	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
+	ASSERT(ShapeType == PhysShapeType_Circle);
+	int32 Index = H_SHAPE_INDEX(HShape);
+	ASSERT(VALID_INDEX(Index, arrlen(World->Shapes.Circles)));
+	return &World->Shapes.Circles[Index];
+}
+
+Polygon* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
+{
+	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
+	ASSERT(ShapeType == PhysShapeType_Polygon);
+	int32 Index = H_SHAPE_INDEX(HShape);
+	ASSERT(VALID_INDEX(Index, arrlen(World->Shapes.Polygons)));
+	return &World->Shapes.Polygons[Index];
 }
 
 bool PhysShapeTestPoint(PhysWorld* World, Vec2 TestPoint, PhysShapeHandle HShape, Vec2 TxPos, Rot2 TxRot)
@@ -114,40 +130,14 @@ bool PhysShapeTestPoint(PhysWorld* World, Vec2 TestPoint, PhysShapeHandle HShape
 
 	switch (H_SHAPE_TYPE(HShape)) {
 		case PhysShapeType_Circle:
-			Result = PhysCircleShapeTestPoint(TestPoint, PhysTryGetCircleShape(World, HShape), TxPos, TxRot);
+			Result = CircleTestPoint(TestPoint, PhysTryGetCircleShape(World, HShape), TxPos, TxRot);
 			break;
 		case PhysShapeType_Polygon:
-			Result = PhysPolygonShapeTestPoint(TestPoint, PhysTryGetPolygonShape(World, HShape), TxPos, TxRot);
+			Result = PolygonTestPoint(TestPoint, PhysTryGetPolygonShape(World, HShape), TxPos, TxRot);
 			break;
 		case PhysShapeType_None:
 		default:
 			break;
-	}
-
-	return Result;
-}
-
-bool PhysCircleShapeTestPoint(Vec2 TestPoint, const PhysCircleShape* CircleShape, Vec2 TxPos, Rot2 TxRot)
-{
-	ASSERT(CircleShape);
-	Vec2 TransformedCenter = TransformV2(CircleShape->Center, TxRot, TxPos);
-	Vec2 Delta = Sub(TestPoint, TransformedCenter);
-	return Dot(Delta, Delta) <= CircleShape->Radius * CircleShape->Radius;
-}
-
-bool PhysPolygonShapeTestPoint(Vec2 TestPoint, const PhysPolygonShape* PolygonShape, Vec2 TxPos, Rot2 TxRot)
-{
-	ASSERT(PolygonShape);
-	bool Result = true;
-	Vec2 LocalPoint = InvTransformV2(TestPoint, TxRot, TxPos);
-
-	for (int32 VertIndex = 0; VertIndex < PolygonShape->VertexCount; VertIndex++) {
-		Vec2 Delta = Sub(LocalPoint, PolygonShape->Vertices[VertIndex]);
-		real32 D = Dot(PolygonShape->Normals[VertIndex], Delta);
-		if (D > 0.0f) {
-			Result = false;
-			break;
-		}
 	}
 
 	return Result;
@@ -169,12 +159,12 @@ static PhysShapeHandle _PhysAllocateShape(PhysWorld* World, PhysShapeType ShapeT
 			break;
 
 		case PhysShapeType_Circle:
-			arrput(World->Shapes.Circles, (PhysCircleShape){0});
+			arrput(World->Shapes.Circles, (Circle){0});
 			ShapeIndex = arrlen(World->Shapes.Circles) - 1;
 			break;
 
 		case PhysShapeType_Polygon:
-			arrput(World->Shapes.Polygons, (PhysPolygonShape){0});
+			arrput(World->Shapes.Polygons, (Polygon){0});
 			ShapeIndex = arrlen(World->Shapes.Polygons) - 1;
 			break;
 
