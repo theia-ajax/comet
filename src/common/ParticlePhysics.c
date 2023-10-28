@@ -387,13 +387,14 @@ int _PhysicsSolveChunkWorker(void* Data)
 			}
 		}
 	}
+	return 0;
 }
 
 static void _PhysicsSolveAllCollisions(void)
 {
 #ifdef USE_GRID_SOLVER
 	enum { KChunks = 2 };
-	_Static_assert(KChunks > 0);
+	_Static_assert(KChunks > 0, "");
 
 	if (KChunks == 1) {
 		for (int32 CellY = 0; CellY < GPhysics.GridHeight; CellY++) {

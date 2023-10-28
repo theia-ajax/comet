@@ -217,11 +217,13 @@ void DrawRender(void)
 					GDraw.Renderer, (SDL_FPoint*)&DrawCmd->PrimCircle.Center, DrawCmd->PrimCircle.Radius);
 				break;
 			case KShapePolygon:
+			{
 				SDL_FPoint Points[KPolygonMaxVerts + 1];
 				memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
 				Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
 				SDL_RenderDrawLinesF(
 					GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+			}
 				break;
 			default:
 				break;

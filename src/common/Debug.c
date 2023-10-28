@@ -34,7 +34,7 @@ void DebugInitialize(const DebugConfig* config)
 	DebugConfig Config = (config != NULL) ? *config
 										  : (DebugConfig){
 											  .CanvasWidth = 320,
-											  .CanvasWidth = 180,
+											  .CanvasHeight = 180,
 										  };
 
 	GDebug.Canvas = SDL_CreateRGBSurfaceWithFormat(
@@ -160,7 +160,7 @@ void DebugGetCursorXY(int32* x, int32* y)
 
 void DebugPrintf(const char* format, ...)
 {
-	uint8 Buffer[1024];
+	char Buffer[1024];
 	va_list Args;
 	va_start(Args, format);
 	SDL_vsnprintf(Buffer, ARRAY_COUNT(Buffer), format, Args);

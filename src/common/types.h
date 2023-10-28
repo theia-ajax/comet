@@ -21,9 +21,9 @@ typedef double flt64;
 
 #ifndef unreachable
 
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #define unreachable() (__builtin_unreachable())
-#elifdef _MSC_VER
+#elif defined(_MSC_VER)
 #define unreachable() (__assume(false))
 #else
 [[noreturn]] inline void unreachable_impl()
