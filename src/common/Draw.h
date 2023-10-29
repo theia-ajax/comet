@@ -54,5 +54,6 @@ void DrawShutdown(void);
 
 void DrawSprite(const SpriteDraw* spriteDraw);
 void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color);
+void DrawAABB(AABB AABB_, uint32 Color);
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color);
 void DrawRender(void);

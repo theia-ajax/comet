@@ -42,7 +42,7 @@ typedef struct Polygon {
 typedef struct RaycastIn {
 	Vec2 Start;
 	Vec2 End;
-	flt32 Fraction;
+	flt32 MaxFraction;
 } RaycastIn;
 
 typedef struct RaycastOut {
@@ -50,6 +50,11 @@ typedef struct RaycastOut {
 	flt32 Fraction;
 } RaycastOut;
 
+typedef Vec2 Rot2;
+typedef struct Tform2 {
+	Vec2 Position;
+	Rot2 Rotation;
+} Tform2;
 
 // Public Interface
 // -------------------------------------------------------
@@ -65,7 +70,6 @@ Vec2 CrossV2F(Vec2 A, flt32 S);
 
 // 2D specific math, maybe find a place for this in HandmadeMath.h at some point.
 // These represent 2d rotations as V2(Cos(Angle), Sin(Angle))
-typedef Vec2 Rot2;
 Rot2 R2(flt32 Angle);
 Rot2 R2Ident(void);
 flt32 R2Angle(Rot2 R);
@@ -74,13 +78,17 @@ Vec2 R2AxisY(Rot2 R);
 Vec2 R2Rotate(Rot2 R, Vec2 V);
 Vec2 R2InvRotate(Rot2 R, Vec2 V);
 
+Tform2 T2(Vec2 Position, Rot2 Rotation);
+Tform2 T2Ident(void);
+
 // 2D non-scaled transformations
-Vec2 TransformV2(Vec2 Point, Rot2 Rotation, Vec2 Translation);
-Vec2 InvTransformV2(Vec2 Point, Rot2 Rotation, Vec2 Translation);
+Vec2 TransformV2(Tform2 Transform, Vec2 Point);
+Vec2 InvTransformV2(Tform2 Transform, Vec2 Point);
 
 /// @param Extents Half-Sizes
 AABB AABBCreateCenterExtents(Vec2 Center, Vec2 Extents);
 AABB AABBEnvelop(AABB Self, Vec2 Point);
+AABB AABBInflate(AABB Self, Vec2 HalfAdjust);
 AABB AABBTranslate(AABB Self, Vec2 Translation);
 bool AABBIsValid(AABB Self);
 Vec2 AABBCenter(AABB Self);
@@ -92,11 +100,24 @@ bool AABBTestOverlap(AABB A, AABB B);
 bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out);
 
 // Shape Utility Functions
-bool CircleTestPoint(Vec2 TestPoint, const Circle* CircleShape, Vec2 TxPos, Rot2 TxRot);
-bool PolygonTestPoint(Vec2 TestPoint, const Polygon* PolygonShape, Vec2 TxPos, Rot2 TxRot);
+void CircleLocalize(const Circle* Self, Tform2 Transform, Circle* Out);
+bool CircleTestPoint(const Circle* Self, Tform2 Transform, Vec2 TestPoint);
+AABB CircleCalcAABB(const Circle* Self, Tform2 Transform);
+bool CircleRaycast(const Circle* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out);
+bool CircleIntersectsCircle(const Circle* A, Tform2 TransformA, const Circle* B, Tform2 TransformB);
+bool CircleIntersectsPolygon(const Circle* A, Tform2 TransformA, const Polygon* B, Tform2 TransformB);
+
 void PolygonMakeAABB(Polygon* Self, Vec2 HalfSize);
 void PolygonMakeBox(Polygon* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle);
-Vec2 ComputeCentroid(const Vec2* Verts, int32 Count);
+void PolygonMakeHull(Polygon* Self, const Vec2* Vertices, int32 VertexCount);
+void PolygonLocalize(const Polygon* Self, Tform2 Transform, Polygon* Out);
+bool PolygonTestPoint(const Polygon* Self, Tform2 Transform, Vec2 TestPoint);
+AABB PolygonCalcAABB(const Polygon* Self, Tform2 Transform);
+bool PolygonRaycast(const Polygon* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out);
+bool PolygonIntersectsCircle(const Polygon* A, Tform2 TransformA, const Circle* B, Tform2 TransformB);
+bool PolygonIntersectsPolygon(const Polygon* A, Tform2 TransformA, const Polygon* B, Tform2 TransformB);
+
+Vec2 CalculateCentroid(const Vec2* Verts, int32 Count);
 
 // Inline Implementations
 // -------------------------------------------------------

@@ -7,6 +7,7 @@ typedef struct PhysWorld {
 		Circle* Circles;
 		Polygon* Polygons;
 	} Shapes;
+	
 } PhysWorld;
 
 // Private Prototypes
@@ -21,6 +22,7 @@ static PhysShapeHandle _PhysAllocateShape(PhysWorld* World, PhysShapeType ShapeT
 PhysWorld* PhysCreateWorld(const PhysWorldConfig* Config)
 {
 	PhysWorld* World = (PhysWorld*)malloc(sizeof(PhysWorld));
+	ZERO_STRUCT(World);
 	arrsetcap(World->Shapes.Circles, 64);
 	arrsetcap(World->Shapes.Polygons, 64);
 	return World;
@@ -65,18 +67,8 @@ PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t Po
 PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Polygon);
-	Polygon* Box = PhysTryGetPolygonShape(World, HShape);
-	if (Box != NULL) {
-		Box->Vertices[0] = V2(-HalfSize.X, -HalfSize.Y);
-		Box->Vertices[1] = V2(HalfSize.X, -HalfSize.Y);
-		Box->Vertices[2] = V2(HalfSize.X, HalfSize.Y);
-		Box->Vertices[3] = V2(-HalfSize.X, HalfSize.Y);
-		Box->Normals[0] = V2(0, -1);
-		Box->Normals[1] = V2(1, 0);
-		Box->Normals[2] = V2(0, 1);
-		Box->Normals[3] = V2(-1, 0);
-		Box->VertexCount = 4;
-	}
+	Polygon* Box = PhysGetPolygonShape(World, HShape);
+	PolygonMakeBox(Box, HalfSize, V2(0, 0), 0);
 	return HShape;
 }
 
@@ -124,16 +116,16 @@ Polygon* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
 	return &World->Shapes.Polygons[Index];
 }
 
-bool PhysShapeTestPoint(PhysWorld* World, Vec2 TestPoint, PhysShapeHandle HShape, Vec2 TxPos, Rot2 TxRot)
+bool PhysShapeTestPoint(PhysWorld* World, PhysShapeHandle HShape, Tform2 Transform, Vec2 TestPoint)
 {
 	bool Result = false;
 
 	switch (H_SHAPE_TYPE(HShape)) {
 		case PhysShapeType_Circle:
-			Result = CircleTestPoint(TestPoint, PhysTryGetCircleShape(World, HShape), TxPos, TxRot);
+			Result = CircleTestPoint(PhysTryGetCircleShape(World, HShape), Transform, TestPoint);
 			break;
 		case PhysShapeType_Polygon:
-			Result = PolygonTestPoint(TestPoint, PhysTryGetPolygonShape(World, HShape), TxPos, TxRot);
+			Result = PolygonTestPoint(PhysTryGetPolygonShape(World, HShape), Transform, TestPoint);
 			break;
 		case PhysShapeType_None:
 		default:

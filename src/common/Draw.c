@@ -124,6 +124,17 @@ void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color)
 	}
 }
 
+void DrawAABB(AABB AABB_, uint32 Color)
+{
+	Vec2 Verts[4] = {
+		AABB_.MinBound,
+		V2(AABB_.MaxBound.X, AABB_.MinBound.Y),
+		AABB_.MaxBound,
+		V2(AABB_.MinBound.X, AABB_.MaxBound.Y),
+	};
+	DrawPolygon(V2(0, 0), R2Ident(), Verts, 4, Color);
+}
+
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color)
 {
 	if (GDraw.PrimitiveCount < KMaxPrimitiveDrawCalls) {
@@ -133,7 +144,7 @@ void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 
 		P.VertexCount = Count;
 		for (int32 Index = 0; Index < P.VertexCount; Index++)
 		{
-			P.Vertices[Index] = TransformV2(P.Vertices[Index], TxRot, TxPos);
+			P.Vertices[Index] = TransformV2(T2(TxPos, TxRot), P.Vertices[Index]);
 		}
 		GDraw.PrimitiveQueue[GDraw.PrimitiveCount++] = (PrimDrawCmd){
 			.Shape = KShapePolygon,

@@ -9,6 +9,7 @@
 #include "Debug.h"
 #include "Draw.h"
 #include "Math2D.h"
+#include "Physics.h"
 #include "Random.h"
 #include "StringId.h"
 
@@ -70,6 +71,7 @@ struct {
 		ImGuiIO* IO;
 	} ImGui;
 	GameInput Input;
+	GameInput LastInput;
 	ImageAsset* ImageAssets[16];
 	SpriteSheetAsset* ShipObjectsSheet;
 	int32 Frame;
@@ -79,14 +81,31 @@ struct {
 	uint32 HeatRampColors[256];
 	int32 HeatRampCount;
 	rnd_pcg_t RandomGen;
+	PhysWorld* Physics;
 } GGame;
 
 int32 ExplosionsSpriteIds[11] = {0};
 
 StringId GProjectileSpriteName;
 
-Circle GCircles[10];
-Polygon GBox;
+struct BoxBody {
+	Polygon Box;
+	Tform2 XForm;
+	flt32 Angle;
+};
+
+struct CircBody {
+	Circle Circ;
+	Tform2 XForm;
+};
+
+static struct BoxBody GBoxBodies[2];
+static struct CircBody GCircBodies[2];
+static bool GBoxAABBOverlap = false;
+static bool GBoxContact = false;
+static bool GCircAABBOverlap = false;
+static bool GCircContact = false;
+static bool GCircBoxContact0 = false;
 
 bool GameInitialize(const GameInitParams* params)
 {
@@ -94,6 +113,8 @@ bool GameInitialize(const GameInitParams* params)
 
 	Uint64 PerformanceCounter = SDL_GetPerformanceCounter();
 	rnd_pcg_seed(&GGame.RandomGen, (uint32)PerformanceCounter);
+
+	GGame.Physics = PhysCreateWorld(&(PhysWorldConfig){});
 
 	GProjectileSpriteName = GetStringId("projectile01-1");
 
@@ -175,16 +196,15 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	};
 
-	for (int32 Index = 0; Index < ARRAY_COUNT(GCircles); Index++) {
-		Vec2 Pos = V2(rnd_pcg_nextf(&GGame.RandomGen) * GameResWidth, rnd_pcg_nextf(&GGame.RandomGen) * GameResHeight);
-		GCircles[Index] = (Circle){
-			.Center = Pos,
-			.Radius = 16,
-		};
-	}
-	PolygonMakeBox(&GBox, V2(12.0f, 24.0f), V2(0, 0), 0.0f);
-	GBox.Centroid = V2(0, 10);
-	// GBox.Centroid = V2(GameResWidth / 2, GameResHeight / 2);
+	PolygonMakeBox(&GBoxBodies[0].Box, V2(24.0f, 12.0f), V2(0, 0), 0.0f);
+	GBoxBodies[0].XForm = T2(V2(144, 108), R2Ident());
+	PolygonMakeBox(&GBoxBodies[1].Box, V2(12.0f, 24.0f), V2(0, 0), 0.0f);
+	GBoxBodies[1].XForm = T2(V2(144 * 3, 108), R2Ident());
+
+	GCircBodies[0].Circ = (Circle){.Radius = 18};
+	GCircBodies[0].XForm = T2(V2(144, 144), R2Ident());
+	GCircBodies[1].Circ = (Circle){.Radius = 26};
+	GCircBodies[1].XForm = T2(V2(144 * 3, 144), R2Ident());
 
 	return true;
 }
@@ -194,17 +214,48 @@ void GameShutdown(void)
 	DrawShutdown();
 	AssetsShutdown();
 	DebugShutdown();
+	PhysDestroyWorld(GGame.Physics);
 	StringIdPoolsShutdown();
 }
 
 void GameSendInput(const GameInput* input)
 {
+	memcpy(&GGame.LastInput, &GGame.Input, sizeof(GameInput));
 	memcpy(&GGame.Input, input, sizeof(GameInput));
 }
 
 void GameProcessEvent(const SDL_Event* event)
 {
 	ImGui_ImplSDL2_ProcessEvent(event);
+}
+
+static inline bool InputKey(int Scancode)
+{
+	return GGame.Input.KeyStates[Scancode];
+}
+static inline bool InputKeyDown(int Scancode)
+{
+	return GGame.Input.KeyStates[Scancode] && !GGame.LastInput.KeyStates[Scancode];
+}
+static inline bool InputKeyUp(int Scancode)
+{
+	return !GGame.Input.KeyStates[Scancode] && GGame.LastInput.KeyStates[Scancode];
+}
+
+static flt32 InputAxis(int ScancodeNeg, int ScancodePos)
+{
+	flt32 Axis = 0.0f;
+	if (InputKey(ScancodeNeg)) Axis -= 1.0f;
+	if (InputKey(ScancodePos)) Axis += 1.0f;
+	return Axis;
+}
+
+static Vec2 InputXY(int ScancodeLeft, int ScancodeRight, int ScancodeUp, int ScancodeDown)
+{
+	return (Vec2){
+		.X = InputAxis(ScancodeLeft, ScancodeRight),
+		.Y = InputAxis(ScancodeUp, ScancodeDown),
+	};
 }
 
 void GameUpdate(const GameTime* gameTime)
@@ -219,18 +270,52 @@ void GameUpdate(const GameTime* gameTime)
 	GameState* State = &GGame.State;
 
 	{
-		Vec2 MoveInput = {0};
-		if (GGame.Input.KeyStates[SDL_SCANCODE_LEFT]) MoveInput.X -= 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_RIGHT]) MoveInput.X += 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_UP]) MoveInput.Y -= 1.0f;
-		if (GGame.Input.KeyStates[SDL_SCANCODE_DOWN]) MoveInput.Y += 1.0f;
-
 		const float KSpeed = 64.0f;
+		Vec2 MoveInput = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
 		Vec2 Delta = Mul(MoveInput, KSpeed * gameTime->DeltaTimeF);
 		State->CometShips[0].Position = Add(State->CometShips[0].Position, Delta);
 		State->CometShips[0].Rotation += gameTime->DeltaTimeF;
 	}
 
+	static bool control_circs = false;
+	if (InputKeyDown(SDL_SCANCODE_T)) control_circs = !control_circs;
+
+	if (control_circs) {
+		Vec2 MoveInput0 = InputXY(SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S);
+		GCircBodies[0].XForm.Position = Add(GCircBodies[0].XForm.Position, MoveInput0);
+		Vec2 MoveInput1 = InputXY(SDL_SCANCODE_J, SDL_SCANCODE_L, SDL_SCANCODE_I, SDL_SCANCODE_K);
+		GCircBodies[1].XForm.Position = Add(GCircBodies[1].XForm.Position, MoveInput1);
+	} else {
+		Vec2 MoveInput0 = InputXY(SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S);
+		GBoxBodies[0].XForm.Position = Add(GBoxBodies[0].XForm.Position, MoveInput0);
+		flt32 RotateInput0 = InputAxis(SDL_SCANCODE_Q, SDL_SCANCODE_E);
+		GBoxBodies[0].Angle += RotateInput0 * gameTime->DeltaTimeF * KUnitFullTurn32;
+		GBoxBodies[0].XForm.Rotation = R2(GBoxBodies[0].Angle);
+
+		Vec2 MoveInput1 = InputXY(SDL_SCANCODE_J, SDL_SCANCODE_L, SDL_SCANCODE_I, SDL_SCANCODE_K);
+		GBoxBodies[1].XForm.Position = Add(GBoxBodies[1].XForm.Position, MoveInput1);
+		flt32 RotateInput1 = InputAxis(SDL_SCANCODE_U, SDL_SCANCODE_O);
+		GBoxBodies[1].Angle += RotateInput1 * gameTime->DeltaTimeF * KUnitFullTurn32;
+		GBoxBodies[1].XForm.Rotation = R2(GBoxBodies[1].Angle);
+	}
+
+	GBoxAABBOverlap = AABBTestOverlap(
+		PolygonCalcAABB(&GBoxBodies[0].Box, GBoxBodies[0].XForm),
+		PolygonCalcAABB(&GBoxBodies[1].Box, GBoxBodies[1].XForm));
+	GBoxContact =
+		GBoxAABBOverlap &&
+		PolygonIntersectsPolygon(&GBoxBodies[0].Box, GBoxBodies[0].XForm, &GBoxBodies[1].Box, GBoxBodies[1].XForm);
+
+	GCircAABBOverlap = AABBTestOverlap(
+		CircleCalcAABB(&GCircBodies[0].Circ, GCircBodies[0].XForm),
+		CircleCalcAABB(&GCircBodies[1].Circ, GCircBodies[1].XForm));
+	GCircContact =
+		GCircAABBOverlap &&
+		CircleIntersectsCircle(&GCircBodies[0].Circ, GCircBodies[0].XForm, &GCircBodies[1].Circ, GCircBodies[1].XForm);
+
+	GCircBoxContact0 =
+		CircleIntersectsPolygon(&GCircBodies[0].Circ, GCircBodies[0].XForm, &GBoxBodies[0].Box, GBoxBodies[0].XForm);
+#if 0
 	if (GGame.Frame % 17 == 0) {
 		flt32 yy[] = {-0.1f, -0.05f, 0.0f, 0.05f, 0.1f};
 		flt32 speed = 200.0f;
@@ -245,6 +330,7 @@ void GameUpdate(const GameTime* gameTime)
 				});
 		}
 	}
+#endif
 
 	for (Projectile* Iter = FixedListBegin(GGame.State.Projectiles); Iter != FixedListEnd(GGame.State.Projectiles);
 		 Iter++)
@@ -324,15 +410,31 @@ void GameRender(const GameTime* gameTime)
 		});
 	}
 
-	for (int32 Index = 0; Index < ARRAY_COUNT(GCircles); Index++) {
-		DrawCircle(GCircles[Index].Center, GCircles[Index].Radius, 0xFFFFFF00);
+	uint32 BoxAABBColor = (!GBoxAABBOverlap) ? 0xFFCCCC00 : 0xFFCC00CC;
+	uint32 PolygonColor = (!GBoxContact) ? 0xFF00CC00 : 0xFFCC0000;
+	for (int32 BodyIndex = 0; BodyIndex < ARRAY_COUNT(GBoxBodies); BodyIndex++) {
+		if (BodyIndex == 0 && GCircBoxContact0) PolygonColor = 0xFF00FFFF;
+		AABB PolygonAABB = PolygonCalcAABB(&GBoxBodies[BodyIndex].Box, GBoxBodies[BodyIndex].XForm);
+		DrawAABB(PolygonAABB, BoxAABBColor);
+		DrawPolygon(
+			GBoxBodies[BodyIndex].XForm.Position,
+			GBoxBodies[BodyIndex].XForm.Rotation,
+			GBoxBodies[BodyIndex].Box.Vertices,
+			GBoxBodies[BodyIndex].Box.VertexCount,
+			PolygonColor);
 	}
-	DrawPolygon(
-		GGame.State.CometShips[0].Position,
-		R2(GGame.State.CometShips[0].Rotation),
-		GBox.Vertices,
-		GBox.VertexCount,
-		0xFFFF00FF);
+
+	uint32 CircAABBColor = (!GCircAABBOverlap) ? 0xFFCCCC00 : 0xFFCC00CC;
+	uint32 CircleColor = (!GCircContact) ? 0xFF00CC00 : 0xFFCC0000;
+	for (int32 BodyIndex = 0; BodyIndex < ARRAY_COUNT(GCircBodies); BodyIndex++) {
+		if (BodyIndex == 0 && GCircBoxContact0) CircleColor = 0xFF00FFFF;
+		AABB CircAABB = CircleCalcAABB(&GCircBodies[BodyIndex].Circ, GCircBodies[BodyIndex].XForm);
+		DrawAABB(CircAABB, CircAABBColor);
+		DrawCircle(
+			TransformV2(GCircBodies[BodyIndex].XForm, GCircBodies[BodyIndex].Circ.Center),
+			GCircBodies[BodyIndex].Circ.Radius,
+			CircleColor);
+	}
 
 	DrawRender();
 

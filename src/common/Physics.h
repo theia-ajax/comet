@@ -39,4 +39,4 @@ Polygon* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
 Circle* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape);
 Polygon* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
 
-bool PhysShapeTestPoint(PhysWorld* World, Vec2 TestPoint, PhysShapeHandle HShape, Vec2 TxPos, Rot2 TxRot);
+bool PhysShapeTestPoint(PhysWorld* World, PhysShapeHandle HShape, Tform2 Transform, Vec2 TestPoint);
