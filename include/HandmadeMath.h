@@ -15,6 +15,9 @@
     - Added Abs/Min/Max Scalar and Vectors ops, keeping old preprocessors ones
     - Added IsFinite F/V2/V3/V4
     - Changed field name 'Elements' -> 'Data'
+    - ApproxFV1/2/3 (Components approximately equal (within epsilon))
+    - SortV2/3/4 RSortV2/3/4, sort components in ascending/descending order (R/SortV generics)
+    - Splat(F) returns V4(F, F, F, F), with SIMD this uses _mm_set1_ps, use swizzles to extract lower dimension vectors
 
   This is a single header file with a bunch of useful types and functions for
   games and graphics. Consider it a lightweight alternative to GLM that works
@@ -264,6 +267,7 @@ extern "C"
 #define ABS(a) ((a) > 0 ? (a) : -(a))
 #define MOD(a, m) (((a) % (m)) >= 0 ? ((a) % (m)) : (((a) % (m)) + (m)))
 #define SQUARE(x) ((x) * (x))
+#define SWAP(T, A, B) { T SWAP = A; A = B; B = SWAP; }
 
     typedef union Vec2
     {
@@ -695,6 +699,19 @@ extern "C"
 #endif
 
         return Result;
+    }
+
+    COVERAGE(Splat, 1)
+    static inline Vec4 Splat(Float F)
+    {
+        ASSERT_COVERED(Splat)
+        Vec4 V;
+#ifdef HANDMADE_MATH__USE_SSE
+        V.SSE = _mm_set1_ps(F);
+#else
+        V = V4(F, F, F, F);
+#endif
+        return V;
     }
 
     /*
@@ -1238,6 +1255,66 @@ extern "C"
     {
         ASSERT_COVERED(IsFiniteV4)
         return IsFinite(Value.X) && IsFinite(Value.Y) && IsFinite(Value.Z) && IsFinite(Value.W);
+    }
+
+    COVERAGE(VecSortV2, 1)
+    static inline Vec2 VecSortV2(Vec2 V)
+    {
+        ASSERT_COVERED(VecSortV2)
+        if (V.X > V.Y) SWAP(Float, V.X, V.Y);
+        return V;
+    }
+
+    COVERAGE(VecSortV3, 1)
+    static inline Vec3 VecSortV3(Vec3 V)
+    {
+        ASSERT_COVERED(VecSortV3)
+        if (V.X > V.Z) SWAP(Float, V.X, V.Z);
+        if (V.X > V.Y) SWAP(Float, V.X, V.Y);
+        if (V.Y > V.Z) SWAP(Float, V.Y, V.Z);
+        return V;
+    }
+
+    COVERAGE(VecSortV4, 1)
+    static inline Vec4 VecSortV4(Vec4 V)
+    {
+        ASSERT_COVERED(VecSortV4)
+        if (V.X > V.Y) SWAP(Float, V.X, V.Y);
+        if (V.Z > V.W) SWAP(Float, V.Z, V.W);
+        if (V.X > V.Z) SWAP(Float, V.X, V.Z);
+        if (V.Y > V.W) SWAP(Float, V.Y, V.W);
+        if (V.Y > V.Z) SWAP(Float, V.Y, V.Z);
+        return V;
+    }
+
+    COVERAGE(VecRSortV2, 1)
+    static inline Vec2 VecRSortV2(Vec2 V)
+    {
+        ASSERT_COVERED(VecRSortV2)
+        if (V.X < V.Y) SWAP(Float, V.X, V.Y);
+        return V;
+    }
+
+    COVERAGE(VecRSortV3, 1)
+    static inline Vec3 VecRSortV3(Vec3 V)
+    {
+        ASSERT_COVERED(VecRSortV3)
+        if (V.X < V.Z) SWAP(Float, V.X, V.Z);
+        if (V.X < V.Y) SWAP(Float, V.X, V.Y);
+        if (V.Y < V.Z) SWAP(Float, V.Y, V.Z);
+        return V;
+    }
+
+    COVERAGE(VecRSortV4, 1)
+    static inline Vec4 VecRSortV4(Vec4 V)
+    {
+        ASSERT_COVERED(VecRSortV4)
+        if (V.X < V.Y) SWAP(Float, V.X, V.Y);
+        if (V.Z < V.W) SWAP(Float, V.Z, V.W);
+        if (V.X < V.Z) SWAP(Float, V.X, V.Z);
+        if (V.Y < V.W) SWAP(Float, V.Y, V.W);
+        if (V.Y < V.Z) SWAP(Float, V.Y, V.Z);
+        return V;
     }
 
     /*
@@ -2947,6 +3024,48 @@ static inline Bool IsFinite(Vec4 Value)
     return IsFiniteV4(Value);
 }
 
+COVERAGE(VecSortV2CPP, 1)
+static inline Vec2 VecSort(Vec2 V)
+{
+    ASSERT_COVERED(VecSortV2CPP)
+    return VecSortV2(V);
+}
+
+COVERAGE(VecSortV3CPP, 1)
+static inline Vec3 VecSort(Vec3 V)
+{
+    ASSERT_COVERED(VecSortV3CPP)
+    return VecSortV3(V);
+}
+
+COVERAGE(VecSortV4CPP, 1)
+static inline Vec4 VecSort(Vec4 V)
+{
+    ASSERT_COVERED(VecSortV4CPP)
+    return VecSortV4(V);
+}
+
+COVERAGE(VecRSortV2CPP, 1)
+static inline Vec2 VecRSort(Vec2 V)
+{
+    ASSERT_COVERED(VecRSortV2CPP)
+    return VecRSortV2(V);
+}
+
+COVERAGE(VecRSortV3CPP, 1)
+static inline Vec3 VecRSort(Vec3 V)
+{
+    ASSERT_COVERED(VecRSortV3CPP)
+    return VecRSortV3(V);
+}
+
+COVERAGE(VecRSortV4CPP, 1)
+static inline Vec4 VecRSort(Vec4 V)
+{
+    ASSERT_COVERED(VecRSortV4CPP)
+    return VecRSortV4(V);
+}
+
 COVERAGE(TransposeM2CPP, 1)
 static inline Mat2 Transpose(Mat2 Matrix)
 {
@@ -4081,6 +4200,9 @@ static inline Vec4 operator-(Vec4 In)
     Vec2: IsFiniteV2,             \
     Vec3: IsFiniteV3,             \
     Vec4: IsFiniteV4)(V)
+
+#define VecSort(V) _Generic((V), Vec2: VecSortV2, Vec3: VecSortV3, Vec4: VecSortV4)(V)
+#define VecRSort(V) _Generic((V), Vec2: VecRSortV2, Vec3: VecRSortV3, Vec4: VecRSortV4)(V)
 
 #define Eq(A, B) _Generic((A), \
     Vec2: EqV2,                \

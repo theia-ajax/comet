@@ -142,8 +142,7 @@ void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 
 		ASSERT(Count <= ARRAY_COUNT(P.Vertices));
 		memcpy(P.Vertices, Verts, Count * sizeof(Vec2));
 		P.VertexCount = Count;
-		for (int32 Index = 0; Index < P.VertexCount; Index++)
-		{
+		for (int32 Index = 0; Index < P.VertexCount; Index++) {
 			P.Vertices[Index] = TransformV2(T2(TxPos, TxRot), P.Vertices[Index]);
 		}
 		GDraw.PrimitiveQueue[GDraw.PrimitiveCount++] = (PrimDrawCmd){
@@ -222,19 +221,39 @@ void DrawRender(void)
 		uint8 A = (Color >> 24);
 		SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
 
+		Vec4 ColorF0 = V4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+		flt32 Grey = VecSort(ColorF0.RGB).G;
+		Vec4 ColorF1 = V4V(Splat(Grey).RGB, A);
+
 		switch (DrawCmd->Shape) {
 			case KShapeCircle:
 				SDL_RenderDrawCircle(
 					GDraw.Renderer, (SDL_FPoint*)&DrawCmd->PrimCircle.Center, DrawCmd->PrimCircle.Radius);
 				break;
 			case KShapePolygon:
-			{
-				SDL_FPoint Points[KPolygonMaxVerts + 1];
-				memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
-				Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
-				SDL_RenderDrawLinesF(
-					GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
-			}
+				{
+					SDL_FPoint Points[KPolygonMaxVerts + 1];
+					memcpy(
+						Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
+					Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
+					const int32 Count = DrawCmd->PrimPolygon.VertexCount;
+					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
+						flt32 EdgeRatio = (flt32)EdgeIndex / Count;
+						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
+						R = (uint8)round(ColorF.R * 255.0f);
+						G = (uint8)round(ColorF.G * 255.0f);
+						B = (uint8)round(ColorF.B * 255.0f);
+						A = (uint8)round(ColorF.A * 255.0f);
+						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+						SDL_RenderDrawLineF(
+							GDraw.Renderer,
+							Points[EdgeIndex].x,
+							Points[EdgeIndex].y,
+							Points[EdgeIndex + 1].x,
+							Points[EdgeIndex + 1].y);
+					}
+					// SDL_RenderDrawLinesF(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+				}
 				break;
 			default:
 				break;

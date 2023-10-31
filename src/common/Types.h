@@ -189,11 +189,15 @@ typedef double flt64;
 // Swap Functions
 // -------------------------------------------------------
 // clang-format off
-#define SWAP(Type, A, B) do { Type SWAP = A; A = B; B = SWAP; } while (0)
-#define SWAP_REF(Type, A, B) SWAP(Type, *A, *B)
+#ifdef SWAP
+#undef SWAP
+#endif
+
+#define SWAP(T, A, B) { T SWAP = A; A = B; B = SWAP; }
+#define SWAP_REF(T, A, B) SWAP(T, *A, *B)
 
 #define SWAP_NAME(Name) NAME2(Swap, Name)
-#define DEFINE_SWAP(Name, Type) static inline void SWAP_NAME(Name)(Type* A, Type* B) { SWAP_REF(Type, A, B); }
+#define DEFINE_SWAP(Name, T) static inline void SWAP_NAME(Name)(T* A, T* B) { SWAP_REF(T, A, B); }
 // clang-format on
 
 DEFINE_SWAP(Bool, bool);

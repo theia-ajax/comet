@@ -404,11 +404,13 @@ void PolygonMakeHull(Polygon* Self, const Vec2* Vertices, int32 VertexCount)
 
 void PolygonLocalize(const Polygon* Self, Tform2 Transform, Polygon* Out)
 {
+	ZERO_STRUCT(Out);
 	Out->Centroid = TransformV2(Transform, Self->Centroid);
 	for (int32 Index = 0; Index < Self->VertexCount; Index++) {
 		Out->Normals[Index] = R2Rotate(Transform.Rotation, Self->Normals[Index]);
 		Out->Vertices[Index] = TransformV2(Transform, Self->Vertices[Index]);
 	}
+	Out->VertexCount = Self->VertexCount;
 }
 
 bool PolygonRaycast(const Polygon* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out)
