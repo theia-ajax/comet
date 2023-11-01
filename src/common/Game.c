@@ -8,10 +8,12 @@
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
+#include "Log.h"
 #include "Math2D.h"
 #include "Physics.h"
 #include "Random.h"
 #include "StringId.h"
+#include "Util.h"
 
 enum SpriteSheetId {
 	SpriteSheetId_Default,
@@ -61,7 +63,6 @@ typedef struct GameState {
 #define GetImage(Id) GGame.ImageAssets[Id]
 static Projectile* CreateProjectile(GameState* gameState, const Projectile* config);
 static void DestroyProjectile(GameState* gameState, Projectile* projectile);
-static uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V);
 
 struct {
 	bool IsRunning;
@@ -89,13 +90,13 @@ int32 ExplosionsSpriteIds[11] = {0};
 StringId GProjectileSpriteName;
 
 struct BoxBody {
-	Polygon Box;
+	PolygonShape Box;
 	Tform2 XForm;
 	flt32 Angle;
 };
 
 struct CircBody {
-	Circle Circ;
+	CircleShape Circ;
 	Tform2 XForm;
 };
 
@@ -109,10 +110,9 @@ static bool GCircBoxContact0 = false;
 
 bool GameInitialize(const GameInitParams* params)
 {
+	LoggingInitialize();
+	rnd_pcg_seed(&GGame.RandomGen, (uint32)SDL_GetPerformanceCounter());
 	StringIdPoolsInitialize();
-
-	Uint64 PerformanceCounter = SDL_GetPerformanceCounter();
-	rnd_pcg_seed(&GGame.RandomGen, (uint32)PerformanceCounter);
 
 	GGame.Physics = PhysCreateWorld(&(PhysWorldConfig){});
 
@@ -201,9 +201,9 @@ bool GameInitialize(const GameInitParams* params)
 	PolygonMakeBox(&GBoxBodies[1].Box, V2(12.0f, 24.0f), V2(0, 0), 0.0f);
 	GBoxBodies[1].XForm = T2(V2(144 * 3, 108), R2Ident());
 
-	GCircBodies[0].Circ = (Circle){.Radius = 18};
+	GCircBodies[0].Circ = (CircleShape){.Radius = 18};
 	GCircBodies[0].XForm = T2(V2(144, 144), R2Ident());
-	GCircBodies[1].Circ = (Circle){.Radius = 26};
+	GCircBodies[1].Circ = (CircleShape){.Radius = 26};
 	GCircBodies[1].XForm = T2(V2(144 * 3, 144), R2Ident());
 
 	return true;
@@ -215,6 +215,7 @@ void GameShutdown(void)
 	AssetsShutdown();
 	DebugShutdown();
 	PhysDestroyWorld(GGame.Physics);
+	LoggingShutdown();
 	StringIdPoolsShutdown();
 }
 
@@ -476,41 +477,4 @@ static void DestroyProjectile(GameState* gameState, Projectile* projectile)
 	ASSERT(VALID_INDEX(ProjectileIndex, gameState->Projectiles.Count));
 
 	FixedListRemoveAt(gameState->Projectiles, ProjectileIndex);
-}
-
-static uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
-{
-	H = (H >= 0 ? 0.0f : 1.0f) + fmodf(H, 1.0f);
-	H *= 360.0f;
-	flt32 C = V * S;
-	flt32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
-	flt32 M = V - C;
-
-	flt32 RP = 0.0f, GP = 0.0f, BP = 0.0f;
-	if (H < 60) {
-		RP = C;
-		GP = X;
-	} else if (H < 120) {
-		RP = X;
-		GP = C;
-	} else if (H < 180) {
-		GP = C;
-		BP = X;
-	} else if (H < 240) {
-		GP = X;
-		BP = C;
-	} else if (H < 300) {
-		RP = X;
-		BP = C;
-	} else if (H < 360) {
-		RP = C;
-		BP = X;
-	}
-
-	Uint8 R = (Uint8)((RP + M) * 255.0f);
-	Uint8 G = (Uint8)((GP + M) * 255.0f);
-	Uint8 B = (Uint8)((BP + M) * 255.0f);
-
-	uint32 Result = (255 << 24) | (R << 16) | (G << 8) | B;
-	return Result;
 }

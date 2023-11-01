@@ -10,7 +10,6 @@
 #include "sysfont.h"
 
 #include "Game.h"
-#include "util.h"
 
 struct line {
 	SDL_Point Points[16];

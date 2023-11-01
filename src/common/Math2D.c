@@ -231,13 +231,13 @@ Vec2 InvTransformV2(Tform2 Transform, Vec2 Point)
 	return R2InvRotate(Transform.Rotation, Sub(Point, Transform.Position));
 }
 
-void CircleLocalize(const Circle* Self, Tform2 Transform, Circle* Out)
+void CircleLocalize(const CircleShape* Self, Tform2 Transform, CircleShape* Out)
 {
 	Out->Center = TransformV2(Transform, Self->Center);
 	Out->Radius = Self->Radius;
 }
 
-bool CircleTestPoint(const Circle* Self, Tform2 Transform, Vec2 TestPoint)
+bool CircleTestPoint(const CircleShape* Self, Tform2 Transform, Vec2 TestPoint)
 {
 	ASSERT(Self);
 	Vec2 TransformedCenter = TransformV2(Transform, Self->Center);
@@ -245,7 +245,7 @@ bool CircleTestPoint(const Circle* Self, Tform2 Transform, Vec2 TestPoint)
 	return LenSqr(Delta) <= SQUARE(Self->Radius);
 }
 
-bool PolygonTestPoint(const Polygon* Self, Tform2 Transform, Vec2 TestPoint)
+bool PolygonTestPoint(const PolygonShape* Self, Tform2 Transform, Vec2 TestPoint)
 {
 	ASSERT(Self);
 	bool Result = true;
@@ -263,7 +263,7 @@ bool PolygonTestPoint(const Polygon* Self, Tform2 Transform, Vec2 TestPoint)
 	return Result;
 }
 
-AABB CircleCalcAABB(const Circle* Self, Tform2 Transform)
+AABB CircleCalcAABB(const CircleShape* Self, Tform2 Transform)
 {
 	Vec2 Center = Add(Self->Center, Transform.Position);
 	Vec2 Rad2 = V2(Self->Radius, Self->Radius);
@@ -273,7 +273,7 @@ AABB CircleCalcAABB(const Circle* Self, Tform2 Transform)
 	};
 }
 
-bool CircleRaycast(const Circle* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out)
+bool CircleRaycast(const CircleShape* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out)
 {
 	Vec2 Center = TransformV2(Transform, Self->Center);
 	Vec2 StartToCenter = Sub(In->Start, Center);
@@ -299,7 +299,7 @@ bool CircleRaycast(const Circle* Self, Tform2 Transform, const RaycastIn* In, Ra
 	return Result;
 }
 
-bool CircleIntersectsCircle(const Circle* A, Tform2 TransformA, const Circle* B, Tform2 TransformB)
+bool CircleIntersectsCircle(const CircleShape* A, Tform2 TransformA, const CircleShape* B, Tform2 TransformB)
 {
 	Vec2 SelfCenter = TransformV2(TransformA, A->Center);
 	Vec2 OtherCenter = TransformV2(TransformB, B->Center);
@@ -308,9 +308,9 @@ bool CircleIntersectsCircle(const Circle* A, Tform2 TransformA, const Circle* B,
 	return DistSqr <= RadSqr;
 }
 
-bool CircleIntersectsPolygon(const Circle* A, Tform2 TransformA, const Polygon* B, Tform2 TransformB)
+bool CircleIntersectsPolygon(const CircleShape* A, Tform2 TransformA, const PolygonShape* B, Tform2 TransformB)
 {
-	Polygon LocalB;
+	PolygonShape LocalB;
 	PolygonLocalize(B, TransformB, &LocalB);
 
 	Vec2 SelfCenter = TransformV2(TransformA, A->Center);
@@ -331,7 +331,7 @@ bool CircleIntersectsPolygon(const Circle* A, Tform2 TransformA, const Polygon* 
 	return false;
 }
 
-AABB PolygonCalcAABB(const Polygon* Self, Tform2 Transform)
+AABB PolygonCalcAABB(const PolygonShape* Self, Tform2 Transform)
 {
 	Vec2 Lower = TransformV2(Transform, Self->Vertices[0]);
 	Vec2 Upper = Lower;
@@ -367,7 +367,7 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count)
 	return Center;
 }
 
-void PolygonMakeAABB(Polygon* Self, Vec2 HalfSize)
+void PolygonMakeAABB(PolygonShape* Self, Vec2 HalfSize)
 {
 	Self->VertexCount = 4;
 	Self->Vertices[0] = V2(-HalfSize.X, -HalfSize.Y);
@@ -381,7 +381,7 @@ void PolygonMakeAABB(Polygon* Self, Vec2 HalfSize)
 	Self->Centroid = V2(0, 0);
 }
 
-void PolygonMakeBox(Polygon* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle)
+void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle)
 {
 	PolygonMakeAABB(Self, HalfSize);
 	Self->Centroid = Center;
@@ -392,7 +392,7 @@ void PolygonMakeBox(Polygon* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle)
 	}
 }
 
-void PolygonMakeHull(Polygon* Self, const Vec2* Vertices, int32 VertexCount)
+void PolygonMakeHull(PolygonShape* Self, const Vec2* Vertices, int32 VertexCount)
 {
 	ASSERT(VertexCount >= 3);
 
@@ -402,7 +402,7 @@ void PolygonMakeHull(Polygon* Self, const Vec2* Vertices, int32 VertexCount)
 	Self->Centroid = CalculateCentroid(Self->Vertices, Self->VertexCount);
 }
 
-void PolygonLocalize(const Polygon* Self, Tform2 Transform, Polygon* Out)
+void PolygonLocalize(const PolygonShape* Self, Tform2 Transform, PolygonShape* Out)
 {
 	ZERO_STRUCT(Out);
 	Out->Centroid = TransformV2(Transform, Self->Centroid);
@@ -413,7 +413,7 @@ void PolygonLocalize(const Polygon* Self, Tform2 Transform, Polygon* Out)
 	Out->VertexCount = Self->VertexCount;
 }
 
-bool PolygonRaycast(const Polygon* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out)
+bool PolygonRaycast(const PolygonShape* Self, Tform2 Transform, const RaycastIn* In, RaycastOut* Out)
 {
 	// Localize ray to polygon's transform
 	Vec2 P0 = InvTransformV2(Transform, In->Start);
@@ -456,14 +456,14 @@ bool PolygonRaycast(const Polygon* Self, Tform2 Transform, const RaycastIn* In, 
 	return false;
 }
 
-bool PolygonIntersectsCircle(const Polygon* A, Tform2 TransformA, const Circle* B, Tform2 TransformB)
+bool PolygonIntersectsCircle(const PolygonShape* A, Tform2 TransformA, const CircleShape* B, Tform2 TransformB)
 {
 	return CircleIntersectsPolygon(B, TransformB, A, TransformA);
 }
 
-bool PolygonIntersectsPolygon(const Polygon* A, Tform2 TransformA, const Polygon* B, Tform2 TransformB)
+bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const PolygonShape* B, Tform2 TransformB)
 {
-	Polygon LocalA, LocalB;
+	PolygonShape LocalA, LocalB;
 	PolygonLocalize(A, TransformA, &LocalA);
 	PolygonLocalize(B, TransformB, &LocalB);
 

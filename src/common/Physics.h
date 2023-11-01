@@ -33,10 +33,10 @@ PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize);
 // TryGet calls return NULL if unable to get the shape. This occurs when:
 // - Shape type encoded in handle is not valid for the given function (e.g. getting a circle from a polygon handle)
 // - Index encoded in handle is invalid.
-Circle* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape);
-Polygon* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
+CircleShape* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape);
+PolygonShape* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
 // Get ASSERTs if the handle is invalid
-Circle* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape);
-Polygon* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
+CircleShape* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape);
+PolygonShape* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape);
 
 bool PhysShapeTestPoint(PhysWorld* World, PhysShapeHandle HShape, Tform2 Transform, Vec2 TestPoint);

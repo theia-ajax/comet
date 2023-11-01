@@ -4,6 +4,7 @@
 #include <json.h>
 
 #include "Math2D.h"
+#include "Util.h"
 
 // Constants
 
@@ -18,8 +19,8 @@ enum { KShapeCircle = 0, KShapePolygon = 1 };
 typedef struct PrimDrawCmd {
 	uint32 Color;
 	int32 Shape;
-	Circle PrimCircle;
-	Polygon PrimPolygon;
+	CircleShape PrimCircle;
+	PolygonShape PrimPolygon;
 } PrimDrawCmd;
 
 struct {
@@ -116,7 +117,7 @@ void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color)
 			.Shape = KShapeCircle,
 			.Color = Color,
 			.PrimCircle =
-				(Circle){
+				(CircleShape){
 					.Center = Center,
 					.Radius = Radius,
 				},
@@ -138,7 +139,7 @@ void DrawAABB(AABB AABB_, uint32 Color)
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color)
 {
 	if (GDraw.PrimitiveCount < KMaxPrimitiveDrawCalls) {
-		Polygon P;
+		PolygonShape P;
 		ASSERT(Count <= ARRAY_COUNT(P.Vertices));
 		memcpy(P.Vertices, Verts, Count * sizeof(Vec2));
 		P.VertexCount = Count;
@@ -240,10 +241,7 @@ void DrawRender(void)
 					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
 						flt32 EdgeRatio = (flt32)EdgeIndex / Count;
 						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
-						R = (uint8)round(ColorF.R * 255.0f);
-						G = (uint8)round(ColorF.G * 255.0f);
-						B = (uint8)round(ColorF.B * 255.0f);
-						A = (uint8)round(ColorF.A * 255.0f);
+						ColorV4ToBytes(ColorF, &R, &G, &B, &A);
 						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
 						SDL_RenderDrawLineF(
 							GDraw.Renderer,

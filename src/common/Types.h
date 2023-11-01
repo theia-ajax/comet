@@ -168,6 +168,15 @@ typedef double flt64;
 	static char name[size]
 #endif
 
+#define FixedArray(type, cap)                                                                                          \
+	struct {                                                                                                           \
+		type Data[cap];                                                                                                \
+	}
+
+#define FixedArrayCapacity(array) ARRAY_COUNT((array).Data)
+#define FixedArrayElemSize(array) sizeof((array).Data[0])
+#define FixedArraySize(array) sizeof((array).Data)
+
 #define FixedList(type, cap)                                                                                           \
 	struct {                                                                                                           \
 		type Data[cap];                                                                                                \
@@ -213,7 +222,8 @@ DEFINE_SWAP(Float32, flt32);
 DEFINE_SWAP(Float64, flt64);
 
 #ifdef Swap
-#warning "Swap already defined which means you probably don't need to manually include Types.h as it's being included from elsewhere."
+#warning                                                                                                               \
+	"Swap already defined which means you probably don't need to manually include Types.h as it's being included from elsewhere."
 #else
 #define Swap(A, B)                                                                                                     \
 	_Generic(                                                                                                          \

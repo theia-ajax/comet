@@ -1,10 +1,11 @@
 #include "config.h"
 
+#include <SDL2/SDL.h>
 #include <cimgui.h>
 
 #include "ini.h"
 #include "stb_ds.h"
-#include "util.h"
+#include "Util.h"
 
 const uint32 INVALID_HASH = (uint32)-1;
 
@@ -14,9 +15,7 @@ typedef struct s_config {
 	s_config_property_type_entry* property_type_map;
 } s_config;
 
-enum {
-	k_maximum_configs = 64
-};
+enum { k_maximum_configs = 64 };
 
 DECLARE_DATA_ARRAY_NO_HANDLE(config, k_maximum_configs);
 
@@ -34,10 +33,7 @@ struct {
 static h_config alloc_config(void);
 static s_config* get_config(h_config config_handle);
 static bool try_load_config(const char* file_name, s_config* out_config);
-static const char* get_property_value(
-	h_config config_handle,
-	const char* section_name,
-	const char* property_name);
+static const char* get_property_value(h_config config_handle, const char* section_name, const char* property_name);
 static bool contains(const char** strings, int count, const char* search);
 static uint32 hash_section_and_property(int section, int property);
 static void build_property_map(s_config* config);
@@ -104,8 +100,7 @@ void config_save(h_config config_handle)
 
 void config_apply(h_config config_handle)
 {
-	s_handler* handler =
-		handler_data_array_get(&g_config.handlers, HANDLE_CONVERT_TO(handler, config_handle));
+	s_handler* handler = handler_data_array_get(&g_config.handlers, HANDLE_CONVERT_TO(handler, config_handle));
 	if (handler->on_apply_config != NULL) {
 		handler->on_apply_config(config_handle);
 	}
@@ -113,29 +108,32 @@ void config_apply(h_config config_handle)
 
 void config_set_on_apply(h_config config_handle, t_on_apply_config on_apply_config)
 {
-	s_handler* handler =
-		handler_data_array_get(&g_config.handlers, HANDLE_CONVERT_TO(handler, config_handle));
+	s_handler* handler = handler_data_array_get(&g_config.handlers, HANDLE_CONVERT_TO(handler, config_handle));
 	handler->on_apply_config = on_apply_config;
 }
 
 static bool try_load_config(const char* file_name, s_config* out_config)
 {
-	size_t length = 0;
-	char* config_file_buffer = read_file("config.ini", &length);
-
 	bool result = false;
 
-	if (config_file_buffer) {
-		ini_t* ini = ini_load(config_file_buffer, NULL);
+	SDL_RWops* file = SDL_RWFromFile(file_name, "r");
+	if (file != NULL) {
+		Sint64 file_size = SDL_RWsize(file);
+		if (file_size != NONE) {
+			char* config_file_buffer = (char*)malloc(file_size + 1);
+			if (SDL_RWread(file, config_file_buffer, 1, file_size) == file_size) {
+				ini_t* ini = ini_load(config_file_buffer, NULL);
 
-		if (ini) {
-			ZERO_STRUCT(out_config);
-			strncpy(out_config->file_name, file_name, ARRAY_COUNT(out_config->file_name));
-			out_config->ini = ini;
-			result = true;
+				if (ini) {
+					ZERO_STRUCT(out_config);
+					strncpy(out_config->file_name, file_name, ARRAY_COUNT(out_config->file_name));
+					out_config->ini = ini;
+					result = true;
+				}
+
+				free(config_file_buffer);
+			}
 		}
-
-		free(config_file_buffer);
 	}
 
 	return result;
@@ -156,10 +154,7 @@ s_config_property_type_entry* config_get_property_type_map(h_config config_handl
 	return get_config(config_handle)->property_type_map;
 }
 
-e_config_property_type properties_map_get_type(
-	s_config_property_type_entry* map,
-	int section,
-	int property)
+e_config_property_type properties_map_get_type(s_config_property_type_entry* map, int section, int property)
 {
 	e_config_property_type result = _config_property_type_string;
 	uint32 key = hash_section_and_property(section, property);
@@ -169,11 +164,7 @@ e_config_property_type properties_map_get_type(
 	return result;
 }
 
-void properties_map_set_type(
-	s_config_property_type_entry* map,
-	int section,
-	int property,
-	e_config_property_type type)
+void properties_map_set_type(s_config_property_type_entry* map, int section, int property, e_config_property_type type)
 {
 	uint32 key = hash_section_and_property(section, property);
 	if (key != INVALID_HASH) {
@@ -187,11 +178,7 @@ bool config_has_section(h_config config_handle, const char* section)
 	return ini_find_section(config->ini, section, -1) != INI_NOT_FOUND;
 }
 
-int32 config_get_or_default_int(
-	h_config config_handle,
-	const char* section,
-	const char* property,
-	int32 default_value)
+int32 config_get_or_default_int(h_config config_handle, const char* section, const char* property, int32 default_value)
 {
 	int32 result = default_value;
 	const char* property_value = get_property_value(config_handle, section, property);
@@ -201,11 +188,7 @@ int32 config_get_or_default_int(
 	return result;
 }
 
-float config_get_or_default_float(
-	h_config config_handle,
-	const char* section,
-	const char* property,
-	float default_value)
+float config_get_or_default_float(h_config config_handle, const char* section, const char* property, float default_value)
 {
 	float result = default_value;
 	const char* property_value = get_property_value(config_handle, section, property);
@@ -215,11 +198,7 @@ float config_get_or_default_float(
 	return result;
 }
 
-bool config_get_or_default_bool(
-	h_config config_handle,
-	const char* section,
-	const char* property,
-	bool default_value)
+bool config_get_or_default_bool(h_config config_handle, const char* section, const char* property, bool default_value)
 {
 	bool result = default_value;
 	const char* property_value = get_property_value(config_handle, section, property);
@@ -257,10 +236,7 @@ static s_config* get_config(h_config config_handle)
 	return config_data_array_get(&g_config.entries, config_handle);
 }
 
-static const char* get_property_value(
-	h_config config_handle,
-	const char* section_name,
-	const char* property_name)
+static const char* get_property_value(h_config config_handle, const char* section_name, const char* property_name)
 {
 	s_config* config = get_config(config_handle);
 	const char* result = NULL;
@@ -391,8 +367,7 @@ static void build_property_map(s_config* config)
 			e_config_property_type property_type = _config_property_type_string;
 			int32 int_value;
 			float float_value;
-			bool is_number = try_parse_int(property_value, &int_value)
-							 | try_parse_float(property_value, &float_value);
+			bool is_number = try_parse_int(property_value, &int_value) | try_parse_float(property_value, &float_value);
 
 			if (is_number) {
 				float int_float_value = (float)int_value;

@@ -5,7 +5,6 @@
 #include <stb_image.h>
 
 #include "JsonHelpers.h"
-#include "util.h"
 
 // Private Definitions
 

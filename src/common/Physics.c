@@ -4,8 +4,8 @@
 // Private Defintitions
 typedef struct PhysWorld {
 	struct {
-		Circle* Circles;
-		Polygon* Polygons;
+		CircleShape* Circles;
+		PolygonShape* Polygons;
 	} Shapes;
 	
 } PhysWorld;
@@ -38,7 +38,7 @@ void PhysDestroyWorld(PhysWorld* World)
 PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, flt32 Radius)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Circle);
-	Circle* Circle = PhysTryGetCircleShape(World, HShape);
+	CircleShape* Circle = PhysTryGetCircleShape(World, HShape);
 	if (Circle != NULL) {
 		Circle->Center = Center;
 		Circle->Radius = Radius;
@@ -51,7 +51,7 @@ PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t Po
 {
 	ASSERT(PointsCount <= KPolygonMaxVerts);
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Polygon);
-	Polygon* Polygon = PhysTryGetPolygonShape(World, HShape);
+	PolygonShape* Polygon = PhysTryGetPolygonShape(World, HShape);
 	if (Polygon != NULL) {
 		memcpy(Polygon->Vertices, Points, sizeof(*Points) * PointsCount);
 		Polygon->VertexCount = MIN(PointsCount, KPolygonMaxVerts);
@@ -67,14 +67,14 @@ PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t Po
 PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Polygon);
-	Polygon* Box = PhysGetPolygonShape(World, HShape);
+	PolygonShape* Box = PhysGetPolygonShape(World, HShape);
 	PolygonMakeBox(Box, HalfSize, V2(0, 0), 0);
 	return HShape;
 }
 
-Circle* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
+CircleShape* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 {
-	Circle* Result = NULL;
+	CircleShape* Result = NULL;
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	if (ShapeType == PhysShapeType_Circle) {
 		int32 Index = H_SHAPE_INDEX(HShape);
@@ -85,9 +85,9 @@ Circle* PhysTryGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 	return Result;
 }
 
-Polygon* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
+PolygonShape* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
 {
-	Polygon* Result = NULL;
+	PolygonShape* Result = NULL;
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	if (ShapeType == PhysShapeType_Polygon) {
 		int32 Index = H_SHAPE_INDEX(HShape);
@@ -98,7 +98,7 @@ Polygon* PhysTryGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
 	return Result;
 }
 
-Circle* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
+CircleShape* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 {
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	ASSERT(ShapeType == PhysShapeType_Circle);
@@ -107,7 +107,7 @@ Circle* PhysGetCircleShape(PhysWorld* World, PhysShapeHandle HShape)
 	return &World->Shapes.Circles[Index];
 }
 
-Polygon* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
+PolygonShape* PhysGetPolygonShape(PhysWorld* World, PhysShapeHandle HShape)
 {
 	PhysShapeType ShapeType = H_SHAPE_TYPE(HShape);
 	ASSERT(ShapeType == PhysShapeType_Polygon);
@@ -151,12 +151,12 @@ static PhysShapeHandle _PhysAllocateShape(PhysWorld* World, PhysShapeType ShapeT
 			break;
 
 		case PhysShapeType_Circle:
-			arrput(World->Shapes.Circles, (Circle){0});
+			arrput(World->Shapes.Circles, (CircleShape){0});
 			ShapeIndex = arrlen(World->Shapes.Circles) - 1;
 			break;
 
 		case PhysShapeType_Polygon:
-			arrput(World->Shapes.Polygons, (Polygon){0});
+			arrput(World->Shapes.Polygons, (PolygonShape){0});
 			ShapeIndex = arrlen(World->Shapes.Polygons) - 1;
 			break;
 

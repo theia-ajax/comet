@@ -4,7 +4,7 @@
 
 #include "config.h"
 #include "ini.h"
-#include "util.h"
+#include "Util.h"
 
 struct {
 	h_config config_handle;
