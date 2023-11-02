@@ -208,21 +208,21 @@ DOCUMENTATION
           Returns the index in the hashmap which has the key 'key', or -1
           if the key is not present.
 
-      hmgetll/
+      hmget
       hmget_ts
       shget
         TV hmget(T*, TK key)
         TV shget(T*, char* key)
         TV hmget_ts(T*, TK key, ptrdiff_t tempvar)
-          Returns the value corresponding to 'key' in the hashmap.ll//
-          The structure must have a 'value' field
+          Returns the value corresponding to 'Key' in the hashmap.
+          The structure must have a 'Value' field
 
       hmgets
       shgets
         T hmgets(T*, TK key)
         T shgets(T*, char* key)m
           Returns the structure corresponding to 'key' in the hashmap.
-ll/
+
       hmgetp
       shgetp
       hmgetp_ts

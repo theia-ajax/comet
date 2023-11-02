@@ -5,6 +5,8 @@
 #define STRPOOL_IMPLEMENTATION
 #include "strpool.h"
 
+#include "Log.h"
+
 struct {
 	bool IsInitialized;
 	strpool_t Pool;
@@ -52,6 +54,8 @@ void StringIdPoolsInitialize(void)
 	strpool_init(&GStringId.Pool, &Config);
 
 	GStringId.IsInitialized = true;
+
+	LogInfo(__FUNCTION__);
 }
 
 void StringIdPoolsShutdown(void)
@@ -61,4 +65,6 @@ void StringIdPoolsShutdown(void)
 	strpool_term(&GStringId.Pool);
 
 	GStringId.IsInitialized = false;
+
+	LogInfo(__FUNCTION__);
 }

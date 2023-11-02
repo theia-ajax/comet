@@ -23,12 +23,15 @@ void LoggingInitialize(void)
 {
 	GLogLevel = LogLevel_Info;
 	GLogFile = fopen("log.txt", "w");
+
+	LogInfo(__FUNCTION__);
 }
 
 void LoggingShutdown(void)
 {
 	GLogLevel = LogLevel_None;
 	fclose(GLogFile);
+	LogInfo(__FUNCTION__);
 }
 
 void LogInfo(const char* Format, ...)

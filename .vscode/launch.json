@@ -53,6 +53,8 @@
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
             "preLaunchTask": "(Linux GCC) Build Debug",
+            "visualizerFile": "${workspaceRoot}/CustomTypes.natvis",
+            "showDisplayString": true,
             "linux": {
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
@@ -74,6 +76,8 @@
             "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
+            "visualizerFile": "${workspaceFolder}/CustomTypes.natvis",
+            "showDisplayString": true,
             "linux": {
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"

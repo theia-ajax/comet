@@ -4,6 +4,7 @@
 #include <cimgui.h>
 #include <cimgui_impl.h>
 #include <stdlib.h>
+#include <stb_ds.h>
 
 #include "AssetTypes.h"
 #include "Debug.h"
@@ -110,9 +111,15 @@ static bool GCircBoxContact0 = false;
 
 bool GameInitialize(const GameInitParams* params)
 {
+	uint32 RandomSeed = (uint32)SDL_GetPerformanceCounter();
+	rnd_pcg_seed(&GGame.RandomGen, RandomSeed);
+	uint64 HashtableSeed = (uint64)rnd_pcg_next(&GGame.RandomGen) | (((uint64)rnd_pcg_next(&GGame.RandomGen)) << 32);
+	stbds_rand_seed(HashtableSeed);
+
 	LoggingInitialize();
-	rnd_pcg_seed(&GGame.RandomGen, (uint32)SDL_GetPerformanceCounter());
 	StringIdPoolsInitialize();
+
+	LogInfo("Game Initializing");
 
 	GGame.Physics = PhysCreateWorld(&(PhysWorldConfig){});
 
@@ -121,6 +128,30 @@ bool GameInitialize(const GameInitParams* params)
 	int32 GameResWidth = 576;  // 576;
 	int32 GameResHeight = 324; // 324;
 
+	int32 testData[] = { 1, 1, 2, 2, 2, 3, 5, 7, 8, 8, 8, 9, 10, 100, 102, 104, 104, 104 };
+	LogInfo("%d", BinarySearch(1, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(2, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(3, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(4, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(5, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(8, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(101, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(103, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(104, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearch(105, testData, ARRAY_COUNT(testData)));
+	LogInfo("---");
+	LogInfo("%d", BinarySearchInsertIndex(1, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(2, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(3, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(4, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(5, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(8, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(101, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(103, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(104, testData, ARRAY_COUNT(testData)));
+	LogInfo("%d", BinarySearchInsertIndex(105, testData, ARRAY_COUNT(testData)));
+
+	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, -1, SDL_RENDERER_ACCELERATED);
@@ -206,6 +237,8 @@ bool GameInitialize(const GameInitParams* params)
 	GCircBodies[1].Circ = (CircleShape){.Radius = 26};
 	GCircBodies[1].XForm = T2(V2(144 * 3, 144), R2Ident());
 
+	LogInfo("Game Initialization Complete");
+
 	return true;
 }
 
@@ -215,8 +248,10 @@ void GameShutdown(void)
 	AssetsShutdown();
 	DebugShutdown();
 	PhysDestroyWorld(GGame.Physics);
-	LoggingShutdown();
 	StringIdPoolsShutdown();
+
+	LogInfo(__FUNCTION__);
+	LoggingShutdown();
 }
 
 void GameSendInput(const GameInput* input)
@@ -280,6 +315,9 @@ void GameUpdate(const GameTime* gameTime)
 
 	static bool control_circs = false;
 	if (InputKeyDown(SDL_SCANCODE_T)) control_circs = !control_circs;
+
+	Vec3 What = V3(1.0f, 2.0f, 3.0f);
+	Vec4 DaFuq = V4V(What, 10.0f);
 
 	if (control_circs) {
 		Vec2 MoveInput0 = InputXY(SDL_SCANCODE_A, SDL_SCANCODE_D, SDL_SCANCODE_W, SDL_SCANCODE_S);

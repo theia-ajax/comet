@@ -38,3 +38,99 @@ static inline uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
 	uint32 Result = (255 << 24) | (R << 16) | (G << 8) | B;
 	return Result;
 }
+
+#define BINARY_SEARCH_DEFINE(type) type NAME2(BinarySearch_, type)(type Find, type * Data, int32 Count)
+#define BINARY_SEARCH_IMPL(type)                                                                                       \
+	BINARY_SEARCH_DEFINE(type)                                                                                         \
+	{                                                                                                                  \
+		type Result = NONE;                                                                                            \
+		int32 Head = 0, Tail = Count, Mid = 0;                                                                         \
+		while (Head < Tail) {                                                                                          \
+			Mid = (Tail - Head) / 2 + Head;                                                                            \
+			if (Find < Data[Mid]) {                                                                                    \
+				Tail = Mid;                                                                                            \
+			} else if (Find > Data[Mid]) {                                                                             \
+				Head = Mid + 1;                                                                                        \
+			} else {                                                                                                   \
+				while (Mid > 0 && Data[Mid - 1] == Find) {                                                             \
+					Mid--;                                                                                             \
+				}                                                                                                      \
+				Result = Head = Tail = Mid;                                                                            \
+				break;                                                                                                 \
+			}                                                                                                          \
+		}                                                                                                              \
+		return Result;                                                                                                 \
+	}
+
+#define BINARY_SEARCH_INSERT_INDEX_DEFINE(type)                                                                        \
+	int32 NAME2(BinarySearchInsertIndex_, type)(int32 Find, int32 * Data, int32 Count)
+#define BINARY_SEARCH_INSERT_INDEX_IMPL(type)                                                                          \
+	BINARY_SEARCH_INSERT_INDEX_DEFINE(type)                                                                            \
+	{                                                                                                                  \
+		int32 Result = NONE;                                                                                           \
+		int32 Head = 0, Tail = Count, Mid = 0;                                                                         \
+		while (Head < Tail) {                                                                                          \
+			Mid = (Tail - Head) / 2 + Head;                                                                            \
+			if (Find < Data[Mid]) {                                                                                    \
+				Tail = Mid;                                                                                            \
+			} else if (Find > Data[Mid]) {                                                                             \
+				Head = Mid + 1;                                                                                        \
+			} else {                                                                                                   \
+				while (Mid > 0 && Data[Mid - 1] == Find) {                                                             \
+					Mid--;                                                                                             \
+				}                                                                                                      \
+				Result = Head = Tail = Mid;                                                                            \
+				break;                                                                                                 \
+			}                                                                                                          \
+		}                                                                                                              \
+		if (Result == NONE && Head == Tail) {                                                                          \
+			Result = Head;                                                                                             \
+		}                                                                                                              \
+		return Result;                                                                                                 \
+	}
+
+#define BINARY_SEARCH_TOOLS_DEFINE(type)                                                                               \
+	BINARY_SEARCH_DEFINE(type);                                                                                        \
+	BINARY_SEARCH_INSERT_INDEX_DEFINE(type);
+#define BINARY_SEARCH_TOOLS_IMPL(type)                                                                                 \
+	BINARY_SEARCH_IMPL(type)                                                                                           \
+	BINARY_SEARCH_INSERT_INDEX_IMPL(type)
+
+BINARY_SEARCH_TOOLS_DEFINE(int8);
+BINARY_SEARCH_TOOLS_DEFINE(int16);
+BINARY_SEARCH_TOOLS_DEFINE(int32);
+BINARY_SEARCH_TOOLS_DEFINE(int64);
+BINARY_SEARCH_TOOLS_DEFINE(uint8);
+BINARY_SEARCH_TOOLS_DEFINE(uint16);
+BINARY_SEARCH_TOOLS_DEFINE(uint32);
+BINARY_SEARCH_TOOLS_DEFINE(uint64);
+BINARY_SEARCH_TOOLS_DEFINE(flt32);
+BINARY_SEARCH_TOOLS_DEFINE(flt64);
+
+#define BinarySearch(Find, Data, Count)                                                                                \
+	_Generic(                                                                                                          \
+		(Find),                                                                                                        \
+		int8: BinarySearch_int8,                                                                                       \
+		int16: BinarySearch_int16,                                                                                     \
+		int32: BinarySearch_int32,                                                                                     \
+		int64: BinarySearch_int64,                                                                                     \
+		uint8: BinarySearch_uint8,                                                                                     \
+		uint16: BinarySearch_uint16,                                                                                   \
+		uint32: BinarySearch_uint32,                                                                                   \
+		uint64: BinarySearch_uint64,                                                                                   \
+		flt32: BinarySearch_flt32,                                                                                     \
+		flt64: BinarySearch_flt64)(Find, Data, Count)
+
+#define BinarySearchInsertIndex(Find, Data, Count)                                                                     \
+	_Generic(                                                                                                          \
+		(Find),                                                                                                        \
+		int8: BinarySearchInsertIndex_int8,                                                                            \
+		int16: BinarySearchInsertIndex_int16,                                                                          \
+		int32: BinarySearchInsertIndex_int32,                                                                          \
+		int64: BinarySearchInsertIndex_int64,                                                                          \
+		uint8: BinarySearchInsertIndex_uint8,                                                                          \
+		uint16: BinarySearchInsertIndex_uint16,                                                                        \
+		uint32: BinarySearchInsertIndex_uint32,                                                                        \
+		uint64: BinarySearchInsertIndex_uint64,                                                                        \
+		flt32: BinarySearchInsertIndex_flt32,                                                                          \
+		flt64: BinarySearchInsertIndex_flt64)(Find, Data, Count)

@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <json.h>
 
+#include "Log.h"
 #include "Math2D.h"
 #include "Util.h"
 
@@ -85,6 +86,8 @@ void DrawInitialize(const DrawConfig* config)
 		GDraw.SpriteSheetTextures[SpriteSheetIndex] =
 			SDL_CreateTextureFromSurface(GDraw.Renderer, SpriteSheet->Image->Data->Surface);
 	}
+
+	LogInfo(__FUNCTION__);
 }
 
 void DrawShutdown(void)
@@ -92,6 +95,8 @@ void DrawShutdown(void)
 	for (int32 TextureIndex = 0; TextureIndex < KMaxDrawSpriteSheets; TextureIndex++) {
 		SDL_DestroyTexture(GDraw.SpriteSheetTextures[TextureIndex]);
 	}
+
+	LogInfo(__FUNCTION__);
 }
 
 void DrawSprite(const SpriteDraw* spriteDraw)
@@ -253,8 +258,7 @@ void DrawRender(void)
 					// SDL_RenderDrawLinesF(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
 				}
 				break;
-			default:
-				break;
+			default: break;
 		}
 	}
 
@@ -297,8 +301,7 @@ static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTi
 				Result = (SDL_Rect){R.X, R.Y, R.W, R.H};
 			}
 			break;
-		default:
-			break;
+		default: break;
 	}
 
 	return Result;

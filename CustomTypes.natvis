@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="Vec2">
+	  <DisplayString>{{ X={Data[0]}, Y={Data[1]} }}</DisplayString>
+	  <Expand>
+		<Item Name="X">Data[0]</Item>
+		<Item Name="Y">Data[1]</Item>
+	  </Expand>
+  </Type>
+  <Type Name="Vec3">
+	  <DisplayString>{{ X={Data[0]}, Y={Data[1]}, Z={Data[2]} }}</DisplayString>
+	  <Expand>
+		<Item Name="X">Data[0]</Item>
+		<Item Name="Y">Data[1]</Item>
+		<Item Name="Z">Data[2]</Item>
+	  </Expand>
+  </Type>
+  <Type Name="Vec4">
+	  <DisplayString>{{ X={Data[0]}, Y={Data[1]}, Z={Data[2]}, W={Data[3]} }}</DisplayString>
+	  <Expand>
+		<Item Name="X">Data[0]</Item>
+		<Item Name="Y">Data[1]</Item>
+		<Item Name="Z">Data[2]</Item>
+		<Item Name="W">Data[3]</Item>
+	  </Expand>
+  </Type>
+</AutoVisualizer>

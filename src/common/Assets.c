@@ -5,6 +5,16 @@
 #include <stb_image.h>
 
 #include "JsonHelpers.h"
+#include "Log.h"
+
+// Constants
+
+const char* AssetTypeNames[] = {
+	"None",
+	"Image",
+	"SpriteSheetData",
+};
+_Static_assert(ARRAY_COUNT(AssetTypeNames) == AssetType_Count, "");
 
 // Private Definitions
 
@@ -38,6 +48,8 @@ void AssetsInitialize(const AssetsConfig* config)
 
 	arrsetcap(GAssets.AssetStorage, 256);
 	arrsetcap(GAssets.AssetStorageFreeStack, 256);
+
+	LogInfo(__FUNCTION__);
 }
 
 void AssetsShutdown(void)
@@ -49,6 +61,8 @@ void AssetsShutdown(void)
 
 	arrfree(GAssets.AssetStorage);
 	arrfree(GAssets.AssetStorageFreeStack);
+
+	LogInfo(__FUNCTION__);
 }
 
 Asset* LoadAsset(AssetType Type, const char* FileName)
@@ -66,10 +80,12 @@ Asset* LoadAsset(AssetType Type, const char* FileName)
 
 	if (TypeInfo->LoadAssetData(FileName, DataStorage)) {
 		Result->Data = DataStorage;
+		LogInfo("Loaded asset '%s' with type '%s'", FileName, AssetTypeNames[Type]);
 	} else {
 		free(DataStorage);
 		_ReleaseAsset(Result);
 		Result = NULL;
+		LogError("Failed to load asset '%s'", FileName);
 	}
 
 	return Result;
