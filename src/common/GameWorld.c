@@ -6,6 +6,8 @@
 #include "StringId.h"
 #include "Util.h"
 
+#define COMPONENT_ID_FIELD_ENTRY(Type) StringId Type;
+
 // clang-format off
 #define KEntityIndexBits 16
 #define KEntityIndexMask ((1 << (KEntityIndexBits - 1)) - 1)
@@ -16,7 +18,13 @@
 #define ENTITY_ID_EQ(A, B) ((A).RawValue == (B).RawValue)
 #define ENTITY_ID_NEQ(A, B) ((A).RawValue != (B).RawValue)
 // clang-format on
+static bool GStaticGameStateDataInitialized = false;
+typedef struct ComponentIdSet {
+	FOR_EACH(COMPONENT_ID_FIELD_ENTRY, COMPONENT_TYPE_LIST);
+} ComponentIdSet;
+ComponentIdSet CID = {0};
 
+// #define COMPONENT_TYPE_DATA(Type) {#Type, sizeof(CAT(Type, Component)), KInitialEntityCapacity},
 
 const int32 KInitialEntityCapacity = 32;
 const struct {
@@ -35,13 +43,6 @@ _Static_assert(
 
 #define REGISTER_COMPONENT_ID(Type) CID.Type = GetStringId(#Type);
 
-static bool GStaticGameStateDataInitialized = false;
-typedef struct ComponentIdSet {
-	StringId Transform;
-	StringId Sprite;
-	StringId Collider;
-} ComponentIdSet;
-ComponentIdSet CID = {0};
 
 typedef struct UntypedComponentList {
 	StringId Key;
@@ -65,7 +66,7 @@ UntypedComponentList CreateComponentList(StringId ComponentType, int32 Component
 	ASSERT(Self.ComponentMemory);
 	arrsetcap(Self.Indices, Self.Capacity);
 	arrsetcap(Self.Entities, Self.Capacity);
-	memset(Self.Indices, 0, sizeof(*Self.Indices) * arrcap(Self.Indices));
+	memset(Self.Indices, NONE, sizeof(*Self.Indices) * arrcap(Self.Indices));
 	memset(Self.Entities, 0, sizeof(*Self.Entities) * arrcap(Self.Entities));
 	return Self;
 }
@@ -90,7 +91,7 @@ void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* 
 
 	ASSERT(EntityIndex <= arrlen(List->Indices) && "Entity has invalid index.");
 	ASSERT(NewIndex <= arrlen(List->Entities));
-	ASSERT(List->Indices[EntityIndex] == 0 && "Entity already has component");
+	ASSERT(List->Indices[EntityIndex] == NONE && "Entity already has component");
 
 	if (EntityIndex == arrlen(List->Indices)) {
 		arrput(List->Indices, NewIndex);
@@ -117,7 +118,7 @@ void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* 
 void ComponentListRemove(UntypedComponentList* Self, EntityId Entity)
 {
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	ASSERT(Self->Indices[EntityIndex] != 0);
+	ASSERT(Self->Indices[EntityIndex] != NONE);
 
 	int32 RemovedIndex = Self->Indices[EntityIndex];
 	int32 LastIndex = Self->Count - 1;
@@ -158,9 +159,7 @@ static void InitializeStaticData(void)
 {
 	GStaticGameStateDataInitialized = true;
 
-	REGISTER_COMPONENT_ID(Transform);
-	REGISTER_COMPONENT_ID(Sprite);
-	REGISTER_COMPONENT_ID(Collider);
+	FOR_EACH(REGISTER_COMPONENT_ID, COMPONENT_TYPE_LIST);
 }
 
 typedef struct GameWorld {
@@ -361,6 +360,5 @@ bool EntityHasComponent(GameWorld* World, EntityId Entity, StringId ComponentId)
 	ADD_COMPONENT_IMPLEMENTATION(Type)                                                                                 \
 	REMOVE_COMPONENT_IMPLEMENTATION(Type) GET_COMPONENT_IMPLEMENTATION(Type) HAS_COMPONENT_IMPLEMENTATION(Type)
 
-COMPONENT_INTERFACE_IMPLEMENTATION(Transform)
-COMPONENT_INTERFACE_IMPLEMENTATION(Sprite)
-COMPONENT_INTERFACE_IMPLEMENTATION(Collider)
+FOR_EACH(COMPONENT_INTERFACE_IMPLEMENTATION, COMPONENT_TYPE_LIST);
+

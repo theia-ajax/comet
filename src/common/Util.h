@@ -39,7 +39,7 @@ static inline uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
 	return Result;
 }
 
-#define BINARY_SEARCH_DEFINE(type) type NAME2(BinarySearch_, type)(type Find, type * Data, int32 Count)
+#define BINARY_SEARCH_DEFINE(type) type CAT(BinarySearch_, type)(type Find, type * Data, int32 Count)
 #define BINARY_SEARCH_IMPL(type)                                                                                       \
 	BINARY_SEARCH_DEFINE(type)                                                                                         \
 	{                                                                                                                  \
@@ -63,7 +63,7 @@ static inline uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
 	}
 
 #define BINARY_SEARCH_INSERT_INDEX_DEFINE(type)                                                                        \
-	int32 NAME2(BinarySearchInsertIndex_, type)(int32 Find, int32 * Data, int32 Count)
+	int32 CAT(BinarySearchInsertIndex_, type)(int32 Find, int32 * Data, int32 Count)
 #define BINARY_SEARCH_INSERT_INDEX_IMPL(type)                                                                          \
 	BINARY_SEARCH_INSERT_INDEX_DEFINE(type)                                                                            \
 	{                                                                                                                  \

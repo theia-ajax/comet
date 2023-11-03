@@ -40,8 +40,8 @@ typedef struct Asset {
 	void* Data;
 } Asset;
 
-#define ASSET(Type) NAME2(Type, Asset)
-#define ASSET_DATA(Type) NAME2(Type, Data)
+#define ASSET(Type) CAT(Type, Asset)
+#define ASSET_DATA(Type) CAT(Type, Data)
 #define ASSET_CAST(Type, Asset) (ASSET(Type)*)(Asset)
 
 #define DEFINE_ASSET(Type)                                                                     \

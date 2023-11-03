@@ -59,19 +59,16 @@ bool GameInitialize(const GameInitParams* params)
 
 	EntityId Entity0 = CreateEntity(GGame.World);
 
-	TransformComponent* T = AddComponent(TransformComponent, GGame.World, Entity0);
-	*T = (TransformComponent){
+	*AddComponent(TransformComponent, GGame.World, Entity0) = (TransformComponent){
 		.Position = V2(64.0f, 128.0f),
 		.Rotation = 0.0f,
 	};
 
-	SpriteComponent* S = AddComponent(SpriteComponent, GGame.World, Entity0);
-	*S = (SpriteComponent){
+	*AddComponent(SpriteComponent, GGame.World, Entity0) = (SpriteComponent){
 		.SpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, 6),
 	};
 
-	ColliderComponent* C = AddComponent(ColliderComponent, GGame.World, Entity0);
-	*C = (ColliderComponent){
+	*AddComponent(ColliderComponent, GGame.World, Entity0) = (ColliderComponent){
 		.Type = ColliderType_Circle,
 		.Circle = {
 			.Radius = 36.0f,
