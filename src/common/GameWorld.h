@@ -25,7 +25,6 @@ bool EntitySignatureMatches(EntitySignature Signature, EntitySignature Required,
 EntityId* WorldEntitiesBegin(GameWorld* World);
 EntityId* WorldEntitiesEnd(GameWorld* World);
 
-
 // Generic Component Interface
 // Defines Add, Remove, Get, Has for each type of component and provides a _Generic macro for each action.
 // -------------------------------------------------------
@@ -94,7 +93,6 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 
 #define HasComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_HAS_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
-
 
 #define HAS_COMPONENTS(World, Entity, ...) \
 	__VA_OPT__(EXPAND(HAS_COMPONENTS_HELPER(World, Entity, __VA_ARGS__)))

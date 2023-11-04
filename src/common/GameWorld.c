@@ -1,10 +1,12 @@
 #include "GameWorld.h"
 
-#include "stb_ds.h"
+#include <stb_ds.h>
 
 #include "Log.h"
 #include "Util.h"
 
+// Constants
+// -------------------------------------------------------
 const int32 KInitialEntityCapacity = 32;
 const int32 KDefaultInitialComponentCapacity = 32;
 
@@ -23,8 +25,7 @@ const int32 KDefaultInitialComponentCapacity = 32;
 static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};
 _Static_assert(ARRAY_COUNT(ComponentTypeNames) == ComponentType_Count, "");
 
-// #define COMPONENT_TYPE_DATA(Type) {#Type, sizeof(CAT(Type, Component)), KInitialEntityCapacity},
-
+// TODO: Revisit this
 const int32 ComponentInitialCapacities[ComponentType_Count] = {
 	0, // Transform
 };
@@ -39,6 +40,8 @@ _Static_assert(
 	ARRAY_COUNT(ComponentTypeData) == ComponentType_Count,
 	"ComponentIdSet missing component ID or ComponentTypeData missing type data");
 
+// Private Definitions
+// -------------------------------------------------------
 typedef struct UntypedComponentList {
 	ComponentType Type;
 	int32 Count;
@@ -49,105 +52,6 @@ typedef struct UntypedComponentList {
 	EntityId* Entities;
 } UntypedComponentList;
 #define ComponentListCast(List, Type) ((Type)*)((List).ComponentMemory)
-
-UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity)
-{
-	UntypedComponentList Self;
-	ZERO_STRUCT(&Self);
-	Self.Type = Type;
-	Self.ComponentSize = ComponentSize;
-	Self.Capacity = Capacity;
-	Self.ComponentMemory = malloc(Self.ComponentSize * Self.Capacity);
-	ASSERT(Self.ComponentMemory);
-	arrsetcap(Self.Indices, Self.Capacity);
-	arrsetcap(Self.Entities, Self.Capacity);
-	memset(Self.Indices, NONE, sizeof(*Self.Indices) * arrcap(Self.Indices));
-	memset(Self.Entities, 0, sizeof(*Self.Entities) * arrcap(Self.Entities));
-	return Self;
-}
-
-static inline void* ComponentMemory(UntypedComponentList* Self, int32 Index)
-{
-	return ((uint8*)Self->ComponentMemory) + (Index * Self->ComponentSize);
-}
-
-void DestroyComponentList(UntypedComponentList* Self)
-{
-	free(Self->ComponentMemory);
-	arrfree(Self->Indices);
-	arrfree(Self->Entities);
-	ZERO_STRUCT(Self);
-}
-
-void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* Component)
-{
-	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	int32 NewIndex = List->Count;
-
-	ASSERT(EntityIndex <= arrlen(List->Indices) && "Entity has invalid index.");
-	ASSERT(NewIndex <= arrlen(List->Entities));
-	ASSERT(List->Indices[EntityIndex] == NONE && "Entity already has component");
-
-	if (EntityIndex == arrlen(List->Indices)) {
-		arrput(List->Indices, NewIndex);
-	} else {
-		List->Indices[EntityIndex] = NewIndex;
-	}
-
-	if (NewIndex == arrlen(List->Entities)) {
-		arrput(List->Entities, Entity);
-	} else {
-		List->Entities[NewIndex] = Entity;
-	}
-
-	void* Storage = ((uint8*)List->ComponentMemory) + NewIndex * List->ComponentSize;
-	if (Component != NULL) {
-		memcpy(Storage, Component, List->ComponentSize);
-	} else {
-		memset(Storage, 0, List->ComponentSize);
-	}
-	List->Count++;
-	return Storage;
-}
-
-void ComponentListRemove(UntypedComponentList* Self, EntityId Entity)
-{
-	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	ASSERT(Self->Indices[EntityIndex] != NONE);
-
-	int32 RemovedIndex = Self->Indices[EntityIndex];
-	int32 LastIndex = Self->Count - 1;
-
-	void* RemovedMemory = ComponentMemory(Self, RemovedIndex);
-	void* LastMemory = ComponentMemory(Self, Self->Count - 1);
-	memcpy(RemovedMemory, LastMemory, Self->ComponentSize);
-	memset(LastMemory, 0, Self->ComponentSize);
-	Self->Count--;
-
-	EntityId LastEntity = Self->Entities[LastIndex];
-	int32 LastEntityIndex = ENTITY_ID_INDEX(LastEntity);
-	Self->Indices[LastEntityIndex] = RemovedIndex;
-	Self->Entities[RemovedIndex] = LastEntity;
-
-	Self->Indices[EntityIndex] = NONE;
-	Self->Entities[LastIndex] = ENTITY_ID_INVALID;
-}
-
-void* ComponentListGet(UntypedComponentList* Self, EntityId Entity)
-{
-	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	ASSERT(ENTITY_ID_NEQ(Self->Entities[EntityIndex], ENTITY_ID_INVALID));
-
-	int32 ComponentIndex = Self->Indices[EntityIndex];
-	void* Result = ComponentMemory(Self, ComponentIndex);
-	return Result;
-}
-
-bool ComponentListHas(UntypedComponentList* Self, EntityId Entity)
-{
-	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	return Self->Indices[EntityIndex] != NONE;
-}
 
 typedef struct GameWorld {
 	// GameEntity* Entities;
@@ -163,6 +67,25 @@ typedef struct GameWorld {
 	int32 AllTimeHighGenerationFirstIndex;
 } GameWorld;
 
+// Component list
+static UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity);
+static inline void* ComponentMemory(UntypedComponentList* Self, int32 Index);
+static void DestroyComponentList(UntypedComponentList* Self);
+static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* Component);
+static void ComponentListRemove(UntypedComponentList* Self, EntityId Entity);
+static void* ComponentListGet(UntypedComponentList* Self, EntityId Entity);
+static bool ComponentListHas(UntypedComponentList* Self, EntityId Entity);
+
+// Entity-component internal API, all higher level entity-component macros call into here (AddComponent,
+// RemoveComponent, etc...)
+static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData);
+static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+
+// Public Implementations
+// -------------------------------------------------------
 GameWorld* CreateGameWorld(void)
 {
 	GameWorld* NewState = (GameWorld*)malloc(sizeof(GameWorld));
@@ -291,9 +214,111 @@ EntityId* WorldEntitiesEnd(GameWorld* World)
 	return arrend(World->ActiveEntities);
 }
 
+// TODO: This is implemented in a weird place, maybe move this to a component specific translation unit
 inline const char* ComponentTypeName(ComponentType Type)
 {
 	return ComponentTypeNames[Type];
+}
+
+// Private Implementations
+// -------------------------------------------------------
+static UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity)
+{
+	UntypedComponentList Self;
+	ZERO_STRUCT(&Self);
+	Self.Type = Type;
+	Self.ComponentSize = ComponentSize;
+	Self.Capacity = Capacity;
+	Self.ComponentMemory = malloc(Self.ComponentSize * Self.Capacity);
+	ASSERT(Self.ComponentMemory);
+	arrsetcap(Self.Indices, Self.Capacity);
+	arrsetcap(Self.Entities, Self.Capacity);
+	memset(Self.Indices, NONE, sizeof(*Self.Indices) * arrcap(Self.Indices));
+	memset(Self.Entities, 0, sizeof(*Self.Entities) * arrcap(Self.Entities));
+	return Self;
+}
+
+static inline void* ComponentMemory(UntypedComponentList* Self, int32 Index)
+{
+	return ((uint8*)Self->ComponentMemory) + (Index * Self->ComponentSize);
+}
+
+static void DestroyComponentList(UntypedComponentList* Self)
+{
+	free(Self->ComponentMemory);
+	arrfree(Self->Indices);
+	arrfree(Self->Entities);
+	ZERO_STRUCT(Self);
+}
+
+static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* Component)
+{
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	int32 NewIndex = List->Count;
+
+	ASSERT(EntityIndex <= arrlen(List->Indices) && "Entity has invalid index.");
+	ASSERT(NewIndex <= arrlen(List->Entities));
+	ASSERT(List->Indices[EntityIndex] == NONE && "Entity already has component");
+
+	if (EntityIndex == arrlen(List->Indices)) {
+		arrput(List->Indices, NewIndex);
+	} else {
+		List->Indices[EntityIndex] = NewIndex;
+	}
+
+	if (NewIndex == arrlen(List->Entities)) {
+		arrput(List->Entities, Entity);
+	} else {
+		List->Entities[NewIndex] = Entity;
+	}
+
+	void* Storage = ((uint8*)List->ComponentMemory) + NewIndex * List->ComponentSize;
+	if (Component != NULL) {
+		memcpy(Storage, Component, List->ComponentSize);
+	} else {
+		memset(Storage, 0, List->ComponentSize);
+	}
+	List->Count++;
+	return Storage;
+}
+
+static void ComponentListRemove(UntypedComponentList* Self, EntityId Entity)
+{
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	ASSERT(Self->Indices[EntityIndex] != NONE);
+
+	int32 RemovedIndex = Self->Indices[EntityIndex];
+	int32 LastIndex = Self->Count - 1;
+
+	void* RemovedMemory = ComponentMemory(Self, RemovedIndex);
+	void* LastMemory = ComponentMemory(Self, Self->Count - 1);
+	memcpy(RemovedMemory, LastMemory, Self->ComponentSize);
+	memset(LastMemory, 0, Self->ComponentSize);
+	Self->Count--;
+
+	EntityId LastEntity = Self->Entities[LastIndex];
+	int32 LastEntityIndex = ENTITY_ID_INDEX(LastEntity);
+	Self->Indices[LastEntityIndex] = RemovedIndex;
+	Self->Entities[RemovedIndex] = LastEntity;
+
+	Self->Indices[EntityIndex] = NONE;
+	Self->Entities[LastIndex] = ENTITY_ID_INVALID;
+}
+
+static void* ComponentListGet(UntypedComponentList* Self, EntityId Entity)
+{
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	ASSERT(ENTITY_ID_NEQ(Self->Entities[EntityIndex], ENTITY_ID_INVALID));
+
+	int32 ComponentIndex = Self->Indices[EntityIndex];
+	void* Result = ComponentMemory(Self, ComponentIndex);
+	return Result;
+}
+
+static bool ComponentListHas(UntypedComponentList* Self, EntityId Entity)
+{
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	return Self->Indices[EntityIndex] != NONE;
 }
 
 static inline UntypedComponentList* _GetComponentList(GameWorld* World, ComponentType Type)
@@ -302,7 +327,7 @@ static inline UntypedComponentList* _GetComponentList(GameWorld* World, Componen
 	return &World->ComponentLists[Type];
 }
 
-void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData)
+static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
@@ -310,7 +335,7 @@ void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, 
 	return ComponentListAdd(_GetComponentList(World, Type), Entity, ComponentData);
 }
 
-void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
@@ -318,14 +343,13 @@ void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type
 	ComponentListRemove(_GetComponentList(World, Type), Entity);
 }
 
-void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	return ComponentListGet(_GetComponentList(World, Type), Entity);
 }
 
-bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type);
-void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	void* Result = NULL;
@@ -335,7 +359,7 @@ void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Typ
 	return Result;
 }
 
-bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
@@ -376,7 +400,11 @@ bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 	ADD_COMPONENT_IMPLEMENTATION(Type);                                                                                \
 	REMOVE_COMPONENT_IMPLEMENTATION(Type);                                                                             \
 	GET_COMPONENT_IMPLEMENTATION(Type);                                                                                \
-	TRYGET_COMPONENT_IMPLEMENTATION(Type);                                                                                \
+	TRYGET_COMPONENT_IMPLEMENTATION(Type);                                                                             \
 	HAS_COMPONENT_IMPLEMENTATION(Type);
 
+// For every component type defined in ComponentTypes.h will create corresponding type-safe entity-component interface
+// implementations e.g.:
+// EntityAddTransformComponent, EntityRemoveTransformComponent, etc...
+// _Generic entity-component interface defined in GameWorld.h calls these generated functions
 FOR_EACH(COMPONENT_INTERFACE_IMPLEMENTATION, COMPONENT_TYPE_LIST);
