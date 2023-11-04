@@ -3,10 +3,10 @@
 #include "stb_ds.h"
 
 #include "Log.h"
-#include "StringId.h"
 #include "Util.h"
 
-#define COMPONENT_ID_FIELD_ENTRY(Type) StringId Type;
+const int32 KInitialEntityCapacity = 32;
+const int32 KDefaultInitialComponentCapacity = 32;
 
 // clang-format off
 #define KEntityIndexBits 16
@@ -18,34 +18,29 @@
 #define ENTITY_ID_EQ(A, B) ((A).RawValue == (B).RawValue)
 #define ENTITY_ID_NEQ(A, B) ((A).RawValue != (B).RawValue)
 // clang-format on
-static bool GStaticGameStateDataInitialized = false;
-typedef struct ComponentIdSet {
-	FOR_EACH(COMPONENT_ID_FIELD_ENTRY, COMPONENT_TYPE_LIST);
-} ComponentIdSet;
-ComponentIdSet CID = {0};
+
+#define COMPONENT_NAME_ENTRY(Type) #Type,
+static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};
+_Static_assert(ARRAY_COUNT(ComponentTypeNames) == ComponentType_Count, "");
 
 // #define COMPONENT_TYPE_DATA(Type) {#Type, sizeof(CAT(Type, Component)), KInitialEntityCapacity},
 
-const int32 KInitialEntityCapacity = 32;
+const int32 ComponentInitialCapacities[ComponentType_Count] = {
+	0, // Transform
+};
+
+#define COMPONENT_TYPE_DATA_ENTRY(Type) {#Type, sizeof(CAT(Type, Component))},
 const struct {
 	const char* Name;
 	int32 Size;
-	int32 Capacity;
-} ComponentTypeData[] = {
-	{"Transform", sizeof(TransformComponent), KInitialEntityCapacity},
-	{"Sprite", sizeof(SpriteComponent), KInitialEntityCapacity},
-	{"Collider", sizeof(ColliderComponent), KInitialEntityCapacity},
-};
+} ComponentTypeData[] = {FOR_EACH(COMPONENT_TYPE_DATA_ENTRY, COMPONENT_TYPE_LIST)};
 
 _Static_assert(
-	ARRAY_COUNT(ComponentTypeData) == (sizeof(ComponentIdSet) / sizeof(StringId)),
+	ARRAY_COUNT(ComponentTypeData) == ComponentType_Count,
 	"ComponentIdSet missing component ID or ComponentTypeData missing type data");
 
-#define REGISTER_COMPONENT_ID(Type) CID.Type = GetStringId(#Type);
-
-
 typedef struct UntypedComponentList {
-	StringId Key;
+	ComponentType Type;
 	int32 Count;
 	int32 Capacity;
 	int32 ComponentSize;
@@ -55,11 +50,11 @@ typedef struct UntypedComponentList {
 } UntypedComponentList;
 #define ComponentListCast(List, Type) ((Type)*)((List).ComponentMemory)
 
-UntypedComponentList CreateComponentList(StringId ComponentType, int32 ComponentSize, int32 Capacity)
+UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity)
 {
 	UntypedComponentList Self;
 	ZERO_STRUCT(&Self);
-	Self.Key = ComponentType;
+	Self.Type = Type;
 	Self.ComponentSize = ComponentSize;
 	Self.Capacity = Capacity;
 	Self.ComponentMemory = malloc(Self.ComponentSize * Self.Capacity);
@@ -154,21 +149,14 @@ bool ComponentListHas(UntypedComponentList* Self, EntityId Entity)
 	return Self->Indices[EntityIndex] != NONE;
 }
 
-
-static void InitializeStaticData(void)
-{
-	GStaticGameStateDataInitialized = true;
-
-	FOR_EACH(REGISTER_COMPONENT_ID, COMPONENT_TYPE_LIST);
-}
-
 typedef struct GameWorld {
 	// GameEntity* Entities;
 	EntityId* ActiveEntities;
+	EntitySignature* EntitySignatures;
 	int32* EntityGenerations;
 	int32* AvailableIndexStack;
 
-	UntypedComponentList* ComponentLists;
+	UntypedComponentList ComponentLists[ComponentType_Count];
 
 	// New band/album name
 	int32 AllTimeHighGeneration;
@@ -177,24 +165,26 @@ typedef struct GameWorld {
 
 GameWorld* CreateGameWorld(void)
 {
-	if (!GStaticGameStateDataInitialized) {
-		InitializeStaticData();
-	}
-
 	GameWorld* NewState = (GameWorld*)malloc(sizeof(GameWorld));
 	ZERO_STRUCT(NewState);
 
 	// arrsetcap(NewState->Entities, KInitialEntityCapacity);
 	arrsetcap(NewState->ActiveEntities, KInitialEntityCapacity);
+	arrsetcap(NewState->EntitySignatures, KInitialEntityCapacity);
 	arrsetcap(NewState->EntityGenerations, KInitialEntityCapacity);
 	arrsetcap(NewState->AvailableIndexStack, 32);
 
 	for (int32 Index = 0; Index < ARRAY_COUNT(ComponentTypeData); Index++) {
-		UntypedComponentList List = CreateComponentList(
-			GetStringId(ComponentTypeData[Index].Name),
-			ComponentTypeData[Index].Size,
-			ComponentTypeData[Index].Capacity);
-		hmputs(NewState->ComponentLists, List);
+		int32 Capacity = ComponentInitialCapacities[Index];
+		if (Capacity == 0) {
+			Capacity = KDefaultInitialComponentCapacity;
+			LogWarning(
+				"Created %s ComponentList with default initial capacity of %d", ComponentTypeName(Index), Capacity);
+		} else {
+			LogWarning("Created %s ComponentList with initial capacity of %d", ComponentTypeName(Index), Capacity);
+		}
+		Capacity = (Capacity != 0) ? Capacity : KDefaultInitialComponentCapacity;
+		NewState->ComponentLists[Index] = CreateComponentList(Index, ComponentTypeData[Index].Size, Capacity);
 	}
 
 	NewState->AllTimeHighGeneration = 1;
@@ -220,6 +210,7 @@ EntityId CreateEntity(GameWorld* World)
 		EntityIndex = arrlen(World->ActiveEntities);
 		// arrput(World->Entities, (GameEntity){0});
 		arrput(World->EntityGenerations, World->AllTimeHighGeneration);
+		arrput(World->EntitySignatures, (EntitySignature){0});
 	}
 	int32 EntityGeneration = World->EntityGenerations[EntityIndex];
 	EntityId Result = ENTITY_ID(EntityIndex, EntityGeneration);
@@ -231,11 +222,11 @@ void DestroyEntity(GameWorld* World, EntityId Entity)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 
-	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	int32 EntityGeneration = ENTITY_ID_GENERATION(Entity);
+	const int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	const int32 EntityGeneration = ENTITY_ID_GENERATION(Entity);
 
 	arrput(World->AvailableIndexStack, EntityIndex);
-	int32 Search = BinarySearch(Entity.RawValue, (int32*)World->ActiveEntities, arrlen(World->ActiveEntities));
+	const int32 Search = BinarySearch(Entity.RawValue, (int32*)World->ActiveEntities, arrlen(World->ActiveEntities));
 	if (Search != NONE) {
 		arrdel(World->ActiveEntities, Search);
 	} else {
@@ -256,6 +247,7 @@ void DestroyEntity(GameWorld* World, EntityId Entity)
 		World->AllTimeHighGenerationFirstIndex = EntityIndex;
 	}
 
+	World->EntitySignatures[EntityIndex] = (EntitySignature){0};
 	World->EntityGenerations[EntityIndex] = NextGeneration;
 }
 
@@ -275,85 +267,78 @@ bool EntityIdIsValid(GameWorld* World, EntityId Entity)
 	return EntityGeneration == ExpectedGeneration;
 }
 
-static inline UntypedComponentList* _GetComponentList(GameWorld* World, StringId ComponentId)
+EntityId* WorldEntitiesBegin(GameWorld* World)
 {
-	UntypedComponentList* List = hmgetp(World->ComponentLists, ComponentId);
-	ASSERT(List != NULL);
-	return List;
+	return World->ActiveEntities;
 }
 
-void* EntityAddComponent(GameWorld* World, EntityId Entity, StringId ComponentId, const void* ComponentData)
+EntityId* WorldEntitiesEnd(GameWorld* World)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
-	void* Component = NULL;
-	UntypedComponentList* List = _GetComponentList(World, ComponentId);
-	if (List->ComponentMemory != NULL) {
-		Component = ComponentListAdd(List, Entity, ComponentData);
-	} else {
-		LogError("List not found for ComponentId '%s'.", StringIdCStr(ComponentId));
-	}
-	return Component;
+	return arrend(World->ActiveEntities);
 }
 
-void EntityRemoveComponent(GameWorld* World, EntityId Entity, StringId ComponentId)
+inline const char* ComponentTypeName(ComponentType Type)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
-	UntypedComponentList* List = _GetComponentList(World, ComponentId);
-	if (List != NULL) {
-		ComponentListRemove(List, Entity);
-	} else {
-		LogError("List not found for ComponentId '%s'.", StringIdCStr(ComponentId));
-	}
+	return ComponentTypeNames[Type];
 }
 
-void* EntityGetComponent(GameWorld* World, EntityId Entity, StringId ComponentId)
+static inline UntypedComponentList* _GetComponentList(GameWorld* World, ComponentType Type)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
-	void* Component = NULL;
-	UntypedComponentList* List = _GetComponentList(World, ComponentId);
-	if (List != NULL) {
-		Component = ComponentListGet(List, Entity);
-	} else {
-		LogError("List not found for ComponentId '%s'.", StringIdCStr(ComponentId));
-	}
-	return Component;
+	ASSERT(VALID_INDEX(Type, ComponentType_Count));
+	return &World->ComponentLists[Type];
 }
 
-bool EntityHasComponent(GameWorld* World, EntityId Entity, StringId ComponentId)
+void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
-	bool Result = false;
-	UntypedComponentList* List = _GetComponentList(World, ComponentId);
-	if (List != NULL) {
-		Result = ComponentListHas(List, Entity);
-	} else {
-		LogError("List not found for ComponentId '%s'.", StringIdCStr(ComponentId));
-	}
-	return Result;
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
+	return ComponentListAdd(_GetComponentList(World, Type), Entity, ComponentData);
+}
+
+void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+{
+	ASSERT(EntityIdIsValid(World, Entity));
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	World->EntitySignatures[EntityIndex].RawValue &= ~(BIT_FLAG64(Type));
+	ComponentListRemove(_GetComponentList(World, Type), Entity);
+}
+
+void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+{
+	ASSERT(EntityIdIsValid(World, Entity));
+	return ComponentListGet(_GetComponentList(World, Type), Entity);
+}
+
+bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+{
+	ASSERT(EntityIdIsValid(World, Entity));
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	return (World->EntitySignatures[EntityIndex].RawValue & BIT_FLAG64(Type)) != 0;
 }
 
 #define ADD_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	ADD_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
-		return (COMPONENT_NAME(Type)*)EntityAddComponent(World, Entity, CID.Type, ComponentData);                      \
+		return (COMPONENT_NAME(Type)*)EntityAddComponent(World, Entity, CAT(ComponentType_, Type), ComponentData);     \
 	}
 
 #define REMOVE_COMPONENT_IMPLEMENTATION(Type)                                                                          \
 	REMOVE_COMPONENT_PROTOTYPE(Type)                                                                                   \
 	{                                                                                                                  \
-		EntityRemoveComponent(World, Entity, CID.Type);                                                                \
+		EntityRemoveComponent(World, Entity, CAT(ComponentType_, Type));                                               \
 	}
 
 #define GET_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	GET_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
-		return (COMPONENT_NAME(Type)*)EntityGetComponent(World, Entity, CID.Type);                                     \
+		return (COMPONENT_NAME(Type)*)EntityGetComponent(World, Entity, CAT(ComponentType_, Type));                    \
 	}
 
 #define HAS_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	HAS_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
-		return EntityHasComponent(World, Entity, CID.Type);                                                            \
+		return EntityHasComponent(World, Entity, CAT(ComponentType_, Type));                                           \
 	}
 
 #define COMPONENT_INTERFACE_IMPLEMENTATION(Type)                                                                       \
@@ -361,4 +346,3 @@ bool EntityHasComponent(GameWorld* World, EntityId Entity, StringId ComponentId)
 	REMOVE_COMPONENT_IMPLEMENTATION(Type) GET_COMPONENT_IMPLEMENTATION(Type) HAS_COMPONENT_IMPLEMENTATION(Type)
 
 FOR_EACH(COMPONENT_INTERFACE_IMPLEMENTATION, COMPONENT_TYPE_LIST);
-

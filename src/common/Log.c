@@ -29,9 +29,9 @@ void LoggingInitialize(void)
 
 void LoggingShutdown(void)
 {
+	LogInfo(__FUNCTION__);
 	GLogLevel = LogLevel_None;
 	fclose(GLogFile);
-	LogInfo(__FUNCTION__);
 }
 
 void LogInfo(const char* Format, ...)

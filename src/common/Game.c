@@ -26,6 +26,8 @@ enum SpriteSheetId {
 
 #define GetImage(Id) GGame.ImageAssets[Id]
 
+typedef void (GameSystem)(GameWorld* World, const GameTime* Time);
+
 struct {
 	bool IsRunning;
 	SDL_Window* Window;
@@ -41,46 +43,23 @@ struct {
 	rnd_pcg_t RandomGen;
 	// PhysWorld* Physics;
 	GameWorld* World;
+	// GameSystem* Systems[];
 } GGame;
 
 bool GameInitialize(const GameInitParams* params)
 {
+	LoggingInitialize();
+	LogInfo(__FUNCTION__);
+
 	uint32 RandomSeed = (uint32)SDL_GetPerformanceCounter();
 	rnd_pcg_seed(&GGame.RandomGen, RandomSeed);
 	uint64 HashtableSeed = (uint64)rnd_pcg_next(&GGame.RandomGen) | (((uint64)rnd_pcg_next(&GGame.RandomGen)) << 32);
 	stbds_rand_seed(HashtableSeed);
 
-	LoggingInitialize();
 	StringIdPoolsInitialize();
 
-	LogInfo("Game Initializing");
-
-	GGame.World = CreateGameWorld();
-
-	EntityId Entity0 = CreateEntity(GGame.World);
-
-	*AddComponent(TransformComponent, GGame.World, Entity0) = (TransformComponent){
-		.Position = V2(64.0f, 128.0f),
-		.Rotation = 0.0f,
-	};
-
-	*AddComponent(SpriteComponent, GGame.World, Entity0) = (SpriteComponent){
-		.SpriteId = SPRITE_ID(SpriteSheetId_ShipObjects, 6),
-	};
-
-	*AddComponent(ColliderComponent, GGame.World, Entity0) = (ColliderComponent){
-		.Type = ColliderType_Circle,
-		.Circle = {
-			.Radius = 36.0f,
-		}};
-
-	RemoveComponent(SpriteComponent, GGame.World, Entity0);
-
-	ColliderComponent* C2 = GetComponent(ColliderComponent, GGame.World, Entity0);
-	bool BBB = HasComponent(SpriteComponent, GGame.World, Entity0);
-
-	int32 GameResWidth = 576;  // 576;D
-	int32 GameResHeight = 324; // 324;
+	int32 GameResWidth = 512;  // 576;D
+	int32 GameResHeight = 288; // 324;
 
 	int32 testData[] = {1, 1, 2, 2, 2, 3, 5, 7, 8, 8, 8, 9, 10, 100, 102, 104, 104, 104};
 	LogInfo("%d", BinarySearch(1, testData, ARRAY_COUNT(testData)));
@@ -155,7 +134,44 @@ bool GameInitialize(const GameInitParams* params)
 			},
 	});
 
-	LogInfo("Game Initialization Complete");
+	LogInfo("Game Systems Initialized");
+
+	GGame.World = CreateGameWorld();
+
+	EntityId Entity0 = CreateEntity(GGame.World);
+	EntityId Entity1 = CreateEntity(GGame.World);
+
+	*AddComponent(TransformComponent, GGame.World, Entity0) = (TransformComponent){
+		.Position = V2(64.0f, 128.0f),
+		.Rotation = 0.25f,
+	};
+
+	*AddComponent(SpriteComponent, GGame.World, Entity0) = (SpriteComponent){
+		.SpriteId = SPRITE_ID(
+			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("green_01"))),
+	};
+
+	*AddComponent(ColliderComponent, GGame.World, Entity0) = (ColliderComponent){
+		.Type = ColliderType_Circle,
+		.Circle = {
+			.Radius = 36.0f,
+		}};
+
+	*AddComponent(TransformComponent, GGame.World, Entity1) = (TransformComponent){
+		.Position = V2(256.0f, 128.0f),
+		.Rotation = -0.25f,
+	};
+
+	*AddComponent(SpriteComponent, GGame.World, Entity1) = (SpriteComponent){
+		.SpriteId = SPRITE_ID(
+			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("red_01"))),
+	};
+
+	*AddComponent(ColliderComponent, GGame.World, Entity1) = (ColliderComponent){
+		.Type = ColliderType_Circle,
+		.Circle = {
+			.Radius = 36.0f,
+		}};
 
 	return true;
 }
@@ -163,6 +179,8 @@ bool GameInitialize(const GameInitParams* params)
 void GameShutdown(void)
 {
 	DrawShutdown();
+	LogInfo("Destrying Renderer");
+	SDL_DestroyRenderer(GGame.Renderer);
 	AssetsShutdown();
 	DebugShutdown();
 	DestroyGameWorld(GGame.World);
@@ -239,16 +257,30 @@ void GameRender(const GameTime* gameTime)
 
 	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
 	// SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
-	// SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
-	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
+	SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
+	// SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
 	// Background nebula
 	DrawSprite(&(SpriteDraw){
 		.SpriteId = SPRITE_ID(SpriteSheetId_BGObjects0, 44),
-		.Position = {370.0f, 128.0f},
+		.Position = {372.0f, 128.0f},
 		.SpriteTiles = {4, 4},
 	});
+
+	for (EntityId* Iter = WorldEntitiesBegin(GGame.World); Iter != WorldEntitiesEnd(GGame.World); Iter++) {
+		EntityId Entity = *Iter;
+		if (HAS_COMPONENTS(GGame.World, Entity, TransformComponent, SpriteComponent))
+		{
+			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
+			SpriteComponent* S = GetComponent(SpriteComponent, GGame.World, Entity);
+			DrawSprite(&(SpriteDraw){
+				.SpriteId = S->SpriteId,
+				.Position = T->Position,
+				.Rotation = T->Rotation,
+			});
+		}
+	}
 
 	DrawRender();
 

@@ -1,40 +1,18 @@
 #pragma once
 
+#include "ComponentTypes.h"
 #include "Math2D.h"
-#include "StringId.h"
 #include "Types.h"
-
-#define COMPONENT_TYPES (Transform)(Sprite)(Collider)
-#define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 
 typedef struct EntityId {
 	int32 RawValue;
 } EntityId;
 
+typedef struct EntitySignature {
+	uint64 RawValue;
+} EntitySignature;
+
 typedef struct GameWorld GameWorld;
-
-typedef struct TransformComponent {
-	Vec2 Position;
-	flt32 Rotation;
-} TransformComponent;
-
-typedef struct SpriteComponent {
-	int32 SpriteId;
-} SpriteComponent;
-
-typedef enum ColliderType {
-	ColliderType_Circle,
-	ColliderType_Polygon,
-	ColliderType_Count,
-} ColliderType;
-
-typedef struct ColliderComponent {
-	ColliderType Type;
-	union {
-		CircleShape Circle;
-		PolygonShape Polygon;
-	};
-} ColliderComponent;
 
 GameWorld* CreateGameWorld(void);
 void DestroyGameWorld(GameWorld* World);
@@ -42,6 +20,8 @@ void DestroyGameWorld(GameWorld* World);
 EntityId CreateEntity(GameWorld* World);
 void DestroyEntity(GameWorld* World, EntityId Entity);
 bool EntityIdIsValid(GameWorld* World, EntityId Entity);
+EntityId* WorldEntitiesBegin(GameWorld* World);
+EntityId* WorldEntitiesEnd(GameWorld* World);
 
 // Generic Component Interface
 // Defines Add, Remove, Get, Has for each type of component and provides a _Generic macro for each action.
@@ -52,6 +32,7 @@ bool EntityIdIsValid(GameWorld* World, EntityId Entity);
 #define COMPONENT_REMOVE_NAME(Type) COMPONENT_FUNC_NAME(EntityRemove, Type)
 #define COMPONENT_GET_NAME(Type) COMPONENT_FUNC_NAME(EntityGet, Type)
 #define COMPONENT_HAS_NAME(Type) COMPONENT_FUNC_NAME(EntityHas, Type)
+#define COMPONENT_HAS(Type) CAT(EntityHas, Type)
 
 #define ADD_COMPONENT_PROTOTYPE(Type)                                                                                  \
 	COMPONENT_NAME(Type) *                                                                                             \
@@ -64,14 +45,14 @@ bool EntityIdIsValid(GameWorld* World, EntityId Entity);
 
 #define HAS_COMPONENT_PROTOTYPE(Type) bool COMPONENT_HAS_NAME(Type)(GameWorld * World, EntityId Entity)
 
-#define DECLARE_COMPONENT_INTERFACE(Type)                                                                               \
+#define DECLARE_COMPONENT_INTERFACE(Type)                                                                              \
 	ADD_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	REMOVE_COMPONENT_PROTOTYPE(Type);                                                                                  \
 	GET_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	HAS_COMPONENT_PROTOTYPE(Type);
 
-#define DECLARE_COMPONENT_INTERFACES(First, ...)                                                                        \
-	DECLARE_COMPONENT_INTERFACE(First);                                                                                 \
+#define DECLARE_COMPONENT_INTERFACES(First, ...)                                                                       \
+	DECLARE_COMPONENT_INTERFACE(First);                                                                                \
 	DECLARE_COMPONENT_INTERFACES(__VA_ARGS__)
 
 FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
@@ -100,3 +81,12 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 
 #define HasComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_HAS_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
+
+#define HAS_COMPONENTS(World, Entity, ...) \
+	__VA_OPT__(EXPAND(HAS_COMPONENTS_HELPER(World, Entity, __VA_ARGS__)))
+
+#define HAS_COMPONENTS_HELPER(World, Entity, First, ...) \
+	COMPONENT_HAS(First)(World, Entity) \
+	__VA_OPT__(&& HAS_COMPONENTS_AGAIN PARENS (World, Entity, __VA_ARGS__))
+
+#define HAS_COMPONENTS_AGAIN() HAS_COMPONENTS_HELPER

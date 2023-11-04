@@ -22,7 +22,6 @@ typedef float flt32;
 typedef double flt64;
 
 #ifndef unreachable
-
 #if defined(__GNUC__)
 #define unreachable() (__builtin_unreachable())
 #elif defined(_MSC_VER)
@@ -65,6 +64,8 @@ typedef double flt64;
 	__VA_OPT__(FOR_EACH_AGAIN PARENS (Expr, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
+#define BIT_FLAG32(bit) (1u << (bit))
+#define BIT_FLAG64(bit) (1llu << (bit))
 #define MASK(index) (1 << (index))
 
 #define ARRAY_COUNT(array) (sizeof((array)) / sizeof((array)[0]))
@@ -161,7 +162,6 @@ DEFINE_SWAP(Float64, flt64);
 		flt32: SwapFloat32,                                                                                            \
 		flt64: SwapFloat64)(A, B)
 #endif
-
 
 // Data Array
 // -------------------------------------------------------

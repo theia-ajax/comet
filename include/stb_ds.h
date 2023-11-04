@@ -407,6 +407,7 @@ CREDITS
 #define arrsetlen   stbds_arrsetlen
 #define arrlast     stbds_arrlast
 #define arrlastp     stbds_arrlastp
+#define arrend      stbds_arrend
 #define arrins      stbds_arrins
 #define arrinsn     stbds_arrinsn
 #define arrdel      stbds_arrdel
@@ -550,6 +551,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arraddnoff       stbds_arraddnindex
 #define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
 #define stbds_arrlastp(a)      (&stbds_arrlast(a))
+#define stbds_arrend(a)        (&a[stbds_header(a)->length])
 #define stbds_arrfree(a)       ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)      stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)   (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
