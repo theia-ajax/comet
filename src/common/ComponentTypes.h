@@ -36,10 +36,10 @@ typedef struct ColliderComponent {
 #define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)
 
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
-
-#define COMPONENT_TYPE_ENUM_VALUE(Type) CAT(ComponentType_, Type) COMMA()
+#define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
+#define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()
 typedef enum ComponentType {
-	FOR_EACH(COMPONENT_TYPE_ENUM_VALUE, COMPONENT_TYPE_LIST) ComponentType_Count,
+	FOR_EACH(COMPONENT_TYPE_ENUM_VALUE_ENTRY, COMPONENT_TYPE_LIST) ComponentType_Count,
 } ComponentType;
 
 _Static_assert(ComponentType_Count <= 64, "More work to be done before more than 64 component types can be supported.");

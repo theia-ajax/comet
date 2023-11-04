@@ -268,6 +268,8 @@ void GameRender(const GameTime* gameTime)
 		.SpriteTiles = {4, 4},
 	});
 
+	EntitySignature Sig = SIGNATURE(Transform, Sprite);
+
 	for (EntityId* Iter = WorldEntitiesBegin(GGame.World); Iter != WorldEntitiesEnd(GGame.World); Iter++) {
 		EntityId Entity = *Iter;
 		if (HAS_COMPONENTS(GGame.World, Entity, TransformComponent, SpriteComponent))

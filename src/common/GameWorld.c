@@ -267,6 +267,20 @@ bool EntityIdIsValid(GameWorld* World, EntityId Entity)
 	return EntityGeneration == ExpectedGeneration;
 }
 
+EntitySignature EntityGetSignature(GameWorld* World, EntityId Entity)
+{
+	ASSERT(EntityIdIsValid(World, Entity));
+	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+	return World->EntitySignatures[EntityIndex];
+}
+
+bool EntitySignaturePassesFilter(EntitySignature Signature, EntitySignature Required, EntitySignature Rejected)
+{
+	bool HasAllRequired = (Signature.RawValue & Required.RawValue) == Required.RawValue;
+	bool HasAnyRejected = (Signature.RawValue & Rejected.RawValue) != 0;
+	return HasAllRequired && !HasAnyRejected;
+}
+
 EntityId* WorldEntitiesBegin(GameWorld* World)
 {
 	return World->ActiveEntities;
@@ -310,6 +324,17 @@ void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 	return ComponentListGet(_GetComponentList(World, Type), Entity);
 }
 
+bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
+{
+	ASSERT(EntityIdIsValid(World, Entity));
+	void* Result = NULL;
+	if (EntityHasComponent(World, Entity, Type)) {
+		Result = ComponentListGet(_GetComponentList(World, Type), Entity);
+	}
+	return Result;
+}
+
 bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
@@ -335,6 +360,12 @@ bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 		return (COMPONENT_NAME(Type)*)EntityGetComponent(World, Entity, CAT(ComponentType_, Type));                    \
 	}
 
+#define TRYGET_COMPONENT_IMPLEMENTATION(Type)                                                                          \
+	TRYGET_COMPONENT_PROTOTYPE(Type)                                                                                   \
+	{                                                                                                                  \
+		return (COMPONENT_NAME(Type)*)EntityTryGetComponent(World, Entity, COMPONENT_TYPE_ENUM_VALUE(Type));           \
+	}
+
 #define HAS_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	HAS_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
@@ -342,7 +373,10 @@ bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 	}
 
 #define COMPONENT_INTERFACE_IMPLEMENTATION(Type)                                                                       \
-	ADD_COMPONENT_IMPLEMENTATION(Type)                                                                                 \
-	REMOVE_COMPONENT_IMPLEMENTATION(Type) GET_COMPONENT_IMPLEMENTATION(Type) HAS_COMPONENT_IMPLEMENTATION(Type)
+	ADD_COMPONENT_IMPLEMENTATION(Type);                                                                                \
+	REMOVE_COMPONENT_IMPLEMENTATION(Type);                                                                             \
+	GET_COMPONENT_IMPLEMENTATION(Type);                                                                                \
+	TRYGET_COMPONENT_IMPLEMENTATION(Type);                                                                                \
+	HAS_COMPONENT_IMPLEMENTATION(Type);
 
 FOR_EACH(COMPONENT_INTERFACE_IMPLEMENTATION, COMPONENT_TYPE_LIST);

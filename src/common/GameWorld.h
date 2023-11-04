@@ -20,8 +20,11 @@ void DestroyGameWorld(GameWorld* World);
 EntityId CreateEntity(GameWorld* World);
 void DestroyEntity(GameWorld* World, EntityId Entity);
 bool EntityIdIsValid(GameWorld* World, EntityId Entity);
+EntitySignature EntityGetSignature(GameWorld* World, EntityId Entity);
+bool EntitySignatureMatches(EntitySignature Signature, EntitySignature Required, EntitySignature Rejected);
 EntityId* WorldEntitiesBegin(GameWorld* World);
 EntityId* WorldEntitiesEnd(GameWorld* World);
+
 
 // Generic Component Interface
 // Defines Add, Remove, Get, Has for each type of component and provides a _Generic macro for each action.
@@ -31,6 +34,7 @@ EntityId* WorldEntitiesEnd(GameWorld* World);
 #define COMPONENT_ADD_NAME(Type) COMPONENT_FUNC_NAME(EntityAdd, Type)
 #define COMPONENT_REMOVE_NAME(Type) COMPONENT_FUNC_NAME(EntityRemove, Type)
 #define COMPONENT_GET_NAME(Type) COMPONENT_FUNC_NAME(EntityGet, Type)
+#define COMPONENT_TRYGET_NAME(Type) COMPONENT_FUNC_NAME(EntityTryGet, Type)
 #define COMPONENT_HAS_NAME(Type) COMPONENT_FUNC_NAME(EntityHas, Type)
 #define COMPONENT_HAS(Type) CAT(EntityHas, Type)
 
@@ -42,6 +46,8 @@ EntityId* WorldEntitiesEnd(GameWorld* World);
 
 #define GET_COMPONENT_PROTOTYPE(Type)                                                                                  \
 	COMPONENT_NAME(Type) * COMPONENT_GET_NAME(Type)(GameWorld * World, EntityId Entity)
+#define TRYGET_COMPONENT_PROTOTYPE(Type)                                                                                  \
+	COMPONENT_NAME(Type) * COMPONENT_TRYGET_NAME(Type)(GameWorld * World, EntityId Entity)
 
 #define HAS_COMPONENT_PROTOTYPE(Type) bool COMPONENT_HAS_NAME(Type)(GameWorld * World, EntityId Entity)
 
@@ -49,6 +55,7 @@ EntityId* WorldEntitiesEnd(GameWorld* World);
 	ADD_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	REMOVE_COMPONENT_PROTOTYPE(Type);                                                                                  \
 	GET_COMPONENT_PROTOTYPE(Type);                                                                                     \
+	TRYGET_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	HAS_COMPONENT_PROTOTYPE(Type);
 
 #define DECLARE_COMPONENT_INTERFACES(First, ...)                                                                       \
@@ -67,6 +74,9 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 #define COMPONENT_GET_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_GET_NAME(Type)
 #define COMPONENT_GET_GENERIC_ENTRIES(...) FOR_EACH(COMPONENT_GET_GENERIC_ENTRY, __VA_ARGS__)
 
+#define COMPONENT_TRYGET_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_TRYGET_NAME(Type)
+#define COMPONENT_TRYGET_GENERIC_ENTRIES(...) FOR_EACH(COMPONENT_TRYGET_GENERIC_ENTRY, __VA_ARGS__)
+
 #define COMPONENT_HAS_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_HAS_NAME(Type)
 #define COMPONENT_HAS_GENERIC_ENTRIES(...) FOR_EACH(COMPONENT_HAS_GENERIC_ENTRY, __VA_ARGS__)
 
@@ -79,14 +89,23 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 #define GetComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_GET_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
 
+#define TryGetComponent(Component, World, Entity)                                                                         \
+	_Generic(((Component){0})COMPONENT_TRYGET_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
+
 #define HasComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_HAS_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
 
+
 #define HAS_COMPONENTS(World, Entity, ...) \
 	__VA_OPT__(EXPAND(HAS_COMPONENTS_HELPER(World, Entity, __VA_ARGS__)))
-
 #define HAS_COMPONENTS_HELPER(World, Entity, First, ...) \
 	COMPONENT_HAS(First)(World, Entity) \
 	__VA_OPT__(&& HAS_COMPONENTS_AGAIN PARENS (World, Entity, __VA_ARGS__))
-
 #define HAS_COMPONENTS_AGAIN() HAS_COMPONENTS_HELPER
+
+#define SIGNATURE(...) \
+	(EntitySignature){__VA_OPT__(EXPAND(SIGNATURE_HELPER(__VA_ARGS__)))}
+#define SIGNATURE_HELPER(First, ...) \
+	COMPONENT_TYPE_ENUM_VALUE(First) \
+	__VA_OPT__(| SIGNATURE_AGAIN PARENS (__VA_ARGS__))
+#define SIGNATURE_AGAIN() SIGNATURE_HELPER
