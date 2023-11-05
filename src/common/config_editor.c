@@ -1,6 +1,6 @@
 #include "config_editor.h"
 
-#include <cimgui.h>
+// #include <cimgui.h>
 
 #include "config.h"
 #include "ini.h"
@@ -9,17 +9,17 @@
 struct {
 	h_config config_handle;
 	bool has_unsaved_changes;
-	ImGuiTextFilter* filter;
+	// ImGuiTextFilter* filter;
 } g_config_window;
 
 void config_editor_initialize(void)
 {
-	g_config_window.filter = ImGuiTextFilter_ImGuiTextFilter("");
+	// g_config_window.filter = ImGuiTextFilter_ImGuiTextFilter("");
 }
 
 void config_editor_shutdown(void)
 {
-	ImGuiTextFilter_destroy(g_config_window.filter);
+	// ImGuiTextFilter_destroy(g_config_window.filter);
 }
 
 void config_editor_set_config(h_config config_handle)
@@ -63,7 +63,7 @@ void config_editor_show_window()
 	};
 
 	static bool show_config_editor = false;
-
+#if 0
 	if (igBegin("Config", &show_config_editor, ImGuiWindowFlags_None)) {
 		if (HANDLE_IS_VALID(g_config_window.config_handle)) {
 			ImGuiTextFilter_Draw(g_config_window.filter, "Search", 0.0f);
@@ -248,4 +248,5 @@ void config_editor_show_window()
 		}
 		igEnd();
 	}
+#endif
 }

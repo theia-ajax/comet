@@ -1,8 +1,6 @@
 #include "Game.h"
 
 #include <SDL2/SDL.h>
-#include <cimgui.h>
-#include <cimgui_impl.h>
 #include <stb_ds.h>
 #include <stdlib.h>
 
@@ -32,9 +30,6 @@ struct {
 	bool IsRunning;
 	SDL_Window* Window;
 	SDL_Renderer* Renderer;
-	struct {
-		ImGuiIO* IO;
-	} ImGui;
 	GameInput Input;
 	GameInput LastInput;
 	ImageAsset* ImageAssets[16];
@@ -92,18 +87,10 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, -1, SDL_RENDERER_ACCELERATED);
 	SDL_RenderSetLogicalSize(GGame.Renderer, GameResWidth, GameResHeight);
 
-	igCreateContext(NULL);
-	GGame.ImGui.IO = igGetIO();
-	GGame.ImGui.IO->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	igStyleColorsDark(NULL);
-
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GameResWidth,
 		.CanvasHeight = GameResHeight,
 	});
-
-	ImGui_ImplSDL2_InitForSDLRenderer(GGame.Window, GGame.Renderer);
-	ImGui_ImplSDLRenderer_Init(GGame.Renderer);
 
 	AssetsInitialize(&(AssetsConfig){
 		.TypeConfigs = {
@@ -248,7 +235,6 @@ void GameSendInput(const GameInput* input)
 
 void GameProcessEvent(const SDL_Event* event)
 {
-	ImGui_ImplSDL2_ProcessEvent(event);
 }
 
 static inline bool InputKey(int Scancode)
@@ -282,11 +268,6 @@ static Vec2 InputXY(int ScancodeLeft, int ScancodeRight, int ScancodeUp, int Sca
 
 void GameUpdate(const GameTime* gameTime)
 {
-	GGame.ImGui.IO->DeltaTime = gameTime->DeltaTimeF;
-	ImGui_ImplSDLRenderer_NewFrame();
-	ImGui_ImplSDL2_NewFrame();
-	igNewFrame();
-
 	DebugNextFrame();
 
 	int FramesPerSecond = (int)round(1.0 / gameTime->DeltaTime);
@@ -344,8 +325,6 @@ void GameUpdate(const GameTime* gameTime)
 		}
 		arrfree(ToDelete);
 	}
-
-	igRender();
 
 	GGame.Frame++;
 }
@@ -411,8 +390,6 @@ void GameRender(const GameTime* gameTime)
 	DrawRender();
 
 	DebugDraw(GGame.Renderer);
-	ImGui_ImplSDLRenderer_RenderDrawData(igGetDrawData());
-
 	SDL_RenderPresent(GGame.Renderer);
 }
 

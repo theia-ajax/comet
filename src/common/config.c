@@ -1,8 +1,6 @@
 #include "config.h"
 
 #include <SDL2/SDL.h>
-#include <cimgui.h>
-
 #include "ini.h"
 #include "stb_ds.h"
 #include "Util.h"

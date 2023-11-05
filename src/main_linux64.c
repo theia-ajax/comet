@@ -1,7 +1,5 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <cimgui.h>
-#include <cimgui_impl.h>
 #include <math.h>
 #include <sokol_time.h>
 #include <stdio.h>

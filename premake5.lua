@@ -25,14 +25,6 @@ filter "configurations:Release"
 	optimize "Full"
 	defines { "_NDEBUG" }
 
-project "cimgui"
-	kind "StaticLib"
-	language "C++"
-	cppdialect "gnu++20"
-	location "bin/cimgui"
-	includedirs { "lib/cimgui/imgui" }
-	files "lib/cimgui/**.cpp"
-	
 project "comet"
 	kind "WindowedApp"
 	language "C"
@@ -44,9 +36,8 @@ project "comet"
 		"src/common/**.inl",
 		"src/main_%{cfg.platform:lower()}.c",
 	}
-	includedirs { "lib/cimgui", "include" }
+	includedirs { "include" }
 	debugdir "."
-	links { "cimgui" }
 
 	if os.istarget("windows") then
 		filter "configurations:Debug"
