@@ -367,6 +367,13 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count)
 	return Center;
 }
 
+PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, flt32 Angle)
+{
+	PolygonShape Result;
+	PolygonMakeBox(&Result, HalfSize, Center, Angle);
+	return Result;
+}
+
 void PolygonMakeAABB(PolygonShape* Self, Vec2 HalfSize)
 {
 	Self->VertexCount = 4;

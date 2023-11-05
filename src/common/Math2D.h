@@ -107,6 +107,7 @@ bool CircleRaycast(const CircleShape* Self, Tform2 Transform, const RaycastIn* I
 bool CircleIntersectsCircle(const CircleShape* A, Tform2 TransformA, const CircleShape* B, Tform2 TransformB);
 bool CircleIntersectsPolygon(const CircleShape* A, Tform2 TransformA, const PolygonShape* B, Tform2 TransformB);
 
+PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, flt32 Angle);
 void PolygonMakeAABB(PolygonShape* Self, Vec2 HalfSize);
 void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle);
 void PolygonMakeHull(PolygonShape* Self, const Vec2* Vertices, int32 VertexCount);

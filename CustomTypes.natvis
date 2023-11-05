@@ -24,4 +24,11 @@
 		<Item Name="W">Data[3]</Item>
 	  </Expand>
   </Type>
+  <Type Name="EntityId">
+	<DisplayString>{{ {RawValue &amp; 0xFFFF} }}</DisplayString>
+	<Expand>
+		<Item Name="Index">RawValue &amp; 0xFFFF</Item>
+		<Item Name="Generation">RawValue &gt;&gt; 16</Item>
+	</Expand>
+  </Type>
 </AutoVisualizer>

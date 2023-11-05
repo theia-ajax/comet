@@ -15,6 +15,8 @@ typedef struct VelocityComponent {
 
 typedef struct SpriteComponent {
 	int32 SpriteId;
+	flt32 Rotation;
+	Vec2 Offset;
 } SpriteComponent;
 
 typedef enum ColliderType {
@@ -31,9 +33,13 @@ typedef struct ColliderComponent {
 	};
 } ColliderComponent;
 
+typedef struct LifetimeComponent {
+	flt32 SecondsRemaining;
+} LifetimeComponent;
+
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
-#define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)
+#define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)(Lifetime)
 
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)

@@ -26,7 +26,7 @@ enum SpriteSheetId {
 
 #define GetImage(Id) GGame.ImageAssets[Id]
 
-typedef void (GameSystem)(GameWorld* World, const GameTime* Time);
+typedef void(GameSystem)(GameWorld* World, const GameTime* Time);
 
 struct {
 	bool IsRunning;
@@ -44,6 +44,8 @@ struct {
 	// PhysWorld* Physics;
 	GameWorld* World;
 	// GameSystem* Systems[];
+	EntityId PlayerEntity;
+	flt32 Timer;
 } GGame;
 
 bool GameInitialize(const GameInitParams* params)
@@ -138,13 +140,22 @@ bool GameInitialize(const GameInitParams* params)
 
 	GGame.World = CreateGameWorld();
 
+	if (!GGame.World) {
+		LogError("Shit");
+		exit(1);
+	}
+
 	EntityId Entity0 = CreateEntity(GGame.World);
 	EntityId Entity1 = CreateEntity(GGame.World);
+	EntityId Entity2 = CreateEntity(GGame.World);
+
+	GGame.PlayerEntity = Entity0;
 
 	*AddComponent(TransformComponent, GGame.World, Entity0) = (TransformComponent){
 		.Position = V2(64.0f, 128.0f),
 		.Rotation = 0.25f,
 	};
+	AddComponent(VelocityComponent, GGame.World, Entity0);
 
 	*AddComponent(SpriteComponent, GGame.World, Entity0) = (SpriteComponent){
 		.SpriteId = SPRITE_ID(
@@ -152,10 +163,9 @@ bool GameInitialize(const GameInitParams* params)
 	};
 
 	*AddComponent(ColliderComponent, GGame.World, Entity0) = (ColliderComponent){
-		.Type = ColliderType_Circle,
-		.Circle = {
-			.Radius = 36.0f,
-		}};
+		.Type = ColliderType_Polygon,
+		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
+	};
 
 	*AddComponent(TransformComponent, GGame.World, Entity1) = (TransformComponent){
 		.Position = V2(256.0f, 128.0f),
@@ -163,17 +173,57 @@ bool GameInitialize(const GameInitParams* params)
 	};
 
 	*AddComponent(SpriteComponent, GGame.World, Entity1) = (SpriteComponent){
-		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("red_01"))),
+		.SpriteId =
+			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("red_01"))),
 	};
 
 	*AddComponent(ColliderComponent, GGame.World, Entity1) = (ColliderComponent){
-		.Type = ColliderType_Circle,
-		.Circle = {
-			.Radius = 36.0f,
-		}};
+		.Type = ColliderType_Polygon,
+		.Polygon = PolygonCreateBox(V2(20.0f, 20.0f), V2(0, 0), 0.0f),
+	};
+
+	*AddComponent(TransformComponent, GGame.World, Entity2) = (TransformComponent){0};
+
+	LogInfo("Game Initialization Complete");
 
 	return true;
+}
+
+static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation, flt32 Speed)
+{
+	EntityId Entity = CreateEntity(World);
+	TransformComponent* T = AddComponent(TransformComponent, World, Entity);
+	*T = (TransformComponent){
+		.Position = Position,
+		.Rotation = Rotation,
+	};
+	VelocityComponent* V = AddComponent(VelocityComponent, World, Entity);
+	*V = (VelocityComponent){
+		.AngularVelocity = 0.0f,
+		.Velocity = Mul(R2(Rotation), Speed),
+	};
+	SpriteComponent* S = AddComponent(SpriteComponent, World, Entity);
+	*S = (SpriteComponent){
+		.SpriteId = SPRITE_ID(
+			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("projectile01-3"))),
+		.Rotation = 0.25f,
+	};
+
+	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
+		.Type = ColliderType_Circle,
+		.Circle = {
+			.Radius = 8.0f,
+		}};
+	
+	*AddComponent(LifetimeComponent, World, Entity) = (LifetimeComponent){
+		.SecondsRemaining = 0.5f,
+	};
+	//  GetComponent(TransformComponent, GGame.World, Entity);
+	if (T->Position.Y < 10) {
+		LogError("HELP");
+		int p = 0;
+	}
+	return Entity;
 }
 
 void GameShutdown(void)
@@ -241,6 +291,59 @@ void GameUpdate(const GameTime* gameTime)
 
 	int FramesPerSecond = (int)round(1.0 / gameTime->DeltaTime);
 	DebugPrintf("FPS: %d, SIM: %0.3fms", FramesPerSecond, gameTime->SimTimeMS);
+	DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
+
+	{
+		VelocityComponent* V = GetComponent(VelocityComponent, GGame.World, GGame.PlayerEntity);
+		Vec2 MoveXY = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
+		V->Velocity = Mul(Norm(MoveXY), 128.0f);
+		if (GGame.Timer > 0.0f) GGame.Timer -= gameTime->DeltaTimeF;
+		if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
+			GGame.Timer += 0.25f;
+			TransformComponent* T = GetComponent(TransformComponent, GGame.World, GGame.PlayerEntity);
+			Vec2 SpawnPosition = Add(T->Position, V2(16.0f, 0.0));
+			flt32 SpawnRotation = T->Rotation - 0.25f;
+			for (int i = -1; i <= 1; i += 1) {
+				CreateProjectile(GGame.World, SpawnPosition, SpawnRotation + (i * 0.05f), 256.0f);
+			}
+		}
+	}
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Velocity), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			EntityId Entity = *Iter;
+			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
+			VelocityComponent* V = GetComponent(VelocityComponent, GGame.World, Entity);
+
+			T->Position = Add(T->Position, Mul(V->Velocity, gameTime->DeltaTimeF));
+
+			T->Rotation += V->AngularVelocity * gameTime->DeltaTimeF;
+		}
+		WorldQueryFree(Query);
+	}
+
+	{
+		EntityId* ToDelete = NULL;
+		arrsetcap(ToDelete, WorldEntityCount(GGame.World));
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Lifetime), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			EntityId Entity = *Iter;
+			LifetimeComponent* L = GetComponent(LifetimeComponent, GGame.World, Entity);
+			if (L->SecondsRemaining > 0.0f) {
+				L->SecondsRemaining -= gameTime->DeltaTimeF;
+				if (L->SecondsRemaining <= 0.0f) {
+					arrput(ToDelete, Entity);
+				}
+			}
+		}
+		WorldQueryFree(Query);
+
+		for (int32 Index = 0; Index < arrlen(ToDelete); Index++) {
+			DestroyEntity(GGame.World, ToDelete[Index]);
+		}
+		arrfree(ToDelete);
+	}
 
 	igRender();
 
@@ -256,8 +359,8 @@ void GameRender(const GameTime* gameTime)
 	SDL_GetRendererOutputSize(GGame.Renderer, &RenderWidth, &RenderHeight);
 
 	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
-	// SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
-	SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
+	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
+	// SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
 	// SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderFillRect(GGame.Renderer, &BgRect);
 
@@ -270,18 +373,39 @@ void GameRender(const GameTime* gameTime)
 
 	EntitySignature Sig = SIGNATURE(Transform, Sprite);
 
-	for (EntityId* Iter = WorldEntitiesBegin(GGame.World); Iter != WorldEntitiesEnd(GGame.World); Iter++) {
-		EntityId Entity = *Iter;
-		if (HAS_COMPONENTS(GGame.World, Entity, TransformComponent, SpriteComponent))
-		{
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Sprite), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			EntityId Entity = *Iter;
 			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
 			SpriteComponent* S = GetComponent(SpriteComponent, GGame.World, Entity);
 			DrawSprite(&(SpriteDraw){
 				.SpriteId = S->SpriteId,
-				.Position = T->Position,
-				.Rotation = T->Rotation,
+				.Position = Add(T->Position, S->Offset),
+				.Rotation = T->Rotation + S->Rotation,
 			});
 		}
+		WorldQueryFree(Query);
+	}
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Collider), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			EntityId Entity = *Iter;
+			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
+			ColliderComponent* S = GetComponent(ColliderComponent, GGame.World, Entity);
+			Tform2 Transform = T2(T->Position, R2(T->Rotation));
+			switch (S->Type) {
+				case ColliderType_Circle:
+					DrawCircle(TransformV2(Transform, S->Circle.Center), S->Circle.Radius, 0xFFFFFF00);
+					break;
+				case ColliderType_Polygon:
+					DrawPolygon(T->Position, R2(T->Rotation), S->Polygon.Vertices, S->Polygon.VertexCount, 0xFFFFFF00);
+					break;
+				default: unreachable(); break;
+			}
+		}
+		WorldQueryFree(Query);
 	}
 
 	DrawRender();

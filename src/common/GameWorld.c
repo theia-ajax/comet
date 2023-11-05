@@ -7,8 +7,8 @@
 
 // Constants
 // -------------------------------------------------------
-const int32 KInitialEntityCapacity = 32;
-const int32 KDefaultInitialComponentCapacity = 32;
+const int32 KInitialEntityCapacity = 4;
+const int32 KDefaultInitialComponentCapacity = 4;
 
 // clang-format off
 #define KEntityIndexBits 16
@@ -68,17 +68,21 @@ typedef struct GameWorld {
 } GameWorld;
 
 // Component list
-static UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity);
-static inline void* ComponentMemory(UntypedComponentList* Self, int32 Index);
-static void DestroyComponentList(UntypedComponentList* Self);
-static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* Component);
-static void ComponentListRemove(UntypedComponentList* Self, EntityId Entity);
-static void* ComponentListGet(UntypedComponentList* Self, EntityId Entity);
-static bool ComponentListHas(UntypedComponentList* Self, EntityId Entity);
+static UntypedComponentList CreateComponentList(
+	ComponentType Type,
+	int32 ComponentSize,
+	int32 Capacity,
+	int32 EntityCapacity);
+static inline void* ComponentMemory(UntypedComponentList* List, int32 Index);
+static void DestroyComponentList(UntypedComponentList* List);
+static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity);
+static void ComponentListRemove(UntypedComponentList* List, EntityId Entity);
+static void* ComponentListGet(UntypedComponentList* List, EntityId Entity);
+static bool ComponentListHas(UntypedComponentList* List, EntityId Entity);
 
 // Entity-component internal API, all higher level entity-component macros call into here (AddComponent,
 // RemoveComponent, etc...)
-static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData);
+static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
@@ -89,6 +93,12 @@ static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType 
 GameWorld* CreateGameWorld(void)
 {
 	GameWorld* NewState = (GameWorld*)malloc(sizeof(GameWorld));
+
+	if (NewState == NULL) {
+		LogError("Unable to allocate game world");
+		exit(1);
+	}
+
 	ZERO_STRUCT(NewState);
 
 	// arrsetcap(NewState->Entities, KInitialEntityCapacity);
@@ -107,11 +117,14 @@ GameWorld* CreateGameWorld(void)
 			LogWarning("Created %s ComponentList with initial capacity of %d", ComponentTypeName(Index), Capacity);
 		}
 		Capacity = (Capacity != 0) ? Capacity : KDefaultInitialComponentCapacity;
-		NewState->ComponentLists[Index] = CreateComponentList(Index, ComponentTypeData[Index].Size, Capacity);
+		NewState->ComponentLists[Index] =
+			CreateComponentList(Index, ComponentTypeData[Index].Size, Capacity, KInitialEntityCapacity);
 	}
 
 	NewState->AllTimeHighGeneration = 1;
 	NewState->AllTimeHighGenerationFirstIndex = NONE;
+
+	return NewState;
 }
 
 void DestroyGameWorld(GameWorld* World)
@@ -119,6 +132,7 @@ void DestroyGameWorld(GameWorld* World)
 	// arrfree(World->Entities);
 	arrfree(World->ActiveEntities);
 	arrfree(World->EntityGenerations);
+	arrfree(World->EntitySignatures);
 	arrfree(World->AvailableIndexStack);
 	ZERO_STRUCT(World);
 	free(World);
@@ -127,17 +141,34 @@ void DestroyGameWorld(GameWorld* World)
 EntityId CreateEntity(GameWorld* World)
 {
 	int32 EntityIndex = NONE;
+	int Z = arrlen(World->AvailableIndexStack);
 	if (arrlen(World->AvailableIndexStack) > 0) {
 		EntityIndex = arrpop(World->AvailableIndexStack);
 	} else {
 		EntityIndex = arrlen(World->ActiveEntities);
-		// arrput(World->Entities, (GameEntity){0});
 		arrput(World->EntityGenerations, World->AllTimeHighGeneration);
 		arrput(World->EntitySignatures, (EntitySignature){0});
 	}
 	int32 EntityGeneration = World->EntityGenerations[EntityIndex];
 	EntityId Result = ENTITY_ID(EntityIndex, EntityGeneration);
+	int32 LastCapacity = arrcap(World->ActiveEntities);
 	arrput(World->ActiveEntities, Result);
+	if (arrcap(World->ActiveEntities) > LastCapacity) {
+		int32 NewLength = arrcap(World->ActiveEntities);
+		for (int32 ListIndex = 0; ListIndex < ARRAY_COUNT(World->ComponentLists); ListIndex++) {
+			int32 OldLength = arrlen(World->ComponentLists[ListIndex].Indices);
+			arrsetlen(World->ComponentLists[ListIndex].Indices, NewLength);
+			memset(
+				&World->ComponentLists[ListIndex].Indices[OldLength],
+				NONE,
+				(NewLength - OldLength) * sizeof(*World->ComponentLists[ListIndex].Indices));
+		}
+		LogWarning(
+			"GameWorld:CreateEntity: Expanding ActiveEntities from %d to %d",
+			LastCapacity,
+			arrcap(World->ActiveEntities));
+	}
+	LogInfo("Create Entity %d[%u:%u]", Result.RawValue, ENTITY_ID_INDEX(Result), ENTITY_ID_GENERATION(Result));
 	return Result;
 }
 
@@ -152,41 +183,49 @@ void DestroyEntity(GameWorld* World, EntityId Entity)
 	const int32 Search = BinarySearch(Entity.RawValue, (int32*)World->ActiveEntities, arrlen(World->ActiveEntities));
 	if (Search != NONE) {
 		arrdel(World->ActiveEntities, Search);
+		int32 NextGeneration = EntityGeneration + 1;
+		if (NextGeneration <= World->AllTimeHighGeneration) {
+			if (EntityIndex < World->AllTimeHighGenerationFirstIndex) {
+				World->AllTimeHighGeneration++;
+				NextGeneration = World->AllTimeHighGeneration;
+				World->AllTimeHighGenerationFirstIndex = EntityIndex;
+			} else {
+				NextGeneration = World->AllTimeHighGeneration;
+			}
+		} else {
+			World->AllTimeHighGeneration = NextGeneration;
+			World->AllTimeHighGenerationFirstIndex = EntityIndex;
+		}
+
+		World->EntitySignatures[EntityIndex] = (EntitySignature){0};
+		World->EntityGenerations[EntityIndex] = NextGeneration;
+
+		for (int32 ListIndex = 0; ListIndex < ARRAY_COUNT(World->ComponentLists); ListIndex++) {
+			if (ComponentListHas(&World->ComponentLists[ListIndex], Entity)) {
+				ComponentListRemove(&World->ComponentLists[ListIndex], Entity);
+			}
+		}
 	} else {
 		LogError("GameWorld:Entities:DestroyEntity: Could not find entity '%d' in ActiveEntities", Entity.RawValue);
 	}
-
-	int32 NextGeneration = EntityGeneration + 1;
-	if (NextGeneration <= World->AllTimeHighGeneration) {
-		if (EntityIndex < World->AllTimeHighGenerationFirstIndex) {
-			World->AllTimeHighGeneration++;
-			NextGeneration = World->AllTimeHighGeneration;
-			World->AllTimeHighGenerationFirstIndex = EntityIndex;
-		} else {
-			NextGeneration = World->AllTimeHighGeneration;
-		}
-	} else {
-		World->AllTimeHighGeneration = NextGeneration;
-		World->AllTimeHighGenerationFirstIndex = EntityIndex;
-	}
-
-	World->EntitySignatures[EntityIndex] = (EntitySignature){0};
-	World->EntityGenerations[EntityIndex] = NextGeneration;
 }
 
 bool EntityIdIsValid(GameWorld* World, EntityId Entity)
 {
+	ASSERT(!ENTITY_ID_EQ(Entity, ENTITY_ID_INVALID));
 	if (ENTITY_ID_EQ(Entity, ENTITY_ID_INVALID)) {
 		return false;
 	}
 
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	if (!VALID_INDEX(EntityIndex, arrlen(World->ActiveEntities))) {
+	ASSERT(VALID_INDEX(EntityIndex, arrlen(World->EntityGenerations)));
+	if (!VALID_INDEX(EntityIndex, arrlen(World->EntityGenerations))) {
 		return false;
 	}
 
 	int32 EntityGeneration = ENTITY_ID_GENERATION(Entity);
 	int32 ExpectedGeneration = World->EntityGenerations[EntityIndex];
+	ASSERT(EntityGeneration == ExpectedGeneration);
 	return EntityGeneration == ExpectedGeneration;
 }
 
@@ -197,11 +236,9 @@ EntitySignature EntityGetSignature(GameWorld* World, EntityId Entity)
 	return World->EntitySignatures[EntityIndex];
 }
 
-bool EntitySignaturePassesFilter(EntitySignature Signature, EntitySignature Required, EntitySignature Rejected)
+inline bool EntitySignaturePassesFilter(EntitySignature Signature, EntitySignature Required, EntitySignature Rejected)
 {
-	bool HasAllRequired = (Signature.RawValue & Required.RawValue) == Required.RawValue;
-	bool HasAnyRejected = (Signature.RawValue & Rejected.RawValue) != 0;
-	return HasAllRequired && !HasAnyRejected;
+	return (Signature.RawValue & Required.RawValue & Rejected.RawValue) == Required.RawValue;
 }
 
 EntityId* WorldEntitiesBegin(GameWorld* World)
@@ -214,6 +251,31 @@ EntityId* WorldEntitiesEnd(GameWorld* World)
 	return arrend(World->ActiveEntities);
 }
 
+EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntitySignature Rejected)
+{
+	EntityId* Entities = NULL;
+	arrsetcap(Entities, arrlen(World->ActiveEntities));
+
+	for (int32 Index = 0; Index < arrlen(World->EntitySignatures); Index++) {
+		EntitySignature Signature = World->EntitySignatures[Index];
+		if (EntitySignaturePassesFilter(Signature, Required, Rejected)) {
+			arrput(Entities, World->ActiveEntities[Index]);
+		}
+	}
+
+	return Entities;
+}
+
+void WorldQueryFree(EntityId* Query)
+{
+	arrfree(Query);
+}
+
+int32 WorldEntityCount(GameWorld* World)
+{
+	return (int32)arrlen(World->ActiveEntities);
+}
+
 // TODO: This is implemented in a weird place, maybe move this to a component specific translation unit
 inline const char* ComponentTypeName(ComponentType Type)
 {
@@ -222,103 +284,114 @@ inline const char* ComponentTypeName(ComponentType Type)
 
 // Private Implementations
 // -------------------------------------------------------
-static UntypedComponentList CreateComponentList(ComponentType Type, int32 ComponentSize, int32 Capacity)
+static UntypedComponentList CreateComponentList(
+	ComponentType Type,
+	int32 ComponentSize,
+	int32 Capacity,
+	int32 EntityCapacity)
 {
-	UntypedComponentList Self;
-	ZERO_STRUCT(&Self);
-	Self.Type = Type;
-	Self.ComponentSize = ComponentSize;
-	Self.Capacity = Capacity;
-	Self.ComponentMemory = malloc(Self.ComponentSize * Self.Capacity);
-	ASSERT(Self.ComponentMemory);
-	arrsetcap(Self.Indices, Self.Capacity);
-	arrsetcap(Self.Entities, Self.Capacity);
-	memset(Self.Indices, NONE, sizeof(*Self.Indices) * arrcap(Self.Indices));
-	memset(Self.Entities, 0, sizeof(*Self.Entities) * arrcap(Self.Entities));
-	return Self;
+	UntypedComponentList List;
+	ZERO_STRUCT(&List);
+	List.Type = Type;
+	List.ComponentSize = ComponentSize;
+	List.Capacity = Capacity;
+	List.ComponentMemory = malloc(List.ComponentSize * List.Capacity);
+	memset(List.ComponentMemory, 0, List.ComponentSize * List.Capacity);
+	ASSERT(List.ComponentMemory);
+	List.Entities = malloc(List.Capacity * sizeof(*List.Entities));
+	ASSERT(List.Entities);
+	arrsetlen(List.Indices, EntityCapacity);
+	memset(List.Indices, NONE, sizeof(*List.Indices) * arrcap(List.Indices));
+	memset(List.Entities, 0, sizeof(*List.Entities) * List.Capacity);
+	return List;
 }
 
-static inline void* ComponentMemory(UntypedComponentList* Self, int32 Index)
+static inline void* ComponentMemory(UntypedComponentList* List, int32 Index)
 {
-	return ((uint8*)Self->ComponentMemory) + (Index * Self->ComponentSize);
+	return ((uint8*)List->ComponentMemory) + (Index * List->ComponentSize);
 }
 
-static void DestroyComponentList(UntypedComponentList* Self)
+static void DestroyComponentList(UntypedComponentList* List)
 {
-	free(Self->ComponentMemory);
-	arrfree(Self->Indices);
-	arrfree(Self->Entities);
-	ZERO_STRUCT(Self);
+	free(List->ComponentMemory);
+	free(List->Entities);
+	arrfree(List->Indices);
+	ZERO_STRUCT(List);
 }
 
-static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity, const void* Component)
+static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity)
 {
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	int32 NewIndex = List->Count;
 
+	ptrdiff_t IndexCount = arrlen(List->Indices);
 	ASSERT(EntityIndex <= arrlen(List->Indices) && "Entity has invalid index.");
-	ASSERT(NewIndex <= arrlen(List->Entities));
+
 	ASSERT(List->Indices[EntityIndex] == NONE && "Entity already has component");
+	List->Indices[EntityIndex] = NewIndex;
 
-	if (EntityIndex == arrlen(List->Indices)) {
-		arrput(List->Indices, NewIndex);
-	} else {
-		List->Indices[EntityIndex] = NewIndex;
+	if (NewIndex == List->Capacity) {
+		int32 LastCapacity = List->Capacity;
+		List->Capacity *= 2;
+		List->ComponentMemory = realloc(List->ComponentMemory, List->Capacity * List->ComponentSize);
+		memset(
+			(uint8*)List->ComponentMemory + LastCapacity * List->ComponentSize,
+			0,
+			(List->Capacity - LastCapacity) * List->ComponentSize);
+		List->Entities = realloc(List->Entities, List->Capacity * sizeof(*List->Entities));
+		memset(List->Entities + LastCapacity, 0, (List->Capacity - LastCapacity) * sizeof(*List->Entities));
+		LogWarning(
+			"GameWorld:ComponentListAdd<%s>: Capacity reached, increasing from %d to %d",
+			ComponentTypeName(List->Type),
+			LastCapacity,
+			List->Capacity);
 	}
 
-	if (NewIndex == arrlen(List->Entities)) {
-		arrput(List->Entities, Entity);
-	} else {
-		List->Entities[NewIndex] = Entity;
-	}
+	ASSERT(List->Entities[NewIndex].RawValue == 0);
+	List->Entities[NewIndex] = Entity;
 
 	void* Storage = ((uint8*)List->ComponentMemory) + NewIndex * List->ComponentSize;
-	if (Component != NULL) {
-		memcpy(Storage, Component, List->ComponentSize);
-	} else {
-		memset(Storage, 0, List->ComponentSize);
-	}
 	List->Count++;
 	return Storage;
 }
 
-static void ComponentListRemove(UntypedComponentList* Self, EntityId Entity)
+static void ComponentListRemove(UntypedComponentList* List, EntityId Entity)
 {
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	ASSERT(Self->Indices[EntityIndex] != NONE);
+	ASSERT(List->Indices[EntityIndex] != NONE);
 
-	int32 RemovedIndex = Self->Indices[EntityIndex];
-	int32 LastIndex = Self->Count - 1;
+	int32 RemovedIndex = List->Indices[EntityIndex];
+	int32 LastIndex = List->Count - 1;
 
-	void* RemovedMemory = ComponentMemory(Self, RemovedIndex);
-	void* LastMemory = ComponentMemory(Self, Self->Count - 1);
-	memcpy(RemovedMemory, LastMemory, Self->ComponentSize);
-	memset(LastMemory, 0, Self->ComponentSize);
-	Self->Count--;
+	void* RemovedMemory = ComponentMemory(List, RemovedIndex);
+	void* LastMemory = ComponentMemory(List, List->Count - 1);
+	memcpy(RemovedMemory, LastMemory, List->ComponentSize);
+	memset(LastMemory, 0, List->ComponentSize);
+	List->Count--;
 
-	EntityId LastEntity = Self->Entities[LastIndex];
+	EntityId LastEntity = List->Entities[LastIndex];
 	int32 LastEntityIndex = ENTITY_ID_INDEX(LastEntity);
-	Self->Indices[LastEntityIndex] = RemovedIndex;
-	Self->Entities[RemovedIndex] = LastEntity;
+	List->Indices[LastEntityIndex] = RemovedIndex;
+	List->Entities[RemovedIndex] = LastEntity;
 
-	Self->Indices[EntityIndex] = NONE;
-	Self->Entities[LastIndex] = ENTITY_ID_INVALID;
+	List->Indices[EntityIndex] = NONE;
+	List->Entities[LastIndex] = ENTITY_ID_INVALID;
 }
 
-static void* ComponentListGet(UntypedComponentList* Self, EntityId Entity)
+static void* ComponentListGet(UntypedComponentList* List, EntityId Entity)
 {
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	ASSERT(ENTITY_ID_NEQ(Self->Entities[EntityIndex], ENTITY_ID_INVALID));
+	int32 ComponentIndex = List->Indices[EntityIndex];
+	ASSERT(ENTITY_ID_NEQ(List->Entities[ComponentIndex], ENTITY_ID_INVALID));
 
-	int32 ComponentIndex = Self->Indices[EntityIndex];
-	void* Result = ComponentMemory(Self, ComponentIndex);
+	void* Result = ComponentMemory(List, ComponentIndex);
 	return Result;
 }
 
-static bool ComponentListHas(UntypedComponentList* Self, EntityId Entity)
+static bool ComponentListHas(UntypedComponentList* List, EntityId Entity)
 {
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
-	return Self->Indices[EntityIndex] != NONE;
+	return List->Indices[EntityIndex] != NONE;
 }
 
 static inline UntypedComponentList* _GetComponentList(GameWorld* World, ComponentType Type)
@@ -327,12 +400,13 @@ static inline UntypedComponentList* _GetComponentList(GameWorld* World, Componen
 	return &World->ComponentLists[Type];
 }
 
-static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type, const void* ComponentData)
+static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
-	return ComponentListAdd(_GetComponentList(World, Type), Entity, ComponentData);
+	LogInfo("GameWorld:EntityAddComponent: added %s component to entity %d", ComponentTypeName(Type), Entity.RawValue);
+	return ComponentListAdd(_GetComponentList(World, Type), Entity);
 }
 
 static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type)
@@ -369,7 +443,7 @@ static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType 
 #define ADD_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	ADD_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
-		return (COMPONENT_NAME(Type)*)EntityAddComponent(World, Entity, CAT(ComponentType_, Type), ComponentData);     \
+		return (COMPONENT_NAME(Type)*)EntityAddComponent(World, Entity, CAT(ComponentType_, Type));                    \
 	}
 
 #define REMOVE_COMPONENT_IMPLEMENTATION(Type)                                                                          \
