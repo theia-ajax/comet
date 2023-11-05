@@ -9,6 +9,7 @@ filter "platforms:Linux64"
 	system "Linux"
 	architecture "x86_64"
 	toolset "gcc"
+	buildoptions {"-Werror"}
 
 filter "platforms:Win64"
 	system "Windows"
@@ -37,19 +38,16 @@ project "comet"
 		"src/main_%{cfg.platform:lower()}.c",
 	}
 	includedirs { "include" }
+	libdirs { "lib/%{cfg.platform}" }
 	debugdir "."
 
 	if os.istarget("windows") then
 		filter "configurations:Debug"
 			kind "ConsoleApp"
-			links { "SDL2maind" }
-			
-		filter "configurations:Release"
-			links { "SDL2main" }
 	end
 
 	filter "platforms:Linux64"
 		cdialect "gnu11"
-		links { "SDL2", "m", "stdc++" }
+		links { "SDL3", "m", "stdc++" }
 
 

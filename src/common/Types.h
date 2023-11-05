@@ -1,10 +1,11 @@
 #pragma once
 
-#include <SDL2/SDL_assert.h>
+#include <SDL3/SDL_assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #define ASSERT(expr) SDL_assert(expr)
 

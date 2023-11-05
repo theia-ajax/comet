@@ -3,7 +3,7 @@
 // #include "debug.h"
 // #include "stb_ds.h"
 // #include "stb_image.h"
-// #include <SDL2/SDL.h>
+// #include <SDL3/SDL.h>
 
 // static s_game g_game;
 

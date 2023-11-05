@@ -1,6 +1,6 @@
 #include "Draw.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <json.h>
 
 #include "Log.h"
@@ -35,7 +35,7 @@ struct {
 } GDraw;
 
 // Private Prototypes
-static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY);
+static SDL_FRect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY);
 
 // Note SDL style naming convention
 static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* center, float radius);
@@ -164,7 +164,7 @@ void DrawRender(void)
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
 
-		SDL_Rect SourceRect =
+		SDL_FRect SourceRect =
 			GetSpriteRect(DrawCommand->SpriteId, DrawCommand->SpriteTiles[0], DrawCommand->SpriteTiles[1]);
 
 		float Width = SourceRect.w * DrawCommand->Scale.X;
@@ -195,7 +195,7 @@ void DrawRender(void)
 		}
 
 		// for now it's all in the first sprite sheet
-		SDL_RenderCopyExF(
+		SDL_RenderTextureRotated(
 			GDraw.Renderer,
 			GDraw.SpriteSheetTextures[SheetIndex],
 			&SourceRect,
@@ -248,7 +248,7 @@ void DrawRender(void)
 						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
 						ColorV4ToBytes(ColorF, &R, &G, &B, &A);
 						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
-						SDL_RenderDrawLineF(
+						SDL_RenderLine(
 							GDraw.Renderer,
 							Points[EdgeIndex].x,
 							Points[EdgeIndex].y,
@@ -268,11 +268,11 @@ void DrawRender(void)
 
 // Private Implementations
 
-static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY)
+static SDL_FRect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY)
 {
 	const SpriteSheet* SpriteSheet = &GDraw.SpriteSheets[SPRITE_ID_SHEET(SpriteId)];
 
-	SDL_Rect Result;
+	SDL_FRect Result;
 
 	switch (SpriteSheet->SheetType) {
 		case SpriteSheetType_Grid:
@@ -287,7 +287,7 @@ static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTi
 				if (SpriteTileY + SpriteTilesY > SpriteSheet->SpritesPerCol)
 					SpriteTilesY = SpriteSheet->SpritesPerCol - SpriteTileY;
 
-				Result = (SDL_Rect){
+				Result = (SDL_FRect){
 					.x = SpriteTileX * SpriteSheet->SpriteWidth,
 					.y = SpriteTileY * SpriteSheet->SpriteHeight,
 					.w = SpriteTilesX * SpriteSheet->SpriteWidth,
@@ -298,7 +298,7 @@ static SDL_Rect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTi
 		case SpriteSheetType_Frames:
 			{
 				Rect16 R = SpriteSheet->SheetData->Data->Frames.Frame[SPRITE_ID_INDEX(SpriteId)];
-				Result = (SDL_Rect){R.X, R.Y, R.W, R.H};
+				Result = (SDL_FRect){R.X, R.Y, R.W, R.H};
 			}
 			break;
 		default: break;
@@ -321,5 +321,5 @@ static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* cente
 	}
 	points[SDL_RENDER_CIRCLE_SEGMENTS] = points[0];
 
-	SDL_RenderDrawLinesF(renderer, points, SDL_RENDER_CIRCLE_SEGMENTS + 1);
+	SDL_RenderLines(renderer, points, SDL_RENDER_CIRCLE_SEGMENTS + 1);
 }

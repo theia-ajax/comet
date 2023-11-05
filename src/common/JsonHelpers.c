@@ -1,6 +1,6 @@
 #include "JsonHelpers.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 struct json_value_s* JsonLoadFile(const char* fileName)
 {

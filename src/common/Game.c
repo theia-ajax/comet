@@ -1,6 +1,6 @@
 #include "Game.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <stb_ds.h>
 #include <stdlib.h>
 
@@ -84,8 +84,9 @@ bool GameInitialize(const GameInitParams* params)
 	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
 	GGame.Window = params->Window;
-	GGame.Renderer = SDL_CreateRenderer(GGame.Window, -1, SDL_RENDERER_ACCELERATED);
-	SDL_RenderSetLogicalSize(GGame.Renderer, GameResWidth, GameResHeight);
+	GGame.Renderer = SDL_CreateRenderer(GGame.Window, NULL, SDL_RENDERER_ACCELERATED);
+	SDL_SetRenderLogicalPresentation(
+		GGame.Renderer, GameResWidth, GameResHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX, SDL_SCALEMODE_NEAREST);
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GameResWidth,
@@ -201,7 +202,7 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 		.Circle = {
 			.Radius = 8.0f,
 		}};
-	
+
 	*AddComponent(LifetimeComponent, World, Entity) = (LifetimeComponent){
 		.SecondsRemaining = 0.5f,
 	};
@@ -335,9 +336,9 @@ void GameRender(const GameTime* gameTime)
 	SDL_RenderClear(GGame.Renderer);
 
 	int RenderWidth, RenderHeight;
-	SDL_GetRendererOutputSize(GGame.Renderer, &RenderWidth, &RenderHeight);
+	SDL_GetRenderLogicalPresentation(GGame.Renderer, &RenderWidth, &RenderHeight, NULL, NULL);
 
-	SDL_Rect BgRect = {0, 0, RenderWidth, RenderHeight};
+	SDL_FRect BgRect = {0, 0, RenderWidth, RenderHeight};
 	SDL_SetRenderDrawColor(GGame.Renderer, 0x12, 0x20, 0x20, 255);
 	// SDL_SetRenderDrawColor(GGame.Renderer, 0xCC, 0xCC, 0xCC, 255);
 	// SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);

@@ -1,6 +1,6 @@
 #include "ParticlePhysics.h"
 
-#include <SDL2/SDL_thread.h>
+#include <SDL3/SDL_thread.h>
 #include <stb_ds.h>
 
 #define USE_GRID_SOLVER
@@ -206,7 +206,7 @@ bool PhysicsIsAreaClear(Vec2 Position)
 	return Result;
 }
 
-#include <SDL2/SDL_render.h>
+#include <SDL3/SDL_render.h>
 void PhysicsDebugDraw(SDL_Renderer* Renderer)
 {
 	SDL_SetRenderDrawColor(Renderer, 0, 0xCC, 0, 255);
@@ -221,7 +221,7 @@ void PhysicsDebugDraw(SDL_Renderer* Renderer)
 		.h = BoundMax.Y - BoundMin.Y,
 	};
 	for (int32 CellY = 0; CellY <= GPhysics.GridHeight; CellY++) {
-		SDL_RenderDrawLineF(
+		SDL_RenderLine(
 			Renderer,
 			BoundMin.X,
 			CellY * GPhysics.Config.CellSize + BoundMin.Y,
@@ -230,7 +230,7 @@ void PhysicsDebugDraw(SDL_Renderer* Renderer)
 	}
 
 	for (int32 CellX = 0; CellX <= GPhysics.GridWidth; CellX++) {
-		SDL_RenderDrawLineF(
+		SDL_RenderLine(
 			Renderer,
 			CellX * GPhysics.Config.CellSize + BoundMin.X,
 			BoundMin.Y,
@@ -249,7 +249,7 @@ void PhysicsDebugDraw(SDL_Renderer* Renderer)
 				.w = GPhysics.Config.CellSize,
 				.h = GPhysics.Config.CellSize,
 			};
-			SDL_RenderFillRectF(Renderer, &GridRect);
+			SDL_RenderFillRect(Renderer, &GridRect);
 		}
 	}
 

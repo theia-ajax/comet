@@ -1,9 +1,11 @@
 #include "config.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
+#include <stdio.h>
+
+#include "Util.h"
 #include "ini.h"
 #include "stb_ds.h"
-#include "Util.h"
 
 const uint32 INVALID_HASH = (uint32)-1;
 
@@ -119,7 +121,7 @@ static bool try_load_config(const char* file_name, s_config* out_config)
 		Sint64 file_size = SDL_RWsize(file);
 		if (file_size != NONE) {
 			char* config_file_buffer = (char*)malloc(file_size + 1);
-			if (SDL_RWread(file, config_file_buffer, 1, file_size) == file_size) {
+			if (SDL_RWread(file, config_file_buffer, file_size) == file_size) {
 				ini_t* ini = ini_load(config_file_buffer, NULL);
 
 				if (ini) {

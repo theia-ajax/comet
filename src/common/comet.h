@@ -3,7 +3,7 @@
 // #include "config.h"
 // #include "Types.h"
 // #include "util.h"
-// #include <SDL2/SDL_rect.h>
+// #include <SDL3/SDL_rect.h>
 
 // typedef struct SDL_Surface SDL_Surface;
 // typedef struct SDL_Texture SDL_Texture;

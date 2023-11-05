@@ -1,6 +1,6 @@
 #include "Debug.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <stdarg.h>
 
 #define SYSFONT_U8 uint8
@@ -12,7 +12,7 @@
 #include "Game.h"
 
 struct line {
-	SDL_Point Points[16];
+	SDL_FPoint Points[16];
 	int32 PointCount;
 	int32 FramesRemaining;
 	SDL_Color Color;
@@ -32,17 +32,17 @@ void DebugInitialize(const DebugConfig* config)
 {
 	DebugConfig Config = (config != NULL) ? *config
 										  : (DebugConfig){
-											  .CanvasWidth = 320,
-											  .CanvasHeight = 180,
-										  };
+												.CanvasWidth = 320,
+												.CanvasHeight = 180,
+											};
 
-	GDebug.Canvas = SDL_CreateRGBSurfaceWithFormat(
-		0, Config.CanvasWidth, Config.CanvasHeight, 32, SDL_PIXELFORMAT_ARGB8888);
+	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_ARGB8888);
+	ASSERT(GDebug.Canvas);
 }
 
 void DebugShutdown(void)
 {
-	SDL_FreeSurface(GDebug.Canvas);
+	SDL_DestroySurface(GDebug.Canvas);
 	SDL_DestroyTexture(GDebug.CanvasTexture);
 }
 
@@ -54,49 +54,37 @@ void DebugNextFrame(void)
 		}
 	}
 
-	SDL_FillRect(
-		GDebug.Canvas, NULL, 0x00000000);
+	SDL_FillSurfaceRect(GDebug.Canvas, NULL, 0x00000000);
 	GDebug.CursorPos = (SDL_Point){0};
 }
 
 void DebugDraw(SDL_Renderer* renderer)
 {
 	for (int32 RawIndex = 0; RawIndex < ARRAY_COUNT(GDebug.LinesRingBuffer); RawIndex++) {
-		int32 Index = (GDebug.LinesRingIndex + ARRAY_COUNT(GDebug.LinesRingBuffer))
-					  % ARRAY_COUNT(GDebug.LinesRingBuffer);
+		int32 Index =
+			(GDebug.LinesRingIndex + ARRAY_COUNT(GDebug.LinesRingBuffer)) % ARRAY_COUNT(GDebug.LinesRingBuffer);
 		Index = RawIndex;
 		if (GDebug.LinesRingBuffer[Index].FramesRemaining != 0) {
 			SDL_Color color = GDebug.LinesRingBuffer[Index].Color;
 			SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-			SDL_RenderDrawLines(
-				renderer,
-				GDebug.LinesRingBuffer[Index].Points,
-				GDebug.LinesRingBuffer[Index].PointCount);
+			SDL_RenderLines(renderer, GDebug.LinesRingBuffer[Index].Points, GDebug.LinesRingBuffer[Index].PointCount);
 		}
 	}
 
 	if (GDebug.CanvasTexture == NULL) {
 		GDebug.CanvasTexture = SDL_CreateTexture(
-			renderer,
-			SDL_PIXELFORMAT_ARGB8888,
-			SDL_TEXTUREACCESS_STREAMING,
-			GDebug.Canvas->w,
-			GDebug.Canvas->h);
+			renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, GDebug.Canvas->w, GDebug.Canvas->h);
 		SDL_SetTextureBlendMode(GDebug.CanvasTexture, SDL_BLENDMODE_BLEND);
 	}
 
 	SDL_Surface* CanvasTextureSurface;
 	if (SDL_LockTextureToSurface(GDebug.CanvasTexture, NULL, &CanvasTextureSurface) == 0) {
-		SDL_FillRect(CanvasTextureSurface, NULL, 0x00000000);
+		SDL_FillSurfaceRect(CanvasTextureSurface, NULL, 0x00000000);
 		SDL_BlitSurface(GDebug.Canvas, NULL, CanvasTextureSurface, NULL);
 		SDL_UnlockTexture(GDebug.CanvasTexture);
 	}
 
-	SDL_RenderCopy(
-		renderer,
-		GDebug.CanvasTexture,
-		NULL,
-		&(SDL_Rect){.w = GDebug.Canvas->w, .h = GDebug.Canvas->h});
+	SDL_RenderTexture(renderer, GDebug.CanvasTexture, NULL, &(SDL_FRect){.w = GDebug.Canvas->w, .h = GDebug.Canvas->h});
 }
 
 static int32 NextIndex()
