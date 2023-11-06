@@ -152,7 +152,9 @@ EntityId CreateEntity(GameWorld* World)
 	int32 EntityGeneration = World->EntityGenerations[EntityIndex];
 	EntityId Result = ENTITY_ID(EntityIndex, EntityGeneration);
 	int32 LastCapacity = arrcap(World->ActiveEntities);
-	arrput(World->ActiveEntities, Result);
+	int32 ActiveEntityIndex =
+		BinarySearchInsertIndex(Result.RawValue, (int32*)World->ActiveEntities, arrlen(World->ActiveEntities));
+	arrins(World->ActiveEntities, ActiveEntityIndex, Result);
 	if (arrcap(World->ActiveEntities) > LastCapacity) {
 		int32 NewLength = arrcap(World->ActiveEntities);
 		for (int32 ListIndex = 0; ListIndex < ARRAY_COUNT(World->ComponentLists); ListIndex++) {
@@ -175,19 +177,25 @@ EntityId CreateEntity(GameWorld* World)
 void DestroyEntity(GameWorld* World, EntityId Entity)
 {
 	ASSERT(EntityIdIsValid(World, Entity));
+	LogInfo("Destroy Entity [%d:%d]%u", ENTITY_ID_INDEX(Entity), ENTITY_ID_GENERATION(Entity), Entity.RawValue);
 
 	const int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	const int32 EntityGeneration = ENTITY_ID_GENERATION(Entity);
 
 	arrput(World->AvailableIndexStack, EntityIndex);
-	const int32 Search = BinarySearch(Entity.RawValue, (int32*)World->ActiveEntities, arrlen(World->ActiveEntities));
+	int32 EntityCount = arrlen(World->ActiveEntities);
+	const int32 Search = BinarySearch(Entity.RawValue, (int32*)World->ActiveEntities, EntityCount);
 	if (Search != NONE) {
 		arrdel(World->ActiveEntities, Search);
+		SDL_memset4(
+			&World->ActiveEntities[arrlen(World->ActiveEntities)],
+			0xFFFFFFFF,
+			arrcap(World->ActiveEntities) - arrlen(World->ActiveEntities));
 		int32 NextGeneration = EntityGeneration + 1;
 		if (NextGeneration <= World->AllTimeHighGeneration) {
 			if (EntityIndex < World->AllTimeHighGenerationFirstIndex) {
-				World->AllTimeHighGeneration++;
-				NextGeneration = World->AllTimeHighGeneration;
+				NextGeneration = World->AllTimeHighGeneration + 1;
+				World->AllTimeHighGeneration = NextGeneration;
 				World->AllTimeHighGenerationFirstIndex = EntityIndex;
 			} else {
 				NextGeneration = World->AllTimeHighGeneration;
@@ -207,6 +215,15 @@ void DestroyEntity(GameWorld* World, EntityId Entity)
 		}
 	} else {
 		LogError("GameWorld:Entities:DestroyEntity: Could not find entity '%d' in ActiveEntities", Entity.RawValue);
+		LogError("GameWorld:Entities:DestroyEntity: Dumping Active Entities List:");
+		for (int32 Index = 0; Index < EntityCount; Index++) {
+			EntityId Entity = World->ActiveEntities[Index];
+			LogError(
+				"GameWorld:Entities:DestroyEntity: [%d:%d]%u",
+				ENTITY_ID_INDEX(Entity),
+				ENTITY_ID_GENERATION(Entity),
+				Entity.RawValue);
+		}
 	}
 }
 
@@ -256,10 +273,12 @@ EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntityS
 	EntityId* Entities = NULL;
 	arrsetcap(Entities, arrlen(World->ActiveEntities));
 
-	for (int32 Index = 0; Index < arrlen(World->EntitySignatures); Index++) {
-		EntitySignature Signature = World->EntitySignatures[Index];
+	for (int32 Index = 0; Index < arrlen(World->ActiveEntities); Index++) {
+		EntityId Entity = World->ActiveEntities[Index];
+		int32 EntityIndex = ENTITY_ID_INDEX(Entity);
+		EntitySignature Signature = World->EntitySignatures[EntityIndex];
 		if (EntitySignaturePassesFilter(Signature, Required, Rejected)) {
-			arrput(Entities, World->ActiveEntities[Index]);
+			arrput(Entities, Entity);
 		}
 	}
 

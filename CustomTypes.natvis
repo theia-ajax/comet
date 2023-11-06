@@ -25,7 +25,7 @@
 	  </Expand>
   </Type>
   <Type Name="EntityId">
-	<DisplayString>{{ {RawValue &amp; 0xFFFF} }}</DisplayString>
+	<DisplayString>[{ (int16)(RawValue &amp; 0xFFFF) }:{ RawValue &gt;&gt; 16 }] {RawValue}</DisplayString>
 	<Expand>
 		<Item Name="Index">RawValue &amp; 0xFFFF</Item>
 		<Item Name="Generation">RawValue &gt;&gt; 16</Item>

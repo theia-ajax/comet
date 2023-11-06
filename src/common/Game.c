@@ -355,7 +355,7 @@ void GameRender(const GameTime* gameTime)
 
 	{
 		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Sprite), REJECTED());
-		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+		for (EntityId* Iter = Query, *Last = arrend(Query); Iter != Last; Iter++) {
 			EntityId Entity = *Iter;
 			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
 			SpriteComponent* S = GetComponent(SpriteComponent, GGame.World, Entity);
