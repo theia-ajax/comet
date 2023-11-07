@@ -103,10 +103,10 @@ GameWorld* CreateGameWorld(void)
 		int32 Capacity = ComponentInitialCapacities[Index];
 		if (Capacity == 0) {
 			Capacity = KDefaultInitialComponentCapacity;
-			LogWarning(
+			LogInfo(
 				"Created %s ComponentList with default initial capacity of %d", ComponentTypeName(Index), Capacity);
 		} else {
-			LogWarning("Created %s ComponentList with initial capacity of %d", ComponentTypeName(Index), Capacity);
+			LogInfo("Created %s ComponentList with initial capacity of %d", ComponentTypeName(Index), Capacity);
 		}
 		Capacity = (Capacity != 0) ? Capacity : KDefaultInitialComponentCapacity;
 		NewState->ComponentLists[Index] =

@@ -50,7 +50,11 @@ struct {
 
 bool GameInitialize(const GameInitParams* params)
 {
-	LoggingInitialize();
+	LogLevel LoggingLevel = LogLevel_Info;
+#ifndef _DEBUG
+	LoggingLevel = LogLevel_Error;
+#endif
+	LoggingInitialize(LoggingLevel);
 	LogInfo(__FUNCTION__);
 
 	uint32 RandomSeed = (uint32)SDL_GetPerformanceCounter();
@@ -244,6 +248,9 @@ void GameSendInput(const GameInput* input)
 
 void GameProcessEvent(const SDL_Event* event)
 {
+	if (event->type == SDL_EVENT_KEY_DOWN && event->key.keysym.scancode == SDL_SCANCODE_F) {
+		LogError("Error test");
+	}
 }
 
 static inline bool InputKey(int Scancode)
@@ -345,7 +352,7 @@ void GameUpdate(const GameTime* gameTime)
 						TransformComponent* Transform1 = GetComponent(TransformComponent, GGame.World, Entity1);
 						AABB Bounds1 = ColliderCalcAABB(Collider1, T2(Transform1->Position, R2(Transform1->Rotation)));
 						if (AABBTestOverlap(Bounds0, Bounds1)) {
-							
+
 							LogInfo("Intersection %d %d", Entity0.RawValue, Entity1.RawValue);
 						}
 					}
