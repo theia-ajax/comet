@@ -61,5 +61,6 @@
         "componenttypes.h": "c"
     },
     "game_target": "comet",
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "dotnet.defaultSolution": "disable"
 }
