@@ -1,0 +1,20 @@
+#pragma once
+
+#include "Types.h"
+
+typedef struct EntityId {
+	int32 RawValue;
+} EntityId;
+
+// clang-format off
+#define ENTITY_ID(Index, Generation) (EntityId) { ((Index) & KEntityIndexMask) | ((Generation) << KEntityIndexBits) }
+#define ENTITY_ID_INDEX(Entity) ((Entity.RawValue) & KEntityIndexMask)
+#define ENTITY_ID_GENERATION(Entity) ((Entity.RawValue) >> KEntityIndexBits)
+#define ENTITY_ID_INVALID (EntityId){0}
+#define ENTITY_ID_EQ(A, B) ((A).RawValue == (B).RawValue)
+#define ENTITY_ID_NEQ(A, B) ((A).RawValue != (B).RawValue)
+// clang-format on
+
+typedef struct EntitySignature {
+	uint64 RawValue;
+} EntitySignature;

@@ -119,50 +119,7 @@ typedef double flt64;
 #define FixedListPop(list) (list).Count--
 #define FixedListRemoveAt(list, index) (FixedListPop(list), (list).Data[index] = (list).Data[(list).Count])
 
-// Swap Functions
-// -------------------------------------------------------
-// clang-format off
-#ifdef SWAP
-#undef SWAP
-#endif
 
-#define SWAP(T, A, B) { T SWAP = A; A = B; B = SWAP; }
-#define SWAP_REF(T, A, B) SWAP(T, *A, *B)
-
-#define SWAP_NAME(Name) CAT(Swap, Name)
-#define DEFINE_SWAP(Name, T) static inline void SWAP_NAME(Name)(T* A, T* B) { SWAP_REF(T, A, B); }
-// clang-format on
-
-DEFINE_SWAP(Bool, bool);
-DEFINE_SWAP(Int8, int8);
-DEFINE_SWAP(Int16, int16);
-DEFINE_SWAP(Int32, int32);
-DEFINE_SWAP(Int64, int64);
-DEFINE_SWAP(UInt8, uint8);
-DEFINE_SWAP(UInt16, uint16);
-DEFINE_SWAP(UInt32, uint32);
-DEFINE_SWAP(UInt64, uint64);
-DEFINE_SWAP(Float32, flt32);
-DEFINE_SWAP(Float64, flt64);
-
-#ifdef Swap
-#warning                                                                                                               \
-	"Swap already defined which means you probably don't need to manually include Types.h as it's being included from elsewhere."
-#else
-#define Swap(A, B)                                                                                                     \
-	_Generic(                                                                                                          \
-		(A),                                                                                                           \
-		int8: SwapInt8,                                                                                                \
-		int16: SwapInt16,                                                                                              \
-		int32: SwapInt32,                                                                                              \
-		int64: SwapInt64,                                                                                              \
-		uint8: SwapUInt8,                                                                                              \
-		uint16: SwapUInt16,                                                                                            \
-		uint32: SwapUInt32,                                                                                            \
-		uint64: SwapUInt64,                                                                                            \
-		flt32: SwapFloat32,                                                                                            \
-		flt64: SwapFloat64)(A, B)
-#endif
 
 // Data Array
 // -------------------------------------------------------

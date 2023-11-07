@@ -1,7 +1,7 @@
 #pragma once
 
+#include "Entity.h"
 #include "Math2D.h"
-#include "Types.h"
 
 typedef struct TransformComponent {
 	Vec2 Position;
@@ -27,6 +27,7 @@ typedef enum ColliderType {
 
 typedef struct ColliderComponent {
 	ColliderType Type;
+	int32 Group; // Colliders in the same group won't intersect, more advanced filtering later if necessary
 	union {
 		CircleShape Circle;
 		PolygonShape Polygon;
@@ -37,9 +38,15 @@ typedef struct LifetimeComponent {
 	flt32 SecondsRemaining;
 } LifetimeComponent;
 
+enum { KMaxSensorEntities = 8 };
+typedef struct SensorComponent {
+	EntityId EntitiesInSensor[KMaxSensorEntities];
+	int32 Count;
+} SensorComponent;
+
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
-#define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)(Lifetime)
+#define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)(Lifetime)(Sensor)
 
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)

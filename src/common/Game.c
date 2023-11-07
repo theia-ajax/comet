@@ -15,6 +15,11 @@
 #include "StringId.h"
 #include "Util.h"
 
+enum {
+	Group_Friendly,
+	Group_Hostile,
+};
+
 enum SpriteSheetId {
 	SpriteSheetId_Default,
 	SpriteSheetId_ShipObjects,
@@ -152,6 +157,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	*AddComponent(ColliderComponent, GGame.World, Entity0) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
+		.Group = Group_Friendly,
 		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
 	};
 
@@ -167,6 +173,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	*AddComponent(ColliderComponent, GGame.World, Entity1) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
+		.Group = Group_Hostile,
 		.Polygon = PolygonCreateBox(V2(20.0f, 20.0f), V2(0, 0), 0.0f),
 	};
 
@@ -199,12 +206,13 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
 		.Type = ColliderType_Circle,
+		.Group = Group_Friendly,
 		.Circle = {
 			.Radius = 8.0f,
 		}};
 
 	*AddComponent(LifetimeComponent, World, Entity) = (LifetimeComponent){
-		.SecondsRemaining = 0.5f,
+		.SecondsRemaining = 2.0f,
 	};
 	//  GetComponent(TransformComponent, GGame.World, Entity);
 	if (T->Position.Y < 10) {
@@ -267,6 +275,23 @@ static Vec2 InputXY(int ScancodeLeft, int ScancodeRight, int ScancodeUp, int Sca
 	};
 }
 
+AABB ColliderCalcAABB(const ColliderComponent* Collider, Tform2 Transform)
+{
+	switch (Collider->Type) {
+		case ColliderType_Circle: return CircleCalcAABB(&Collider->Circle, Transform);
+		case ColliderType_Polygon: return PolygonCalcAABB(&Collider->Polygon, Transform);
+		default:
+			ASSERT(0 && "Unhandled case.");
+			unreachable();
+			break;
+	}
+
+	return (AABB){
+		.MinBound = V2(KMaxFloat32, KMaxFloat32),
+		.MaxBound = V2(-KMaxFloat32, -KMaxFloat32),
+	};
+}
+
 void GameUpdate(const GameTime* gameTime)
 {
 	DebugNextFrame();
@@ -281,7 +306,7 @@ void GameUpdate(const GameTime* gameTime)
 		V->Velocity = Mul(Norm(MoveXY), 128.0f);
 		if (GGame.Timer > 0.0f) GGame.Timer -= gameTime->DeltaTimeF;
 		if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
-			GGame.Timer += 0.25f;
+			GGame.Timer += 0.17f;
 			TransformComponent* T = GetComponent(TransformComponent, GGame.World, GGame.PlayerEntity);
 			Vec2 SpawnPosition = Add(T->Position, V2(16.0f, 0.0));
 			flt32 SpawnRotation = T->Rotation - 0.25f;
@@ -301,6 +326,31 @@ void GameUpdate(const GameTime* gameTime)
 			T->Position = Add(T->Position, Mul(V->Velocity, gameTime->DeltaTimeF));
 
 			T->Rotation += V->AngularVelocity * gameTime->DeltaTimeF;
+		}
+		WorldQueryFree(Query);
+	}
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Collider), REJECTED());
+		for (EntityId* Iter0 = Query; Iter0 != arrend(Query); Iter0++) {
+			EntityId Entity0 = *Iter0;
+			ColliderComponent* Collider0 = GetComponent(ColliderComponent, GGame.World, Entity0);
+			TransformComponent* Transform0 = GetComponent(TransformComponent, GGame.World, Entity0);
+			AABB Bounds0 = ColliderCalcAABB(Collider0, T2(Transform0->Position, R2(Transform0->Rotation)));
+			for (EntityId* Iter1 = Query; Iter1 != arrend(Query); Iter1++) {
+				EntityId Entity1 = *Iter1;
+				if (!ENTITY_ID_EQ(Entity0, Entity1)) {
+					ColliderComponent* Collider1 = GetComponent(ColliderComponent, GGame.World, Entity1);
+					if (Collider0->Group != Collider1->Group) {
+						TransformComponent* Transform1 = GetComponent(TransformComponent, GGame.World, Entity1);
+						AABB Bounds1 = ColliderCalcAABB(Collider1, T2(Transform1->Position, R2(Transform1->Rotation)));
+						if (AABBTestOverlap(Bounds0, Bounds1)) {
+							
+							LogInfo("Intersection %d %d", Entity0.RawValue, Entity1.RawValue);
+						}
+					}
+				}
+			}
 		}
 		WorldQueryFree(Query);
 	}
@@ -355,7 +405,7 @@ void GameRender(const GameTime* gameTime)
 
 	{
 		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Sprite), REJECTED());
-		for (EntityId* Iter = Query, *Last = arrend(Query); Iter != Last; Iter++) {
+		for (EntityId *Iter = Query, *Last = arrend(Query); Iter != Last; Iter++) {
 			EntityId Entity = *Iter;
 			TransformComponent* T = GetComponent(TransformComponent, GGame.World, Entity);
 			SpriteComponent* S = GetComponent(SpriteComponent, GGame.World, Entity);

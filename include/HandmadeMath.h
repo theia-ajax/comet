@@ -213,8 +213,6 @@ extern "C"
 #define TurnToDeg ((Float)(KDeg180 / KTurnHalf))
 #define KEpsilonFloat64 0.000000001
 #define KEpsilonFloat32 0.00001f
-#define KMaxFloat32 FLT_MAX
-#define KMaxFloat64 DBL_MAX
 
 #if defined(HANDMADE_MATH_USE_RADIANS)
 #define AngleRad(a) (a)
@@ -238,6 +236,9 @@ extern "C"
 
 #if !defined(HANDMADE_MATH_PROVIDE_MATH_FUNCTIONS)
 #include <math.h>
+#include <float.h>
+#define KMaxFloat32 FLT_MAX
+#define KMaxFloat64 DBL_MAX
 #define SINF sinf
 #define COSF cosf
 #define TANF tanf

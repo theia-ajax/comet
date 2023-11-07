@@ -10,16 +10,8 @@
 const int32 KInitialEntityCapacity = 4;
 const int32 KDefaultInitialComponentCapacity = 4;
 
-// clang-format off
 #define KEntityIndexBits 16
 #define KEntityIndexMask ((1 << (KEntityIndexBits - 1)) - 1)
-#define ENTITY_ID(Index, Generation) (EntityId) { ((Index) & KEntityIndexMask) | ((Generation) << KEntityIndexBits) }
-#define ENTITY_ID_INDEX(Entity) ((Entity.RawValue) & KEntityIndexMask)
-#define ENTITY_ID_GENERATION(Entity) ((Entity.RawValue) >> KEntityIndexBits)
-#define ENTITY_ID_INVALID (EntityId){0}
-#define ENTITY_ID_EQ(A, B) ((A).RawValue == (B).RawValue)
-#define ENTITY_ID_NEQ(A, B) ((A).RawValue != (B).RawValue)
-// clang-format on
 
 #define COMPONENT_NAME_ENTRY(Type) #Type,
 static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};

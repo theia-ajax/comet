@@ -122,13 +122,7 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count);
 
 // Inline Implementations
 // -------------------------------------------------------
-DEFINE_SWAP(Vec2, Vec2);
-DEFINE_SWAP(Vec3, Vec3);
-DEFINE_SWAP(Vec4, Vec4);
-DEFINE_SWAP(Quat, Quat);
-DEFINE_SWAP(Mat2, Mat2);
-DEFINE_SWAP(Mat3, Mat3);
-DEFINE_SWAP(Mat4, Mat4);
+
 
 #ifdef Swap
 // Allows Types.h Swap to exist without needing to know about vector math types

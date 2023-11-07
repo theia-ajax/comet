@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Entity.h"
 #include "Math2D.h"
 
 static inline void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A)
@@ -134,3 +135,23 @@ BINARY_SEARCH_TOOLS_DEFINE(flt64);
 		uint64: BinarySearchInsertIndex_uint64,                                                                        \
 		flt32: BinarySearchInsertIndex_flt32,                                                                          \
 		flt64: BinarySearchInsertIndex_flt64)(Find, Data, Count)
+
+// Swap Functions
+// -------------------------------------------------------
+// clang-format off
+#define SWAP(T, A, B) { T SWAP = A; A = B; B = SWAP; }
+#define SWAP_REF(T, A, B) SWAP(T, *A, *B)
+
+#define SWAP_NAME(Name) CAT(Swap, Name)
+#define DEFINE_SWAP(T) static inline void CAT(Swap_, T)(T* A, T* B) { SWAP_REF(T, A, B); }
+// clang-format on
+
+// Any new types added to this will get a swap function defined for it and make it available via the Swap _Generic
+#define SWAP_TYPES                                                                                                     \
+	(bool)(int8)(int16)(int32)(int64)(uint8)(uint16)(uint32)(uint64)(flt32)(flt64)(Vec2)(Vec3)(Vec4)(Quat)(Mat2)(Mat3)(Mat4)(EntityId)
+#define SWAP_TYPES_LIST CHAIN_COMMA(SWAP_TYPES)
+
+FOR_EACH(DEFINE_SWAP, SWAP_TYPES_LIST);
+
+#define SWAP_TYPE_GENERIC_ENTRY(T) , T : CAT(Swap_, T)
+#define Swap(A, B) _Generic((A)FOR_EACH(SWAP_TYPE_GENERIC_ENTRY, SWAP_TYPES_LIST))(&A, &B)

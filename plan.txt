@@ -1,0 +1,7 @@
+# Near
+
+- Cleanup GameWorld implementations particularly around allocation/reallocation, setting sentinel values etc...
+- GameWorld defer action queue (queue entity creation/destruction, component add/removes and apply when done deferring)
+- Use existing component arch to build basic collision testing/response system
+
+
