@@ -13,8 +13,8 @@ int main(int argc, char* argv[])
 
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-
 	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	SDL_SetWindowPosition(Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 	size_t MemoryBytes = 64 * 1024;
 	void* Memory = malloc(MemoryBytes);
@@ -28,8 +28,7 @@ int main(int argc, char* argv[])
 	ASSERT(Success);
 
 	const int KTargetFramesPerSecond = 60;
-	double KTargetFrameRateSeconds =
-		(KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
+	double KTargetFrameRateSeconds = (KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
 	uint64 NowTicks = 0;
 	uint64 DeltaTicks = 0;
 	uint64 SimTimeTicks = 0;
@@ -44,18 +43,13 @@ int main(int argc, char* argv[])
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {
 			switch (Event.type) {
-				case SDL_EVENT_QUIT:
-					GameRequestShutdown();
-					break;
+				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
 				case SDL_EVENT_KEY_DOWN:
 					if (Event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
 					InputState.KeyStates[Event.key.keysym.scancode] = true;
 					break;
-				case SDL_EVENT_KEY_UP:
-					InputState.KeyStates[Event.key.keysym.scancode] = false;
-					break;
-				default:
-					break;
+				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.keysym.scancode] = false; break;
+				default: break;
 			}
 			GameProcessEvent(&Event);
 		}
@@ -78,9 +72,7 @@ int main(int argc, char* argv[])
 
 		SimTimeTicks = stm_since(FrameStartTicks);
 
-		while (KTargetFramesPerSecond != 0 &&
-			   stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds)
-		{
+		while (KTargetFramesPerSecond != 0 && stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds) {
 			// Do nothing...
 		};
 

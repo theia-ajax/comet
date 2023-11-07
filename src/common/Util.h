@@ -148,7 +148,8 @@ BINARY_SEARCH_TOOLS_DEFINE(flt64);
 
 // Any new types added to this will get a swap function defined for it and make it available via the Swap _Generic
 #define SWAP_TYPES                                                                                                     \
-	(bool)(int8)(int16)(int32)(int64)(uint8)(uint16)(uint32)(uint64)(flt32)(flt64)(Vec2)(Vec3)(Vec4)(Quat)(Mat2)(Mat3)(Mat4)(EntityId)
+	(bool)(int8)(int16)(int32)(int64)(uint8)(uint16)(uint32)(uint64) \
+	(flt32)(flt64)(Vec2)(Vec3)(Vec4)(Quat)(Mat2)(Mat3)(Mat4)(EntityId)
 #define SWAP_TYPES_LIST CHAIN_COMMA(SWAP_TYPES)
 
 FOR_EACH(DEFINE_SWAP, SWAP_TYPES_LIST);
