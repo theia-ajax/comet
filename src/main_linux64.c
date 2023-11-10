@@ -14,7 +14,16 @@ int main(int argc, char* argv[])
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
-	SDL_SetWindowPosition(Window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
+	// Manually smudging the window position to make it more centered for now.
+	SDL_DisplayID WindowDisplayId = SDL_GetDisplayForWindow(Window);
+	SDL_Rect DisplayBounds;
+	SDL_GetDisplayBounds(WindowDisplayId, &DisplayBounds);
+	int WindowHeight;
+	SDL_GetWindowSize(Window, NULL, &WindowHeight);
+	int WindowY = DisplayBounds.y + (DisplayBounds.h - (WindowHeight + 96.0f)) / 2;
+	SDL_SetWindowPosition(Window, SDL_WINDOWPOS_CENTERED, WindowY);
 
 	size_t MemoryBytes = 64 * 1024;
 	void* Memory = malloc(MemoryBytes);
