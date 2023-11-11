@@ -40,13 +40,30 @@ typedef struct LifetimeComponent {
 
 enum { KMaxSensorEntities = 8 };
 typedef struct SensorComponent {
-	EntityId EntitiesInSensor[KMaxSensorEntities];
-	int32 Count;
+	FixedArray(EntityId, KMaxSensorEntities) Entities;
 } SensorComponent;
+
+typedef struct HitReceiverComponent {
+	EntityId SourceEntity;
+	int32 LastHitPriority;
+} HitReceiverComponent;
+
+typedef struct DamageSourceComponent {
+	flt32 DamageAmount;
+} DamageSourceComponent;
+
+typedef struct DamageReceiverComponent {
+	flt32 DamageAccumulator;
+} DamageReceiverComponent;
+
+typedef struct DurabilityComponent {
+	flt32 CurrentDurability;
+} DurabilityComponent;
 
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
-#define COMPONENT_TYPES (Transform)(Velocity)(Sprite)(Collider)(Lifetime)(Sensor)
+#define COMPONENT_TYPES                                                                                                \
+	(Transform)(Velocity)(Sprite)(Collider)(Lifetime)(Sensor)(DamageSource)(DamageReceiver)(Durability)
 
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)

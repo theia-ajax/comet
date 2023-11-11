@@ -15,6 +15,8 @@ typedef struct EntityId {
 #define ENTITY_ID_NEQ(A, B) ((A).RawValue != (B).RawValue)
 // clang-format on
 
+static inline int32 EntityIdCompare(EntityId A, EntityId B) { return A.RawValue - B.RawValue; }
+
 typedef struct EntitySignature {
 	uint64 RawValue;
 } EntitySignature;

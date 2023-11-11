@@ -28,7 +28,7 @@ const enum TermColor LogLevelColors[] = {
 	TermColor_Normal,
 	TermColor_Red,
 	TermColor_Yellow,
-	TermColor_Green,
+	TermColor_White,
 };
 _Static_assert(ARRAY_COUNT(LogLevelColors) == LogLevel_Count, "");
 

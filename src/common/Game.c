@@ -29,6 +29,13 @@ enum SpriteSheetId {
 
 #define GetImage(Id) GGame.ImageAssets[Id]
 
+Tform2 T2Component(const TransformComponent* Transform);
+static bool ColliderIntersectsCollider(
+	const ColliderComponent* A,
+	Tform2 TransformA,
+	const ColliderComponent* B,
+	Tform2 TransformB);
+
 typedef void(GameSystem)(GameWorld* World, const GameTime* Time);
 
 struct {
@@ -181,6 +188,9 @@ bool GameInitialize(const GameInitParams* params)
 		.Polygon = PolygonCreateBox(V2(20.0f, 20.0f), V2(0, 0), 0.0f),
 	};
 
+	*AddComponent(DamageReceiverComponent, GGame.World, Entity1) = (DamageReceiverComponent){};
+	*AddComponent(DurabilityComponent, GGame.World, Entity1) = (DurabilityComponent){.CurrentDurability = 10.0f};
+
 	*AddComponent(TransformComponent, GGame.World, Entity2) = (TransformComponent){0};
 
 	LogInfo("Game Initialization Complete");
@@ -218,6 +228,11 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 	*AddComponent(LifetimeComponent, World, Entity) = (LifetimeComponent){
 		.SecondsRemaining = 2.0f,
 	};
+
+	*AddComponent(DamageSourceComponent, World, Entity) = (DamageSourceComponent){
+		.DamageAmount = 1.0f,
+	};
+
 	//  GetComponent(TransformComponent, GGame.World, Entity);
 	if (T->Position.Y < 10) {
 		LogError("HELP");
@@ -299,6 +314,25 @@ AABB ColliderCalcAABB(const ColliderComponent* Collider, Tform2 Transform)
 	};
 }
 
+static void OnEntityCollision(EntityId Entity0, EntityId Entity1)
+{
+}
+
+struct DamageEvent {
+	EntityId DamageReceiver;
+	EntityId DamageSource;
+};
+static int32 DamageEventCompare(struct DamageEvent A, struct DamageEvent B)
+{
+	return ENTITY_ID_EQ(A.DamageReceiver, B.DamageReceiver) ? EntityIdCompare(A.DamageSource, B.DamageSource)
+															: EntityIdCompare(A.DamageReceiver, B.DamageReceiver);
+}
+
+static int DamageEventCompareVoid(const void* A, const void* B)
+{
+	return DamageEventCompare(*(const struct DamageEvent*)A, *(const struct DamageEvent*)B);
+}
+
 void GameUpdate(const GameTime* gameTime)
 {
 	DebugNextFrame();
@@ -338,25 +372,80 @@ void GameUpdate(const GameTime* gameTime)
 	}
 
 	{
+
+		struct DamageEvent* DamageEvents = NULL;
+		arrsetcap(DamageEvents, 256);
+
 		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, Collider), REJECTED());
 		for (EntityId* Iter0 = Query; Iter0 != arrend(Query); Iter0++) {
 			EntityId Entity0 = *Iter0;
 			ColliderComponent* Collider0 = GetComponent(ColliderComponent, GGame.World, Entity0);
-			TransformComponent* Transform0 = GetComponent(TransformComponent, GGame.World, Entity0);
-			AABB Bounds0 = ColliderCalcAABB(Collider0, T2(Transform0->Position, R2(Transform0->Rotation)));
-			for (EntityId* Iter1 = Query; Iter1 != arrend(Query); Iter1++) {
+			Tform2 Transform0 = T2Component(GetComponent(TransformComponent, GGame.World, Entity0));
+			AABB Bounds0 = ColliderCalcAABB(Collider0, Transform0);
+			for (EntityId* Iter1 = Iter0 + 1; Iter1 != arrend(Query); Iter1++) {
 				EntityId Entity1 = *Iter1;
 				if (!ENTITY_ID_EQ(Entity0, Entity1)) {
 					ColliderComponent* Collider1 = GetComponent(ColliderComponent, GGame.World, Entity1);
 					if (Collider0->Group != Collider1->Group) {
-						TransformComponent* Transform1 = GetComponent(TransformComponent, GGame.World, Entity1);
-						AABB Bounds1 = ColliderCalcAABB(Collider1, T2(Transform1->Position, R2(Transform1->Rotation)));
+						Tform2 Transform1 = T2Component(GetComponent(TransformComponent, GGame.World, Entity1));
+						AABB Bounds1 = ColliderCalcAABB(Collider1, Transform1);
 						if (AABBTestOverlap(Bounds0, Bounds1)) {
-
-							LogInfo("Intersection %d %d", Entity0.RawValue, Entity1.RawValue);
+							if (ColliderIntersectsCollider(Collider0, Transform0, Collider1, Transform1)) {
+								if (HasComponent(DamageReceiverComponent, GGame.World, Entity0) &&
+									HasComponent(DamageSourceComponent, GGame.World, Entity1))
+								{
+									arrput(
+										DamageEvents,
+										((struct DamageEvent){.DamageReceiver = Entity0, .DamageSource = Entity1}));
+								}
+								if (HasComponent(DamageReceiverComponent, GGame.World, Entity1) &&
+									HasComponent(DamageSourceComponent, GGame.World, Entity0))
+								{
+									arrput(
+										DamageEvents,
+										((struct DamageEvent){.DamageReceiver = Entity1, .DamageSource = Entity0}));
+								}
+							}
 						}
 					}
 				}
+			}
+		}
+		WorldQueryFree(Query);
+
+		SDL_qsort(DamageEvents, arrlenu(DamageEvents), sizeof(*DamageEvents), DamageEventCompareVoid);
+
+		for (int32 Index = 0; Index < arrlen(DamageEvents); Index++) {
+			EntityId SourceEntity = DamageEvents[Index].DamageSource;
+			EntityId ReceiverEntity = DamageEvents[Index].DamageReceiver;
+			DamageSourceComponent* Source = GetComponent(DamageSourceComponent, GGame.World, SourceEntity);
+			DamageReceiverComponent* Receiver = GetComponent(DamageReceiverComponent, GGame.World, ReceiverEntity);
+
+			Receiver->DamageAccumulator += Source->DamageAmount;
+
+			if (!HasComponent(LifetimeComponent, GGame.World, SourceEntity)) {
+				AddComponent(LifetimeComponent, GGame.World, SourceEntity);
+			}
+			GetComponent(LifetimeComponent, GGame.World, SourceEntity)->SecondsRemaining = 0.0f;
+
+			LogInfo("Damage Event: %d -> %d", DamageEvents[Index].DamageSource, DamageEvents[Index].DamageReceiver);
+		}
+
+		arrfree(DamageEvents);
+	}
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(DamageReceiver, Durability), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			DamageReceiverComponent* Receiver = GetComponent(DamageReceiverComponent, GGame.World, *Iter);
+			DurabilityComponent* Durability = GetComponent(DurabilityComponent, GGame.World, *Iter);
+			Durability->CurrentDurability -= Receiver->DamageAccumulator;
+			Receiver->DamageAccumulator = 0.0f;
+			if (Durability->CurrentDurability <= 0.0f) {
+				if (!HasComponent(LifetimeComponent, GGame.World, *Iter)) {
+					AddComponent(LifetimeComponent, GGame.World, *Iter);
+				}
+				GetComponent(LifetimeComponent, GGame.World, *Iter)->SecondsRemaining = 0.0f;
 			}
 		}
 		WorldQueryFree(Query);
@@ -369,7 +458,7 @@ void GameUpdate(const GameTime* gameTime)
 		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
 			EntityId Entity = *Iter;
 			LifetimeComponent* L = GetComponent(LifetimeComponent, GGame.World, Entity);
-			if (L->SecondsRemaining > 0.0f) {
+			if (L->SecondsRemaining >= 0.0f) {
 				L->SecondsRemaining -= gameTime->DeltaTimeF;
 				if (L->SecondsRemaining <= 0.0f) {
 					arrput(ToDelete, Entity);
@@ -459,4 +548,42 @@ bool GameIsRunning(void)
 void GameRequestShutdown(void)
 {
 	GGame.IsRunning = false;
+}
+
+Tform2 T2Component(const TransformComponent* Transform)
+{
+	ASSERT(Transform != NULL);
+	return T2(Transform->Position, R2(Transform->Rotation));
+}
+
+static bool ColliderIntersectsCollider(
+	const ColliderComponent* A,
+	Tform2 TransformA,
+	const ColliderComponent* B,
+	Tform2 TransformB)
+{
+	switch (A->Type) {
+		case ColliderType_Circle:
+			switch (B->Type) {
+				case ColliderType_Circle: return CircleIntersectsCircle(&A->Circle, TransformA, &B->Circle, TransformB);
+				case ColliderType_Polygon:
+					return CircleIntersectsPolygon(&A->Circle, TransformA, &B->Polygon, TransformB);
+				default: unreachable(); break;
+			}
+			break;
+
+		case ColliderType_Polygon:
+			switch (B->Type) {
+				case ColliderType_Circle:
+					return PolygonIntersectsCircle(&A->Polygon, TransformA, &B->Circle, TransformB);
+				case ColliderType_Polygon:
+					return PolygonIntersectsPolygon(&A->Polygon, TransformA, &B->Polygon, TransformB);
+				default: unreachable(); break;
+			}
+			break;
+
+		default: unreachable(); break;
+	}
+
+	return false;
 }
