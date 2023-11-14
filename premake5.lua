@@ -9,7 +9,7 @@ filter "platforms:Linux64"
 	system "Linux"
 	architecture "x86_64"
 	toolset "gcc"
-	buildoptions {"-Werror"}
+	buildoptions {"-Werror", "-ftrack-macro-expansion=0"}
 
 filter "platforms:Win64"
 	system "Windows"

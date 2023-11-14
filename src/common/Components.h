@@ -3,6 +3,8 @@
 #include "Entity.h"
 #include "Math2D.h"
 
+enum { KMaxComponentSizeInBytes = 256 };
+
 typedef struct TransformComponent {
 	Vec2 Position;
 	flt32 Rotation;
@@ -64,7 +66,6 @@ typedef struct DurabilityComponent {
 // Will create component interface, enum value, etc..
 #define COMPONENT_TYPES                                                                                                \
 	(Transform)(Velocity)(Sprite)(Collider)(Lifetime)(Sensor)(DamageSource)(DamageReceiver)(Durability)
-
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
 #define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()
@@ -73,5 +74,16 @@ typedef enum ComponentType {
 } ComponentType;
 
 _Static_assert(ComponentType_Count <= 64, "More work to be done before more than 64 component types can be supported.");
+
+#define COMPONENT_SIZE_ENUM_ENTRY(Type) CAT(CAT(K, CAT(Type, Component)), Size) = sizeof(CAT(Type, Component)),
+
+enum { FOR_EACH(COMPONENT_SIZE_ENUM_ENTRY, COMPONENT_TYPE_LIST) };
+
+#define VALIDATE_COMPONENT_TYPE(Type)                                                                                  \
+	_Static_assert(                                                                                                    \
+		sizeof(CAT(Type, Component)) <= KMaxComponentSizeInBytes,                                                      \
+		"Size of " #Type "Component is greater than KMaxComponentSizeInBytes");
+
+FOR_EACH(VALIDATE_COMPONENT_TYPE, COMPONENT_TYPE_LIST);
 
 const char* ComponentTypeName(ComponentType Type);

@@ -35,6 +35,11 @@ typedef double flt64;
 #endif
 #endif
 
+#define KILOBYTES(N) ((N)*1024)
+#define MEGABYTES(N) (KILOBYTES(N)*1024)
+#define GIGABYTES(N) (MEGABYTES(N)*1024)
+#define TERABYTES(N) (TERABYTES(N)*1024)
+
 #define NONE -1
 #define CAT(x, y) CAT_(x, y)
 #define CAT_(x, y) x ## y

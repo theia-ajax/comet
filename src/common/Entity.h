@@ -2,6 +2,9 @@
 
 #include "Types.h"
 
+#define KEntityIndexBits 16
+#define KEntityIndexMask ((1 << (KEntityIndexBits - 1)) - 1)
+
 typedef struct EntityId {
 	int32 RawValue;
 } EntityId;

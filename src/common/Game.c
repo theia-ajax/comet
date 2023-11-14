@@ -365,7 +365,6 @@ void GameUpdate(const GameTime* gameTime)
 			VelocityComponent* V = GetComponent(VelocityComponent, GGame.World, Entity);
 
 			T->Position = Add(T->Position, Mul(V->Velocity, gameTime->DeltaTimeF));
-
 			T->Rotation += V->AngularVelocity * gameTime->DeltaTimeF;
 		}
 		WorldQueryFree(Query);
@@ -422,11 +421,7 @@ void GameUpdate(const GameTime* gameTime)
 			DamageReceiverComponent* Receiver = GetComponent(DamageReceiverComponent, GGame.World, ReceiverEntity);
 
 			Receiver->DamageAccumulator += Source->DamageAmount;
-
-			if (!HasComponent(LifetimeComponent, GGame.World, SourceEntity)) {
-				AddComponent(LifetimeComponent, GGame.World, SourceEntity);
-			}
-			GetComponent(LifetimeComponent, GGame.World, SourceEntity)->SecondsRemaining = 0.0f;
+			GetOrAddComponent(LifetimeComponent, GGame.World, SourceEntity)->SecondsRemaining = 0.0f;
 
 			LogInfo("Damage Event: %d -> %d", DamageEvents[Index].DamageSource, DamageEvents[Index].DamageReceiver);
 		}
@@ -442,18 +437,13 @@ void GameUpdate(const GameTime* gameTime)
 			Durability->CurrentDurability -= Receiver->DamageAccumulator;
 			Receiver->DamageAccumulator = 0.0f;
 			if (Durability->CurrentDurability <= 0.0f) {
-				if (!HasComponent(LifetimeComponent, GGame.World, *Iter)) {
-					AddComponent(LifetimeComponent, GGame.World, *Iter);
-				}
-				GetComponent(LifetimeComponent, GGame.World, *Iter)->SecondsRemaining = 0.0f;
+				GetOrAddComponent(LifetimeComponent, GGame.World, *Iter)->SecondsRemaining = 0.0f;
 			}
 		}
 		WorldQueryFree(Query);
 	}
 
 	{
-		EntityId* ToDelete = NULL;
-		arrsetcap(ToDelete, WorldEntityCount(GGame.World));
 		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Lifetime), REJECTED());
 		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
 			EntityId Entity = *Iter;
@@ -461,16 +451,11 @@ void GameUpdate(const GameTime* gameTime)
 			if (L->SecondsRemaining >= 0.0f) {
 				L->SecondsRemaining -= gameTime->DeltaTimeF;
 				if (L->SecondsRemaining <= 0.0f) {
-					arrput(ToDelete, Entity);
+					DestroyEntity(GGame.World, Entity);
 				}
 			}
 		}
 		WorldQueryFree(Query);
-
-		for (int32 Index = 0; Index < arrlen(ToDelete); Index++) {
-			DestroyEntity(GGame.World, ToDelete[Index]);
-		}
-		arrfree(ToDelete);
 	}
 
 	GGame.Frame++;

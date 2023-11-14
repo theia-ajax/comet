@@ -1,11 +1,12 @@
 #pragma once
 
-#include "ComponentTypes.h"
+#include "Components.h"
 #include "Entity.h"
 #include "Math2D.h"
 #include "Types.h"
 
 typedef struct GameWorld GameWorld;
+typedef struct GameWorldCommandQueue GameWorldCommandQueue;
 
 GameWorld* CreateGameWorld(void);
 void DestroyGameWorld(GameWorld* World);
@@ -21,13 +22,42 @@ EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntityS
 void WorldQueryFree(EntityId* Query);
 int32 WorldEntityCount(GameWorld* World);
 
+void WorldLock(GameWorld* World);
+void WorldUnlock(GameWorld* World);
+bool WorldIsLocked(const GameWorld* World);
+
+typedef struct FutureEntityId {
+	int32 _Internal;
+} FutureEntityId;
+#define KInvalidFutureEntityId ((FutureEntityId){NONE})
+
+// The command queue is allocated and needs to be freed by either consuming it via WorldConsumeCommandQueue which will
+// execute all of the commands or by calling WorldDestroyCommandQueue to free the allocation but not execute the
+// commands.
+GameWorldCommandQueue* WorldCreateCommandQueue(GameWorld* World);
+void WorldConsumeCommandQueue(GameWorldCommandQueue* Queue);
+void WorldDestroyCommandQueue(GameWorldCommandQueue* Queue);
+FutureEntityId QueueCreateEntity(GameWorldCommandQueue* Queue);
+void QueueDestroyEntityId(GameWorldCommandQueue* Queue, EntityId Entity);
+void QueueDestroyFutureEntityId(GameWorldCommandQueue* Queue, FutureEntityId FutureEntity);
+#define QueueDestroyEntity(Queue, Entity)                                                                              \
+	_Generic((Entity), EntityId: QueueDestroyEntityId, FutureEntityId: QueueDestroyFutureEntityId)(Queue, Entity)
+
+// T* QueueAddComponent(GameWorldCommandQueue* Queue, Entity)
+
+void WorldDeferQueueBegin(GameWorld* World);
+void WorldFlushDeferQueue(GameWorld* World);
+void WorldDeferQueueEnd(GameWorld* World);
+
 // Generic Component Interface
 // Defines Add, Remove, Get, Has for each type of component and provides a _Generic macro for each action.
 // -------------------------------------------------------
 #define COMPONENT_NAME(Type) CAT(Type, Component)
 #define COMPONENT_FUNC_NAME(Func, Type) CAT(Func, COMPONENT_NAME(Type))
 #define COMPONENT_ADD_NAME(Type) COMPONENT_FUNC_NAME(EntityAdd, Type)
+#define COMPONENT_QUEUE_ADD_NAME(Type, EID) CAT(COMPONENT_FUNC_NAME(QueueEntityAdd, Type), EID)
 #define COMPONENT_REMOVE_NAME(Type) COMPONENT_FUNC_NAME(EntityRemove, Type)
+#define COMPONENT_QUEUE_REMOVE_NAME(Type, EID) CAT(COMPONENT_FUNC_NAME(QueueEntityRemove, Type), EID)
 #define COMPONENT_GET_NAME(Type) COMPONENT_FUNC_NAME(EntityGet, Type)
 #define COMPONENT_TRYGET_NAME(Type) COMPONENT_FUNC_NAME(EntityTryGet, Type)
 #define COMPONENT_HAS_NAME(Type) COMPONENT_FUNC_NAME(EntityHas, Type)
@@ -37,6 +67,12 @@ int32 WorldEntityCount(GameWorld* World);
 	COMPONENT_NAME(Type) * COMPONENT_ADD_NAME(Type)(GameWorld * World, EntityId Entity)
 
 #define REMOVE_COMPONENT_PROTOTYPE(Type) void COMPONENT_REMOVE_NAME(Type)(GameWorld * World, EntityId Entity)
+
+#define QUEUE_ADD_COMPONENT_PROTOTYPE(Type, EID)                                                                       \
+	COMPONENT_NAME(Type) * COMPONENT_QUEUE_ADD_NAME(Type, EID)(GameWorldCommandQueue * Queue, EID Entity)
+
+#define QUEUE_REMOVE_COMPONENT_PROTOTYPE(Type, EID)                                                                    \
+	void COMPONENT_QUEUE_REMOVE_NAME(Type, EID)(GameWorldCommandQueue * Queue, EID Entity)
 
 #define GET_COMPONENT_PROTOTYPE(Type)                                                                                  \
 	COMPONENT_NAME(Type) * COMPONENT_GET_NAME(Type)(GameWorld * World, EntityId Entity)
@@ -48,6 +84,10 @@ int32 WorldEntityCount(GameWorld* World);
 #define DECLARE_COMPONENT_INTERFACE(Type)                                                                              \
 	ADD_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	REMOVE_COMPONENT_PROTOTYPE(Type);                                                                                  \
+	QUEUE_ADD_COMPONENT_PROTOTYPE(Type, EntityId);                                                                     \
+	QUEUE_REMOVE_COMPONENT_PROTOTYPE(Type, EntityId);                                                                  \
+	QUEUE_ADD_COMPONENT_PROTOTYPE(Type, FutureEntityId);                                                               \
+	QUEUE_REMOVE_COMPONENT_PROTOTYPE(Type, FutureEntityId);                                                            \
 	GET_COMPONENT_PROTOTYPE(Type);                                                                                     \
 	TRYGET_COMPONENT_PROTOTYPE(Type);                                                                                  \
 	HAS_COMPONENT_PROTOTYPE(Type);
@@ -65,6 +105,23 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 #define COMPONENT_REMOVE_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_REMOVE_NAME(Type)
 #define COMPONENT_REMOVE_GENERIC_ENTRIES(...) FOR_EACH(COMPONENT_REMOVE_GENERIC_ENTRY, __VA_ARGS__)
 
+#define COMPONENT_QUEUE_ADD_GENERIC_ENTRY(Type, EID) , COMPONENT_NAME(Type) : COMPONENT_QUEUE_ADD_NAME(Type, EID)
+#define COMPONENT_QUEUE_ADD_GENERIC_ENTITY_ID_ENTRY(Type) COMPONENT_QUEUE_ADD_GENERIC_ENTRY(Type, EntityId)
+#define COMPONENT_QUEUE_ADD_GENERIC_FUTURE_ENTITY_ID_ENTRY(Type) COMPONENT_QUEUE_ADD_GENERIC_ENTRY(Type, FutureEntityId)
+#define COMPONENT_QUEUE_ADD_ENTITY_ID_GENERIC_ENTRIES(...)                                                             \
+	FOR_EACH(COMPONENT_QUEUE_ADD_GENERIC_ENTITY_ID_ENTRY, __VA_ARGS__)
+#define COMPONENT_QUEUE_ADD_FUTURE_ENTITY_ID_GENERIC_ENTRIES(...)                                                      \
+	FOR_EACH(COMPONENT_QUEUE_ADD_GENERIC_FUTURE_ENTITY_ID_ENTRY, __VA_ARGS__)
+
+#define COMPONENT_QUEUE_REMOVE_GENERIC_ENTRY(Type, EID) , COMPONENT_NAME(Type) : COMPONENT_QUEUE_REMOVE_NAME(Type, EID)
+#define COMPONENT_QUEUE_REMOVE_GENERIC_ENTITY_ID_ENTRY(Type) COMPONENT_QUEUE_REMOVE_GENERIC_ENTRY(Type, EntityId)
+#define COMPONENT_QUEUE_REMOVE_GENERIC_FUTURE_ENTITY_ID_ENTRY(Type)                                                    \
+	COMPONENT_QUEUE_REMOVE_GENERIC_ENTRY(Type, FutureEntityId)
+#define COMPONENT_QUEUE_REMOVE_ENTITY_ID_GENERIC_ENTRIES(...)                                                          \
+	FOR_EACH(COMPONENT_QUEUE_REMOVE_GENERIC_ENTITY_ID_ENTRY, __VA_ARGS__)
+#define COMPONENT_QUEUE_REMOVE_FUTURE_ENTITY_ID_GENERIC_ENTRIES(...)                                                   \
+	FOR_EACH(COMPONENT_QUEUE_REMOVE_GENERIC_FUTURE_ENTITY_ID_ENTRY, __VA_ARGS__)
+
 #define COMPONENT_GET_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_GET_NAME(Type)
 #define COMPONENT_GET_GENERIC_ENTRIES(...) FOR_EACH(COMPONENT_GET_GENERIC_ENTRY, __VA_ARGS__)
 
@@ -80,6 +137,23 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 #define RemoveComponent(Component, World, Entity)                                                                      \
 	_Generic(((Component){0})COMPONENT_REMOVE_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
 
+// _Generic(((Component){0})COMPONENT_QUEUE_ADD_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((Queue), (Entity))
+#define QueueAddComponent(Component, Queue, Entity)                                                                    \
+	_Generic(                                                                                                          \
+		(Entity),                                                                                                      \
+		FutureEntityId: _Generic(((Component){0})COMPONENT_QUEUE_ADD_FUTURE_ENTITY_ID_GENERIC_ENTRIES(                 \
+			COMPONENT_TYPE_LIST)),                                                                                     \
+		EntityId: _Generic(((Component){0})COMPONENT_QUEUE_ADD_ENTITY_ID_GENERIC_ENTRIES(COMPONENT_TYPE_LIST)))(       \
+		(Queue), (Entity))
+
+#define QueueRemoveComponent(Component, Queue, Entity)                                                                 \
+	_Generic(                                                                                                          \
+		(Entity),                                                                                                      \
+		FutureEntityId: _Generic(((Component){0})COMPONENT_QUEUE_REMOVE_FUTURE_ENTITY_ID_GENERIC_ENTRIES(              \
+			COMPONENT_TYPE_LIST)),                                                                                     \
+		EntityId: _Generic(((Component){0})COMPONENT_QUEUE_REMOVE_ENTITY_ID_GENERIC_ENTRIES(COMPONENT_TYPE_LIST)))(    \
+		(Queue), (Entity))
+
 #define GetComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_GET_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
 
@@ -88,6 +162,10 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 
 #define HasComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_HAS_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))
+
+#define GetOrAddComponent(Component, World, Entity)                                                                    \
+	(HasComponent(Component, World, Entity) ? GetComponent(Component, World, Entity)                                   \
+											: AddComponent(Component, World, Entity))
 
 #define HAS_COMPONENTS(World, Entity, ...) __VA_OPT__(EXPAND(HAS_COMPONENTS_HELPER(World, Entity, __VA_ARGS__)))
 #define HAS_COMPONENTS_HELPER(World, Entity, First, ...)                                                               \

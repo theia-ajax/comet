@@ -10,9 +10,6 @@
 const int32 KInitialEntityCapacity = 4;
 const int32 KDefaultInitialComponentCapacity = 4;
 
-#define KEntityIndexBits 16
-#define KEntityIndexMask ((1 << (KEntityIndexBits - 1)) - 1)
-
 #define COMPONENT_NAME_ENTRY(Type) #Type,
 static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};
 _Static_assert(ARRAY_COUNT(ComponentTypeNames) == ComponentType_Count, "");
@@ -45,6 +42,22 @@ typedef struct UntypedComponentList {
 } UntypedComponentList;
 #define ComponentListCast(List, Type) ((Type)*)((List).ComponentMemory)
 
+typedef enum GameWorldCommandOp {
+	GameWorldCommandOp_CreateEntity,
+	GameWorldCommandOp_DestroyEntity,
+	GameWorldCommandOp_AddComponent,
+	GameWorldCommandOp_RemoveComponent,
+	GameWorldCommandOp_Count,
+} GameWorldCommandOp;
+
+typedef struct GameWorldCommand {
+	GameWorldCommandOp Operation;
+	EntityId Entity;
+	FutureEntityId FutureEntity;
+	ComponentType ComponentType;
+	void* ComponentStorage;
+} GameWorldCommand;
+
 typedef struct GameWorld {
 	// GameEntity* Entities;
 	EntityId* ActiveEntities;
@@ -53,6 +66,8 @@ typedef struct GameWorld {
 	int32* AvailableIndexStack;
 
 	UntypedComponentList ComponentLists[ComponentType_Count];
+
+	bool IsLocked;
 
 	// New band/album name
 	int32 AllTimeHighGeneration;
@@ -76,47 +91,49 @@ static bool ComponentListHas(UntypedComponentList* List, EntityId Entity);
 // RemoveComponent, etc...)
 static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+static void* EntityQueueAddComponent(GameWorldCommandQueue* Queue, EntityId Entity, ComponentType Type);
+static void EntityQueueRemoveComponent(GameWorldCommandQueue* Queue, EntityId Entity, ComponentType Type);
 static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type);
 static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type);
+static inline UntypedComponentList* _GetComponentList(GameWorld* World, ComponentType Type);
 
 // Public Implementations
 // -------------------------------------------------------
 GameWorld* CreateGameWorld(void)
 {
-	GameWorld* NewState = (GameWorld*)malloc(sizeof(GameWorld));
+	GameWorld* NewWorld = (GameWorld*)malloc(sizeof(GameWorld));
 
-	if (NewState == NULL) {
+	if (NewWorld == NULL) {
 		LogError("Unable to allocate game world");
 		exit(1);
 	}
 
-	ZERO_STRUCT(NewState);
+	ZERO_STRUCT(NewWorld);
 
-	// arrsetcap(NewState->Entities, KInitialEntityCapacity);
-	arrsetcap(NewState->ActiveEntities, KInitialEntityCapacity);
-	arrsetcap(NewState->EntitySignatures, KInitialEntityCapacity);
-	arrsetcap(NewState->EntityGenerations, KInitialEntityCapacity);
-	arrsetcap(NewState->AvailableIndexStack, 32);
+	// arrsetcap(NewWorld->Entities, KInitialEntityCapacity);
+	arrsetcap(NewWorld->ActiveEntities, KInitialEntityCapacity);
+	arrsetcap(NewWorld->EntitySignatures, KInitialEntityCapacity);
+	arrsetcap(NewWorld->EntityGenerations, KInitialEntityCapacity);
+	arrsetcap(NewWorld->AvailableIndexStack, 32);
 
 	for (int32 Index = 0; Index < ARRAY_COUNT(ComponentTypeData); Index++) {
 		int32 Capacity = ComponentInitialCapacities[Index];
 		if (Capacity == 0) {
 			Capacity = KDefaultInitialComponentCapacity;
-			LogInfo(
-				"Created %s ComponentList with default initial capacity of %d", ComponentTypeName(Index), Capacity);
+			LogInfo("Created %s ComponentList with default initial capacity of %d", ComponentTypeName(Index), Capacity);
 		} else {
 			LogInfo("Created %s ComponentList with initial capacity of %d", ComponentTypeName(Index), Capacity);
 		}
 		Capacity = (Capacity != 0) ? Capacity : KDefaultInitialComponentCapacity;
-		NewState->ComponentLists[Index] =
+		NewWorld->ComponentLists[Index] =
 			CreateComponentList(Index, ComponentTypeData[Index].Size, Capacity, KInitialEntityCapacity);
 	}
 
-	NewState->AllTimeHighGeneration = 1;
-	NewState->AllTimeHighGenerationFirstIndex = NONE;
+	NewWorld->AllTimeHighGeneration = 1;
+	NewWorld->AllTimeHighGenerationFirstIndex = NONE;
 
-	return NewState;
+	return NewWorld;
 }
 
 void DestroyGameWorld(GameWorld* World)
@@ -132,8 +149,10 @@ void DestroyGameWorld(GameWorld* World)
 
 EntityId CreateEntity(GameWorld* World)
 {
+	ASSERT(World);
+	ASSERT(!World->IsLocked && "Cannot create entities while world is locked.");
+
 	int32 EntityIndex = NONE;
-	int Z = arrlen(World->AvailableIndexStack);
 	if (arrlen(World->AvailableIndexStack) > 0) {
 		EntityIndex = arrpop(World->AvailableIndexStack);
 	} else {
@@ -168,6 +187,9 @@ EntityId CreateEntity(GameWorld* World)
 
 void DestroyEntity(GameWorld* World, EntityId Entity)
 {
+	ASSERT(World);
+	ASSERT(!World->IsLocked && "Cannot destroy entities while world is locked.");
+
 	ASSERT(EntityIdIsValid(World, Entity));
 	LogInfo("Destroy Entity [%d:%d]%u", ENTITY_ID_INDEX(Entity), ENTITY_ID_GENERATION(Entity), Entity.RawValue);
 
@@ -285,6 +307,172 @@ void WorldQueryFree(EntityId* Query)
 int32 WorldEntityCount(GameWorld* World)
 {
 	return (int32)arrlen(World->ActiveEntities);
+}
+
+void WorldLock(GameWorld* World)
+{
+	ASSERT(World);
+	ASSERT(!World->IsLocked && "Lock/Unlock mismatch");
+	World->IsLocked = true;
+}
+
+void WorldUnlock(GameWorld* World)
+{
+	ASSERT(World);
+	ASSERT(World->IsLocked && "Lock/Unlock mismatch");
+	World->IsLocked = false;
+}
+
+bool WorldIsLocked(const GameWorld* World)
+{
+	return World->IsLocked;
+}
+
+typedef struct GameWorldCommandQueue {
+	GameWorld* World;
+	GameWorldCommand* CommandQueue;
+	int32 NextFutureEntityId;
+	uint8* ComponentStorage;
+	int32 ComponentStorageCapacityBytes;
+	int32 ComponentStorageUsedBytes;
+} GameWorldCommandQueue;
+
+static void* _CommandQueueAlloc(GameWorldCommandQueue* Queue, int32 Bytes)
+{
+	ASSERT(
+		Queue->ComponentStorageUsedBytes + Bytes < Queue->ComponentStorageCapacityBytes &&
+		"Command queue component storage is full, consider increasing capacity in WorldCreateCommandQueue.");
+
+	// TODO: Alignment
+	void* Result = Queue->ComponentStorage + Queue->ComponentStorageUsedBytes;
+	Queue->ComponentStorageUsedBytes += Bytes;
+	return Result;
+}
+
+GameWorldCommandQueue* WorldCreateCommandQueue(GameWorld* World)
+{
+	GameWorldCommandQueue* Queue = (GameWorldCommandQueue*)malloc(sizeof(GameWorldCommandQueue));
+	ZERO_STRUCT(Queue);
+
+	Queue->World = World;
+	Queue->ComponentStorageCapacityBytes = MEGABYTES(1);
+	Queue->ComponentStorage = malloc(Queue->ComponentStorageCapacityBytes);
+
+	ASSERT(Queue->ComponentStorage);
+
+	arrsetcap(Queue->CommandQueue, 128);
+
+	return Queue;
+}
+
+void WorldConsumeCommandQueue(GameWorldCommandQueue* Queue)
+{
+	ASSERT(Queue);
+	ASSERT(Queue->World);
+	ASSERT(!Queue->World->IsLocked);
+
+	EntityId* FutureEntityMap = NULL;
+	arrsetlen(FutureEntityMap, Queue->NextFutureEntityId);
+
+	for (GameWorldCommand* Command = Queue->CommandQueue; Command != arrend(Queue->CommandQueue); Command++) {
+		switch (Command->Operation) {
+			case GameWorldCommandOp_CreateEntity:
+				{
+					int32 Index = Command->FutureEntity._Internal;
+					ASSERT(Index >= 0 && Index < arrlen(FutureEntityMap));
+					ASSERT(FutureEntityMap[Index].RawValue == 0);
+					EntityId NewEntity = CreateEntity(Queue->World);
+					FutureEntityMap[Index] = NewEntity;
+				}
+				break;
+			case GameWorldCommandOp_DestroyEntity:
+				{
+					EntityId Entity = Command->Entity;
+					int32 Index = Command->FutureEntity._Internal;
+					if (Index != NONE) {
+						ASSERT(Index >= 0 && Index < arrlen(FutureEntityMap));
+						ASSERT(FutureEntityMap[Index].RawValue != 0);
+						Entity = FutureEntityMap[Index];
+					}
+					DestroyEntity(Queue->World, Entity);
+				}
+				break;
+			case GameWorldCommandOp_AddComponent:
+				{
+					EntityId Entity = Command->Entity;
+					int32 Index = Command->FutureEntity._Internal;
+					if (Index != NONE) {
+						ASSERT(Index >= 0 && Index < arrlen(FutureEntityMap));
+						ASSERT(FutureEntityMap[Index].RawValue != 0);
+						Entity = FutureEntityMap[Index];
+					}
+					void* Component = EntityAddComponent(Queue->World, Entity, Command->ComponentType);
+					if (Command->ComponentStorage != NULL) {
+						int32 ComponentSize = _GetComponentList(Queue->World, Command->ComponentType)->ComponentSize;
+						memcpy(Component, Command->ComponentStorage, ComponentSize);
+					}
+				}
+				break;
+			case GameWorldCommandOp_RemoveComponent:
+				{
+					EntityId Entity = Command->Entity;
+					int32 Index = Command->FutureEntity._Internal;
+					if (Index != NONE) {
+						ASSERT(Index >= 0 && Index < arrlen(FutureEntityMap));
+						ASSERT(FutureEntityMap[Index].RawValue != 0);
+						Entity = FutureEntityMap[Index];
+					}
+					EntityRemoveComponent(Queue->World, Entity, Command->ComponentType);
+				}
+				break;
+			default:
+				ASSERT(false);
+				unreachable();
+				break;
+		}
+	}
+
+	WorldDestroyCommandQueue(Queue);
+}
+
+void WorldDestroyCommandQueue(GameWorldCommandQueue* Queue)
+{
+	arrfree(Queue->CommandQueue);
+	ZERO_STRUCT(Queue);
+	free(Queue);
+}
+
+FutureEntityId QueueCreateEntity(GameWorldCommandQueue* Queue)
+{
+	FutureEntityId FutureEntity = (FutureEntityId){Queue->NextFutureEntityId++};
+	GameWorldCommand Command = (GameWorldCommand){
+		.Operation = GameWorldCommandOp_CreateEntity,
+		.ComponentType = NONE,
+		.FutureEntity = FutureEntity,
+	};
+	arrput(Queue->CommandQueue, Command);
+	return FutureEntity;
+}
+
+void QueueDestroyEntityId(GameWorldCommandQueue* Queue, EntityId Entity)
+{
+	GameWorldCommand Command = (GameWorldCommand){
+		.Operation = GameWorldCommandOp_DestroyEntity,
+		.ComponentType = NONE,
+		.Entity = Entity,
+		.FutureEntity = (FutureEntityId){NONE},
+	};
+	arrput(Queue->CommandQueue, Command);
+}
+
+void QueueDestroyFutureEntityId(GameWorldCommandQueue* Queue, FutureEntityId FutureEntity)
+{
+	GameWorldCommand Command = (GameWorldCommand){
+		.Operation = GameWorldCommandOp_DestroyEntity,
+		.ComponentType = NONE,
+		.FutureEntity = FutureEntity,
+	};
+	arrput(Queue->CommandQueue, Command);
 }
 
 // TODO: This is implemented in a weird place, maybe move this to a component specific translation unit
@@ -413,6 +601,8 @@ static inline UntypedComponentList* _GetComponentList(GameWorld* World, Componen
 
 static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
+	ASSERT(World);
+	ASSERT(!World->IsLocked && "Cannot add components while world is locked.");
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
@@ -422,10 +612,74 @@ static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType
 
 static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
+	ASSERT(World);
+	ASSERT(!World->IsLocked && "Cannot remove components while world is locked.");
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue &= ~(BIT_FLAG64(Type));
 	ComponentListRemove(_GetComponentList(World, Type), Entity);
+}
+
+static void* _InternalEntityQueueAddComponent(
+	GameWorldCommandQueue* Queue,
+	EntityId Entity,
+	FutureEntityId FutureEntity,
+	ComponentType Type)
+{
+	ASSERT(Queue);
+	ASSERT(Queue->World);
+	// Maybe want to move component attributes data (size, etc...) to World level instead of inside the component lists
+	size_t ComponentSize = _GetComponentList(Queue->World, Type)->ComponentSize;
+	GameWorldCommand Command = (GameWorldCommand){
+		.Entity = Entity,
+		.FutureEntity = FutureEntity,
+		.Operation = GameWorldCommandOp_AddComponent,
+		.ComponentType = Type,
+		.ComponentStorage = _CommandQueueAlloc(Queue, ComponentSize),
+	};
+	arrput(Queue->CommandQueue, Command);
+	return Command.ComponentStorage;
+}
+
+static void* QueueAddComponentEntityId(GameWorldCommandQueue* Queue, EntityId Entity, ComponentType Type)
+{
+	return _InternalEntityQueueAddComponent(Queue, Entity, (FutureEntityId){NONE}, Type);
+}
+
+static void* QueueAddComponentFutureEntityId(GameWorldCommandQueue* Queue, FutureEntityId Entity, ComponentType Type)
+{
+	ASSERT(Queue);
+	ASSERT(Entity._Internal >= 0 && Entity._Internal < Queue->NextFutureEntityId);
+	return _InternalEntityQueueAddComponent(Queue, (EntityId){0}, Entity, Type);
+}
+
+static void _InternalEntityQueueRemoveComponent(
+	GameWorldCommandQueue* Queue,
+	EntityId Entity,
+	FutureEntityId FutureEntity,
+	ComponentType Type)
+{
+	ASSERT(Queue);
+	ASSERT(Queue->World);
+	GameWorldCommand Command = (GameWorldCommand){
+		.Entity = Entity,
+		.FutureEntity = FutureEntity,
+		.Operation = GameWorldCommandOp_RemoveComponent,
+		.ComponentType = Type,
+	};
+	arrput(Queue->CommandQueue, Command);
+}
+
+static void QueueRemoveComponentEntityId(GameWorldCommandQueue* Queue, EntityId Entity, ComponentType Type)
+{
+	_InternalEntityQueueRemoveComponent(Queue, Entity, (FutureEntityId){NONE}, Type);
+}
+
+static void QueueRemoveComponentFutureEntityId(GameWorldCommandQueue* Queue, FutureEntityId Entity, ComponentType Type)
+{
+	ASSERT(Queue);
+	ASSERT(Entity._Internal >= 0 && Entity._Internal < Queue->NextFutureEntityId);
+	_InternalEntityQueueRemoveComponent(Queue, (EntityId){0}, Entity, Type);
 }
 
 static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
@@ -463,6 +717,18 @@ static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType 
 		EntityRemoveComponent(World, Entity, CAT(ComponentType_, Type));                                               \
 	}
 
+#define QUEUE_ADD_COMPONENT_IMPLEMENTATION(Type, EID)                                                                  \
+	QUEUE_ADD_COMPONENT_PROTOTYPE(Type, EID)                                                                           \
+	{                                                                                                                  \
+		(COMPONENT_NAME(Type)*)CAT(QueueAddComponent, EID)(Queue, Entity, CAT(ComponentType_, Type));                  \
+	}
+
+#define QUEUE_REMOVE_COMPONENT_IMPLEMENTATION(Type, EID)                                                               \
+	QUEUE_REMOVE_COMPONENT_PROTOTYPE(Type, EID)                                                                        \
+	{                                                                                                                  \
+		CAT(QueueRemoveComponent, EID)(Queue, Entity, CAT(ComponentType_, Type));                                      \
+	}
+
 #define GET_COMPONENT_IMPLEMENTATION(Type)                                                                             \
 	GET_COMPONENT_PROTOTYPE(Type)                                                                                      \
 	{                                                                                                                  \
@@ -484,6 +750,10 @@ static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType 
 #define COMPONENT_INTERFACE_IMPLEMENTATION(Type)                                                                       \
 	ADD_COMPONENT_IMPLEMENTATION(Type);                                                                                \
 	REMOVE_COMPONENT_IMPLEMENTATION(Type);                                                                             \
+	QUEUE_ADD_COMPONENT_IMPLEMENTATION(Type, EntityId);                                                                \
+	QUEUE_REMOVE_COMPONENT_IMPLEMENTATION(Type, EntityId);                                                             \
+	QUEUE_ADD_COMPONENT_IMPLEMENTATION(Type, FutureEntityId);                                                          \
+	QUEUE_REMOVE_COMPONENT_IMPLEMENTATION(Type, FutureEntityId);                                                       \
 	GET_COMPONENT_IMPLEMENTATION(Type);                                                                                \
 	TRYGET_COMPONENT_IMPLEMENTATION(Type);                                                                             \
 	HAS_COMPONENT_IMPLEMENTATION(Type);
