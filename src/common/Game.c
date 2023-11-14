@@ -437,7 +437,7 @@ void GameUpdate(const GameTime* gameTime)
 			Durability->CurrentDurability -= Receiver->DamageAccumulator;
 			Receiver->DamageAccumulator = 0.0f;
 			if (Durability->CurrentDurability <= 0.0f) {
-				GetOrAddComponent(LifetimeComponent, GGame.World, *Iter)->SecondsRemaining = 0.0f;
+				DestroyEntity(GGame.World, *Iter);
 			}
 		}
 		WorldQueryFree(Query);
@@ -451,7 +451,7 @@ void GameUpdate(const GameTime* gameTime)
 			if (L->SecondsRemaining >= 0.0f) {
 				L->SecondsRemaining -= gameTime->DeltaTimeF;
 				if (L->SecondsRemaining <= 0.0f) {
-					DestroyEntity(GGame.World, Entity);
+					DestroyEntity(GGame.World, *Iter);
 				}
 			}
 		}
