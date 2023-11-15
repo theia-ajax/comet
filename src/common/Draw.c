@@ -35,7 +35,7 @@ struct {
 } GDraw;
 
 // Private Prototypes
-static SDL_FRect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY);
+static SDL_FRect GetSpriteRect(int32 SpriteId, Point SpriteTiles);
 
 // Note SDL style naming convention
 static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* center, float radius);
@@ -107,8 +107,8 @@ void DrawSprite(const SpriteDraw* spriteDraw)
 		DrawCommand.Scale = V2(1, 1);
 	}
 
-	DrawCommand.SpriteTiles[0] = (DrawCommand.SpriteTiles[0] > 0) ? DrawCommand.SpriteTiles[0] : 1;
-	DrawCommand.SpriteTiles[1] = (DrawCommand.SpriteTiles[1] > 0) ? DrawCommand.SpriteTiles[1] : 1;
+	DrawCommand.SpriteTiles.X = (DrawCommand.SpriteTiles.X > 0) ? DrawCommand.SpriteTiles.X : 1;
+	DrawCommand.SpriteTiles.Y = (DrawCommand.SpriteTiles.Y > 0) ? DrawCommand.SpriteTiles.Y : 1;
 
 	if (GDraw.SpriteCount < KMaxSpriteDrawCalls) {
 		GDraw.SpriteQueue[GDraw.SpriteCount++] = DrawCommand;
@@ -159,13 +159,24 @@ void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 
 	}
 }
 
+static int SpriteDrawLayerCompare(const SpriteDraw* A, const SpriteDraw* B)
+{
+	return A->Layer - B->Layer;
+}
+
+static int SpriteDrawLayerCompareVoid(const void* A, const void* B)
+{
+	return SpriteDrawLayerCompare((const SpriteDraw*)A, (const SpriteDraw*)B);
+}
+
 void DrawRender(void)
 {
+	SDL_qsort(GDraw.SpriteQueue, GDraw.SpriteCount, sizeof(GDraw.SpriteQueue[0]), SpriteDrawLayerCompareVoid);
+
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
 
-		SDL_FRect SourceRect =
-			GetSpriteRect(DrawCommand->SpriteId, DrawCommand->SpriteTiles[0], DrawCommand->SpriteTiles[1]);
+		SDL_FRect SourceRect = GetSpriteRect(DrawCommand->SpriteId, DrawCommand->SpriteTiles);
 
 		float Width = SourceRect.w * DrawCommand->Scale.X;
 		float Height = SourceRect.h * DrawCommand->Scale.Y;
@@ -187,14 +198,10 @@ void DrawRender(void)
 		SDL_Texture* Texture = GDraw.SpriteSheetTextures[SheetIndex];
 
 		if (DrawCommand->UseTint) {
-			uint32 TintColor = DrawCommand->TintColor;
-			uint R = (TintColor >> 0) & 0xFF;
-			uint G = (TintColor >> 8) & 0xFF;
-			uint B = (TintColor >> 16) & 0xFF;
-			SDL_SetTextureColorMod(Texture, R, G, B);
+			ColorU8 TintColor = DrawCommand->TintColor;
+			SDL_SetTextureColorMod(Texture, TintColor.R, TintColor.G, TintColor.B);
 		}
 
-		// for now it's all in the first sprite sheet
 		SDL_RenderTextureRotated(
 			GDraw.Renderer,
 			GDraw.SpriteSheetTextures[SheetIndex],
@@ -207,15 +214,6 @@ void DrawRender(void)
 		if (DrawCommand->UseTint) {
 			SDL_SetTextureColorMod(Texture, 255, 255, 255);
 		}
-
-		// SDL_FRect PosRect = (SDL_FRect){
-		// 	.x = DestRect.x + Center.x,
-		// 	.y = DestRect.y + Center.y,
-		// 	.w = 1.0f,
-		// 	.h = 1.0f,
-		// };
-		// SDL_SetRenderDrawColor(GDraw.Renderer, 0, 255, 255, 0);
-		// SDL_RenderDrawRectF(GDraw.Renderer, &PosRect);
 	}
 
 	for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
@@ -268,7 +266,7 @@ void DrawRender(void)
 
 // Private Implementations
 
-static SDL_FRect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteTilesY)
+static SDL_FRect GetSpriteRect(int32 SpriteId, Point SpriteTiles)
 {
 	const SpriteSheet* SpriteSheet = &GDraw.SpriteSheets[SPRITE_ID_SHEET(SpriteId)];
 
@@ -281,17 +279,17 @@ static SDL_FRect GetSpriteRect(int32 SpriteId, int32 SpriteTilesX, int32 SpriteT
 				int32 SpriteTileX = SpriteIndex % SpriteSheet->SpritesPerRow;
 				int32 SpriteTileY = SpriteIndex / SpriteSheet->SpritesPerRow;
 
-				if (SpriteTileX + SpriteTilesX > SpriteSheet->SpritesPerRow)
-					SpriteTilesX = SpriteSheet->SpritesPerRow - SpriteTileX;
+				if (SpriteTileX + SpriteTiles.X > SpriteSheet->SpritesPerRow)
+					SpriteTiles.X = SpriteSheet->SpritesPerRow - SpriteTileX;
 
-				if (SpriteTileY + SpriteTilesY > SpriteSheet->SpritesPerCol)
-					SpriteTilesY = SpriteSheet->SpritesPerCol - SpriteTileY;
+				if (SpriteTileY + SpriteTiles.Y > SpriteSheet->SpritesPerCol)
+					SpriteTiles.Y = SpriteSheet->SpritesPerCol - SpriteTileY;
 
 				Result = (SDL_FRect){
 					.x = SpriteTileX * SpriteSheet->SpriteWidth,
 					.y = SpriteTileY * SpriteSheet->SpriteHeight,
-					.w = SpriteTilesX * SpriteSheet->SpriteWidth,
-					.h = SpriteTilesY * SpriteSheet->SpriteHeight,
+					.w = SpriteTiles.X * SpriteSheet->SpriteWidth,
+					.h = SpriteTiles.Y * SpriteSheet->SpriteHeight,
 				};
 			}
 			break;
@@ -322,4 +320,51 @@ static void SDL_RenderDrawCircle(SDL_Renderer* renderer, const SDL_FPoint* cente
 	points[SDL_RENDER_CIRCLE_SEGMENTS] = points[0];
 
 	SDL_RenderLines(renderer, points, SDL_RENDER_CIRCLE_SEGMENTS + 1);
+}
+
+void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A)
+{
+	if (R != NULL) *R = (uint8)round(Color.R * 255.0f);
+	if (G != NULL) *G = (uint8)round(Color.G * 255.0f);
+	if (B != NULL) *B = (uint8)round(Color.B * 255.0f);
+	if (A != NULL) *A = (uint8)round(Color.A * 255.0f);
+}
+
+ColorU8 ColorV4ToColorU8(Vec4 Color)
+{
+	ColorU8 Result;
+	Result.R = (uint8)round(Color.R * 255.0f);
+	Result.G = (uint8)round(Color.G * 255.0f);
+	Result.B = (uint8)round(Color.B * 255.0f);
+	Result.A = (uint8)round(Color.A * 255.0f);
+	return Result;
+}
+
+uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
+{
+	H = (H >= 0 ? 0.0f : 1.0f) + fmodf(H, 1.0f);
+	H *= 6.0f;
+	flt32 C = V * S;
+	flt32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
+	flt32 M = V - C;
+
+	flt32 RP = 0, GP = 0, BP = 0;
+	// clang-format off
+	switch ((int32)H)
+	{
+		case 0: RP = C; GP = X; break;
+		case 1: RP = X; GP = C; break;
+		case 2: GP = C; BP = X; break;
+		case 3: GP = X; BP = C; break;
+		case 4: RP = X; BP = C; break;
+		case 5: RP = C; BP = X; break;
+		default: unreachable(); break;
+	}
+	// clang-format on
+
+	Vec4 ColorRgb = V4(RP, GP, BP, 1.0f);
+	uint8 R, G, B, A;
+	ColorV4ToBytes(ColorRgb, &R, &G, &B, &A);
+	uint32 Result = (255 << 24) | (R << 16) | (G << 8) | B;
+	return Result;
 }

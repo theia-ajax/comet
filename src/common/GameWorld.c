@@ -606,7 +606,11 @@ static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType
 	ASSERT(EntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
-	LogInfo("GameWorld:EntityAddComponent: added %s component to entity %d", ComponentTypeName(Type), Entity.RawValue);
+	LogInfo(
+		"GameWorld:EntityAddComponent: added %s component to entity %d[%d]",
+		ComponentTypeName(Type),
+		ENTITY_ID_INDEX(Entity),
+		ENTITY_ID_GENERATION(Entity));
 	return ComponentListAdd(_GetComponentList(World, Type), Entity);
 }
 

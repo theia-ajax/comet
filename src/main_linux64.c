@@ -25,6 +25,8 @@ int main(int argc, char* argv[])
 	int WindowY = DisplayBounds.y + (DisplayBounds.h - (WindowHeight + 96.0f)) / 2;
 	SDL_SetWindowPosition(Window, SDL_WINDOWPOS_CENTERED, WindowY);
 
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+
 	size_t MemoryBytes = 64 * 1024;
 	void* Memory = malloc(MemoryBytes);
 
@@ -36,7 +38,7 @@ int main(int argc, char* argv[])
 
 	ASSERT(Success);
 
-	const int KTargetFramesPerSecond = 60;
+	const int KTargetFramesPerSecond = 0;
 	double KTargetFrameRateSeconds = (KTargetFramesPerSecond != 0) ? (1.0 / KTargetFramesPerSecond) : 0.0;
 	uint64 NowTicks = 0;
 	uint64 DeltaTicks = 0;
@@ -77,9 +79,10 @@ int main(int argc, char* argv[])
 		};
 
 		GameUpdate(&Time);
+		SimTimeTicks = stm_since(FrameStartTicks);
+		
 		GameRender(&Time);
 
-		SimTimeTicks = stm_since(FrameStartTicks);
 
 		while (KTargetFramesPerSecond != 0 && stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds) {
 			// Do nothing...

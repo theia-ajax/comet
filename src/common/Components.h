@@ -21,6 +21,18 @@ typedef struct SpriteComponent {
 	Vec2 Offset;
 } SpriteComponent;
 
+typedef struct SpriteTilesComponent {
+	Point Tiles;
+} SpriteTilesComponent;
+
+typedef struct RenderLayerComponent {
+	int32 Layer;
+} RenderLayerComponent;
+
+typedef struct RenderTintComponent {
+	Vec4 TintColor;
+} RenderTintComponent;
+
 typedef enum ColliderType {
 	ColliderType_Circle,
 	ColliderType_Polygon,
@@ -62,10 +74,15 @@ typedef struct DurabilityComponent {
 	flt32 CurrentDurability;
 } DurabilityComponent;
 
+// clang-format off
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
 #define COMPONENT_TYPES                                                                                                \
-	(Transform)(Velocity)(Sprite)(Collider)(Lifetime)(Sensor)(DamageSource)(DamageReceiver)(Durability)
+	(Transform)(Velocity)                                                                                              \
+	(Sprite)(SpriteTiles)(RenderLayer)(RenderTint)                                                                     \
+	(Lifetime)(Collider)(DamageSource)(DamageReceiver)(Durability)
+// clang-format on
+
 #define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
 #define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()

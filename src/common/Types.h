@@ -124,8 +124,6 @@ typedef double flt64;
 #define FixedListPop(list) (list).Count--
 #define FixedListRemoveAt(list, index) (FixedListPop(list), (list).Data[index] = (list).Data[(list).Count])
 
-
-
 // Data Array
 // -------------------------------------------------------
 // $TODO: Revisit this entire data array thing and move it to it's own file if it's still going to be a thing

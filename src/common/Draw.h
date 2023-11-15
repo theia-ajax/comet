@@ -32,14 +32,17 @@ typedef struct DrawConfig {
 	SpriteSheet SpriteSheets[KMaxDrawSpriteSheets];
 } DrawConfig;
 
+typedef struct ColorU8 { uint8 R, G, B, A; } ColorU8;
+
 typedef struct SpriteDraw {
 	int32 SpriteId;
 	Vec2 Position;
 	Vec2 Scale;
 	flt32 Rotation;
-	int32 SpriteTiles[2];
-	uint32 TintColor;
+	Point SpriteTiles;
+	ColorU8 TintColor;
 	bool UseTint;
+	int32 Layer;
 } SpriteDraw;
 
 #define SPRITE_ID(Sheet, Sprite) (((Sheet) << 16) | ((Sprite) & 0xFFFF))
@@ -57,3 +60,7 @@ void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color);
 void DrawAABB(AABB AABB_, uint32 Color);
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color);
 void DrawRender(void);
+
+void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A);
+ColorU8 ColorV4ToColorU8(Vec4 Color);
+uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V);
