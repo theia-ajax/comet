@@ -111,11 +111,50 @@ BINARY_SEARCH_TOOLS_DEFINE(flt64);
 
 // Any new types added to this will get a swap function defined for it and make it available via the Swap _Generic
 #define SWAP_TYPES                                                                                                     \
-	(bool)(int8)(int16)(int32)(int64)(uint8)(uint16)(uint32)(uint64) \
-	(flt32)(flt64)(Vec2)(Vec3)(Vec4)(Quat)(Mat2)(Mat3)(Mat4)(EntityId)
+	(bool)(int8)(int16)(int32)(int64)(uint8)(uint16)(uint32)(uint64)(flt32)(flt64)(Vec2)(Vec3)(Vec4)(Quat)(Mat2)(Mat3)(Mat4)(EntityId)
 #define SWAP_TYPES_LIST CHAIN_COMMA(SWAP_TYPES)
 
 FOR_EACH(DEFINE_SWAP, SWAP_TYPES_LIST);
 
 #define SWAP_TYPE_GENERIC_ENTRY(T) , T : CAT(Swap_, T)
 #define Swap(A, B) _Generic((A)FOR_EACH(SWAP_TYPE_GENERIC_ENTRY, SWAP_TYPES_LIST))(&A, &B)
+
+static inline int8 TrueModuloInt8(int8 A, int8 B)
+{
+	return (A >= 0) ? A % B : ((B >= 0 ? B : -B) - 1 + (A + 1) % B);
+}
+
+static inline int16 TrueModuloInt16(int16 A, int16 B)
+{
+	return (A >= 0) ? A % B : ((B >= 0 ? B : -B) - 1 + (A + 1) % B);
+}
+
+static inline int32 TrueModuloInt32(int32 A, int32 B)
+{
+	return (A >= 0) ? A % B : ((B >= 0 ? B : -B) - 1 + (A + 1) % B);
+}
+
+static inline int64 TrueModuloInt64(int64 A, int64 B)
+{
+	return (A >= 0) ? A % B : ((B >= 0 ? B : -B) - 1 + (A + 1) % B);
+}
+
+static inline flt32 TrueModuloFlt32(flt32 A, flt32 B)
+{
+	return A - B * floor(A / B);
+}
+
+static inline flt64 TrueModuloFlt64(flt64 A, flt64 B)
+{
+	return A - B * floor(A / B);
+}
+
+#define TrueModulo(A, B)                                                                                               \
+	_Generic(                                                                                                          \
+		(A),                                                                                                           \
+		int8: TrueModuloInt8,                                                                                          \
+		int16: TrueModuloInt16,                                                                                        \
+		int32: TrueModuloInt32,                                                                                        \
+		int64: TrueModuloInt64,                                                                                        \
+		flt32: TrueModuloFlt32,                                                                                        \
+		flt64: TrueModuloFlt64)(A, B)

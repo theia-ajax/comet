@@ -340,31 +340,34 @@ ColorU8 ColorV4ToColorU8(Vec4 Color)
 	return Result;
 }
 
-uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V)
+ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A)
 {
-	H = (H >= 0 ? 0.0f : 1.0f) + fmodf(H, 1.0f);
-	H *= 6.0f;
-	flt32 C = V * S;
-	flt32 X = C * (1.0f - fabs(fmod((H / 60.0f), 2) - 1.0f));
-	flt32 M = V - C;
+	if (S == 0.0f) {
+		uint8 V8 = (uint8)(V * 255.0f);
+		uint8 A8 = (uint8)(A * 255.0f);
+		return (ColorU8){V8, V8, V8, A8};
+	}
 
-	flt32 RP = 0, GP = 0, BP = 0;
+	H = (H - floor(H)) * 6.0f;
+	int32 HI = (int32)H;
+	flt32 Frac = H - HI;
+	flt32 N0 = V * (1.0f - S);
+	flt32 N1 = V * (1.0f - S * Frac);
+	flt32 N2 = V * (1.0f - S * (1.0f - Frac));
+
+	flt32 RP = V, GP = V, BP = V;
 	// clang-format off
-	switch ((int32)H)
+	switch (HI)
 	{
-		case 0: RP = C; GP = X; break;
-		case 1: RP = X; GP = C; break;
-		case 2: GP = C; BP = X; break;
-		case 3: GP = X; BP = C; break;
-		case 4: RP = X; BP = C; break;
-		case 5: RP = C; BP = X; break;
+		case 0: GP = N2; BP = N0; break;
+		case 1: RP = N1; BP = N0; break;
+		case 2: RP = N0; BP = N2; break;
+		case 3: RP = N0; GP = N1; break;
+		case 4: RP = N2; GP = N0; break;
+		case 5: GP = N0; BP = N1; break;
 		default: unreachable(); break;
 	}
 	// clang-format on
 
-	Vec4 ColorRgb = V4(RP, GP, BP, 1.0f);
-	uint8 R, G, B, A;
-	ColorV4ToBytes(ColorRgb, &R, &G, &B, &A);
-	uint32 Result = (255 << 24) | (R << 16) | (G << 8) | B;
-	return Result;
+	return ColorV4ToColorU8(V4(RP, GP, BP, A));
 }

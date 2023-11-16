@@ -82,9 +82,8 @@ bool GameInitialize(const GameInitParams* params)
 	stbds_rand_seed(HashtableSeed);
 
 	StringIdPoolsInitialize();
-
-	int32 GameResWidth = 512;  // 576;
-	int32 GameResHeight = 288; // 324;
+	int32 GameResWidth = 640;  // 576;
+	int32 GameResHeight = 360; // 324;
 
 	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
@@ -140,7 +139,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	GGame.LevelEntity = CreateEntity(GGame.World);
 	*AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
-		.TintColor = V4(0x12 / 255.0f, 0x20 / 255.0f, 0x20 / 255.0f, 1.0f),
+		.TintColor = V4(0.01f, 0.02f, 0.1f, 1.0f),
 	};
 
 	GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));

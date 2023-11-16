@@ -63,4 +63,4 @@ void DrawRender(void);
 
 void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A);
 ColorU8 ColorV4ToColorU8(Vec4 Color);
-uint32 HsvToArgb8888(flt32 H, flt32 S, flt32 V);
+ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A);
