@@ -59,7 +59,9 @@
         "draw.h": "c",
         "math2d.h": "c",
         "componenttypes.h": "c",
-        "sdl_platform_defines.h": "c"
+        "sdl_platform_defines.h": "c",
+        "bitset": "c",
+        "string_view": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,
