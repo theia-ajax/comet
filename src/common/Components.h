@@ -3,12 +3,19 @@
 #include "Entity.h"
 #include "Math2D.h"
 
+// Not really a hard limit atm just seems useful to keep track of bloated components
 enum { KMaxComponentSizeInBytes = 256 };
 
 typedef struct TransformComponent {
 	Vec2 Position;
 	flt32 Rotation;
 } TransformComponent;
+
+typedef struct LocalTransformComponent {
+	EntityId ParentEntity;
+	flt32 LocalRotation;
+	Vec2 LocalPosition;
+} LocalTransformComponent;
 
 typedef struct VelocityComponent {
 	Vec2 Velocity;
@@ -78,7 +85,7 @@ typedef struct DurabilityComponent {
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
 #define COMPONENT_TYPES                                                                                                \
-	(Transform)(Velocity)                                                                                              \
+	(Transform)(LocalTransform)(Velocity)                                                                              \
 	(Sprite)(SpriteTiles)(RenderLayer)(RenderTint)                                                                     \
 	(Lifetime)(Collider)(DamageSource)(DamageReceiver)(Durability)
 // clang-format on
