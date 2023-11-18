@@ -13,7 +13,8 @@ int main(int argc, char* argv[])
 
 	SDL_Init(SDL_INIT_EVERYTHING);
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 2560, 1440, SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
 	// Manually smudging the window position to make it more centered for now.
@@ -24,8 +25,6 @@ int main(int argc, char* argv[])
 	SDL_GetWindowSize(Window, NULL, &WindowHeight);
 	int WindowY = DisplayBounds.y + (DisplayBounds.h - (WindowHeight + 96.0f)) / 2;
 	SDL_SetWindowPosition(Window, SDL_WINDOWPOS_CENTERED, WindowY);
-
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
 	size_t MemoryBytes = 64 * 1024;
 	void* Memory = malloc(MemoryBytes);
