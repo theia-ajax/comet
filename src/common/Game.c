@@ -82,8 +82,9 @@ bool GameInitialize(const GameInitParams* params)
 	stbds_rand_seed(HashtableSeed);
 
 	StringIdPoolsInitialize();
-	int32 GameResWidth = 640;  // 576;
-	int32 GameResHeight = 360; // 324;
+
+	int32 GameResWidth = 640;
+	int32 GameResHeight = 360;
 
 	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
@@ -221,13 +222,42 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
 		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("green_01"))),
+			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("darkgrey_06"))),
 	};
 
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
 		.Group = Group_Friendly,
 		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
+	};
+
+	EntityId AnchorEntity = CreateEntity(World);
+	AddComponent(TransformComponent, World, AnchorEntity);
+	AddComponent(LocalTransformComponent, World, AnchorEntity)->ParentEntity = Entity;
+
+	EntityId DroneEntity0 = CreateEntity(World);
+	EntityId DroneEntity1 = CreateEntity(World);
+
+	AddComponent(TransformComponent, World, DroneEntity0);
+	AddComponent(TransformComponent, World, DroneEntity1);
+
+	*AddComponent(LocalTransformComponent, World, DroneEntity0) = (LocalTransformComponent){
+		.ParentEntity = Entity,
+		.LocalPosition = V2(32, 0),
+	};
+
+	*AddComponent(SpriteComponent, World, DroneEntity0) = (SpriteComponent){
+		.SpriteId =
+			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1"))),
+	};
+
+	*AddComponent(LocalTransformComponent, World, DroneEntity1) = (LocalTransformComponent){
+		.ParentEntity = AnchorEntity,
+		.LocalPosition = V2(-32, 0),
+	};
+	*AddComponent(SpriteComponent, World, DroneEntity1) = (SpriteComponent){
+		.SpriteId =
+			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1"))),
 	};
 
 	return Entity;
@@ -338,6 +368,28 @@ void GameUpdate(const GameTime* gameTime)
 
 	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
 	MovementSystemUpdate(GGame.World, gameTime);
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform), REJECTED());
+		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+			// todo: very dumb and bad just getting absolute basic case working
+			// Tform2 ParentTransform;
+			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
+			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
+			Tform2 ParentT2 = (Tform2){0};
+			flt32 ParentRotation = 0.0f;
+			if (LocalTransform->ParentEntity.RawValue != 0) {
+				TransformComponent* ParentTransform =
+					GetComponent(TransformComponent, GGame.World, LocalTransform->ParentEntity);
+				ParentT2 = T2Component(ParentTransform);
+				ParentRotation = ParentTransform->Rotation;
+			}
+			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
+			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
+		}
+		WorldQueryFree(Query);
+	}
+
 	DamageSystemUpdate(GGame.World, gameTime);
 	LifetimeSystemUpdate(GGame.World, gameTime);
 
@@ -350,6 +402,14 @@ void GameUpdate(const GameTime* gameTime)
 	}
 	DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
 	DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
+	static bool ShowComponentCounts = false;
+	if (ShowComponentCounts) {
+		int32 ComponentCounts[ComponentType_Count];
+		WorldComponentCounts(GGame.World, ComponentCounts, ComponentType_Count);
+		for (int32 Index = 0; Index < ComponentType_Count; Index++) {
+			DebugPrintf(" %s: %d", ComponentTypeName(Index), ComponentCounts[Index]);
+		}
+	}
 
 	GGame.Frame++;
 }
@@ -393,15 +453,16 @@ void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
 {
 	VelocityComponent* V = GetComponent(VelocityComponent, World, GGame.PlayerEntity);
 	Vec2 MoveXY = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
-	V->Velocity = Mul(Norm(MoveXY), 128.0f);
+	V->Velocity = Mul(Norm(MoveXY), 84.0f);
+	V->AngularVelocity = 0.1f;
 	if (GGame.Timer > 0.0f) GGame.Timer -= Time->DeltaTimeF;
 	if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
-		GGame.Timer += 0.17f;
+		GGame.Timer += 0.18f;
 		TransformComponent* T = GetComponent(TransformComponent, World, GGame.PlayerEntity);
 		Vec2 SpawnPosition = Add(T->Position, V2(16.0f, 0.0));
 		flt32 SpawnRotation = T->Rotation - 0.25f;
-		for (int i = -1; i <= 1; i += 1) {
-			CreateProjectile(World, SpawnPosition, SpawnRotation + (i * 0.05f), 256.0f);
+		for (int i = -5; i <= 5; i += 1) {
+			CreateProjectile(World, SpawnPosition, SpawnRotation + (i * 0.015f), 256.0f);
 		}
 	}
 }
