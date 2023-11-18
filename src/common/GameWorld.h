@@ -21,6 +21,8 @@ EntityId* WorldEntitiesEnd(GameWorld* World);
 EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntitySignature Rejected);
 void WorldQueryFree(EntityId* Query);
 int32 WorldEntityCount(GameWorld* World);
+// BufferLength is required to be at least the same size as ComponentType_Count
+void WorldComponentCounts(GameWorld* World, int32* OutBuffer, int32 BufferLength);
 
 void WorldLock(GameWorld* World);
 void WorldUnlock(GameWorld* World);
