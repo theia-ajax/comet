@@ -79,9 +79,8 @@ int main(int argc, char* argv[])
 
 		GameUpdate(&Time);
 		SimTimeTicks = stm_since(FrameStartTicks);
-		
-		GameRender(&Time);
 
+		GameRender(&Time);
 
 		while (KTargetFramesPerSecond != 0 && stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds) {
 			// Do nothing...

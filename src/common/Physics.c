@@ -7,7 +7,7 @@ typedef struct PhysWorld {
 		CircleShape* Circles;
 		PolygonShape* Polygons;
 	} Shapes;
-	
+
 } PhysWorld;
 
 // Private Prototypes
@@ -128,8 +128,7 @@ bool PhysShapeTestPoint(PhysWorld* World, PhysShapeHandle HShape, Tform2 Transfo
 			Result = PolygonTestPoint(PhysTryGetPolygonShape(World, HShape), Transform, TestPoint);
 			break;
 		case PhysShapeType_None:
-		default:
-			break;
+		default: break;
 	}
 
 	return Result;
@@ -147,8 +146,7 @@ static PhysShapeHandle _PhysAllocateShape(PhysWorld* World, PhysShapeType ShapeT
 	uint32 ShapeIndex = 0;
 
 	switch (ShapeType) {
-		case PhysShapeType_None:
-			break;
+		case PhysShapeType_None: break;
 
 		case PhysShapeType_Circle:
 			arrput(World->Shapes.Circles, (CircleShape){0});
@@ -160,8 +158,7 @@ static PhysShapeHandle _PhysAllocateShape(PhysWorld* World, PhysShapeType ShapeT
 			ShapeIndex = arrlen(World->Shapes.Polygons) - 1;
 			break;
 
-		default:
-			unreachable();
+		default: unreachable();
 	}
 
 	ASSERT((ShapeIndex & 0xFFFF) == ShapeIndex);

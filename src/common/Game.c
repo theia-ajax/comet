@@ -91,7 +91,11 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, NULL, SDL_RENDERER_ACCELERATED);
 	SDL_SetRenderLogicalPresentation(
-		GGame.Renderer, GameResWidth, GameResHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX, SDL_SCALEMODE_NEAREST);
+		GGame.Renderer,
+		GameResWidth,
+		GameResHeight,
+		SDL_LOGICAL_PRESENTATION_LETTERBOX,
+		SDL_SCALEMODE_NEAREST);
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GameResWidth,
@@ -183,7 +187,8 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 	SpriteComponent* S = AddComponent(SpriteComponent, World, Entity);
 	*S = (SpriteComponent){
 		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("projectile01-3"))),
+			SpriteSheetId_ShipObjects,
+			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("projectile01-3"))),
 		.Rotation = 0.25f,
 	};
 
@@ -222,7 +227,8 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
 		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("darkgrey_06"))),
+			SpriteSheetId_ShipObjects,
+			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("darkgrey_06"))),
 	};
 
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){

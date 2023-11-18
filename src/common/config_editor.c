@@ -2,9 +2,9 @@
 
 // #include <cimgui.h>
 
+#include "Util.h"
 #include "config.h"
 #include "ini.h"
-#include "Util.h"
 
 struct {
 	h_config config_handle;

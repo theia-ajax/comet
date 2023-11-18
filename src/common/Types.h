@@ -36,13 +36,13 @@ typedef double flt64;
 #endif
 
 #define KILOBYTES(N) ((N)*1024)
-#define MEGABYTES(N) (KILOBYTES(N)*1024)
-#define GIGABYTES(N) (MEGABYTES(N)*1024)
-#define TERABYTES(N) (TERABYTES(N)*1024)
+#define MEGABYTES(N) (KILOBYTES(N) * 1024)
+#define GIGABYTES(N) (MEGABYTES(N) * 1024)
+#define TERABYTES(N) (TERABYTES(N) * 1024)
 
 #define NONE -1
 #define CAT(x, y) CAT_(x, y)
-#define CAT_(x, y) x ## y
+#define CAT_(x, y) x##y
 
 #define EMPTY()
 #define DEFER(id) id EMPTY()
@@ -63,11 +63,8 @@ typedef double flt64;
 #define EXPAND1(...) __VA_ARGS__
 
 #define PARENS ()
-#define FOR_EACH(Expr, ...) \
-	__VA_OPT__(EXPAND(FOR_EACH_HELPER(Expr, __VA_ARGS__)))
-#define FOR_EACH_HELPER(Expr, First, ...) \
-	Expr(First) \
-	__VA_OPT__(FOR_EACH_AGAIN PARENS (Expr, __VA_ARGS__))
+#define FOR_EACH(Expr, ...) __VA_OPT__(EXPAND(FOR_EACH_HELPER(Expr, __VA_ARGS__)))
+#define FOR_EACH_HELPER(Expr, First, ...) Expr(First) __VA_OPT__(FOR_EACH_AGAIN PARENS(Expr, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
 #define BIT_FLAG32(bit) (1u << (bit))
@@ -81,7 +78,6 @@ typedef double flt64;
 
 #define ZERO_STRUCT(struct_ptr) ZERO(struct_ptr, sizeof(*(struct_ptr)))
 #define ZERO_ARRAY(array_ptr) ZERO(array_ptr, ARRAY_COUNT(array_ptr) * sizeof(*(array_ptr)))
-
 
 #ifndef fixed_buffer
 // fixed_buffer(name, size) creates a char array e.g. char name[size]

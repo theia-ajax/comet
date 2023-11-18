@@ -36,14 +36,9 @@ void AssetDatabase_Shutdown(void)
 	hmfree(GAssetDatabase.TypedAssetDatabaseMap);
 }
 
-void AssetDatabase_RegisterAssetType(
-	AssetTypeId AssetType,
-	LoadAssetFunc LoadAsset,
-	UnloadAssetFunc UnloadAsset)
+void AssetDatabase_RegisterAssetType(AssetTypeId AssetType, LoadAssetFunc LoadAsset, UnloadAssetFunc UnloadAsset)
 {
-	ASSERT(
-		hmgeti(GAssetDatabase.TypedAssetDatabaseMap, AssetType) < 0
-		&& "AssetType already registered.");
+	ASSERT(hmgeti(GAssetDatabase.TypedAssetDatabaseMap, AssetType) < 0 && "AssetType already registered.");
 
 	hmput(
 		GAssetDatabase.TypedAssetDatabaseMap,
@@ -57,8 +52,7 @@ void AssetDatabase_RegisterAssetType(
 void* AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char* AssetName)
 {
 	void* Result = NULL;
-	TypedAssetDatabase* AssetDatabase =
-		&hmgetp(GAssetDatabase.TypedAssetDatabaseMap, AssetType)->Value;
+	TypedAssetDatabase* AssetDatabase = &hmgetp(GAssetDatabase.TypedAssetDatabaseMap, AssetType)->Value;
 
 	ASSERT(AssetDatabase != NULL && "AssetType not registered.");
 

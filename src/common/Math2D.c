@@ -323,8 +323,7 @@ bool CircleIntersectsPolygon(const CircleShape* A, Tform2 TransformA, const Poly
 			.MaxFraction = 1.0f,
 		};
 		RaycastOut RaycastResult;
-		if (CircleRaycast(A, TransformA, &Raycast, &RaycastResult))
-		{
+		if (CircleRaycast(A, TransformA, &Raycast, &RaycastResult)) {
 			return true;
 		}
 	}
@@ -475,8 +474,7 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 	PolygonLocalize(A, TransformA, &LocalA);
 	PolygonLocalize(B, TransformB, &LocalB);
 
-	for (int32 EdgeIndex = 0; EdgeIndex < A->VertexCount + B->VertexCount; EdgeIndex++)
-	{
+	for (int32 EdgeIndex = 0; EdgeIndex < A->VertexCount + B->VertexCount; EdgeIndex++) {
 		Vec2 Normal;
 		if (EdgeIndex < A->VertexCount) {
 			Normal = LocalA.Normals[EdgeIndex];
@@ -486,17 +484,15 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 
 		flt32 DotA = Dot(LocalA.Vertices[0], Normal);
 		flt32 MinA = DotA, MaxA = DotA;
-		for (int32 Index = 1; Index < A->VertexCount; Index++)
-		{
+		for (int32 Index = 1; Index < A->VertexCount; Index++) {
 			DotA = Dot(LocalA.Vertices[Index], Normal);
 			MinA = Min(MinA, DotA);
 			MaxA = Max(MaxA, DotA);
 		}
-		
+
 		flt32 DotB = Dot(LocalB.Vertices[0], Normal);
 		flt32 MinB = DotB, MaxB = DotB;
-		for (int32 Index = 1; Index < B->VertexCount; Index++)
-		{
+		for (int32 Index = 1; Index < B->VertexCount; Index++) {
 			DotB = Dot(LocalB.Vertices[Index], Normal);
 			MinB = Min(MinB, DotB);
 			MaxB = Max(MaxB, DotB);
@@ -508,7 +504,7 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 		}
 	}
 
-	#if 0
+#if 0
 	Vec2 RotatedNormals0[KPolygonMaxVerts];
 	Vec2 RotatedNormals1[KPolygonMaxVerts];
 
@@ -538,7 +534,7 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 	}
 
 	return false;
-	#endif
+#endif
 
 	return true;
 }

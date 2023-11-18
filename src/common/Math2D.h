@@ -123,7 +123,6 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count);
 // Inline Implementations
 // -------------------------------------------------------
 
-
 #ifdef Swap
 // Allows Types.h Swap to exist without needing to know about vector math types
 // Means code that doesn't care about vector math doesn't need to include this file to get Swap support on primtives.

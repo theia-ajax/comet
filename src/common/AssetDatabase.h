@@ -13,8 +13,5 @@ typedef void (*UnloadAssetFunc)(void* Asset);
 
 void AssetDatabase_Initialize(void);
 void AssetDatabase_Shutdown(void);
-void AssetDatabase_RegisterAssetType(
-	AssetTypeId AssetType,
-	LoadAssetFunc LoadAsset,
-	UnloadAssetFunc UnloadAsset);
+void AssetDatabase_RegisterAssetType(AssetTypeId AssetType, LoadAssetFunc LoadAsset, UnloadAssetFunc UnloadAsset);
 void* AssetDatabase_LoadAssetWithType(AssetTypeId AssetType, const char* AssetName);

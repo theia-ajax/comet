@@ -232,13 +232,14 @@ void DrawRender(void)
 		switch (DrawCmd->Shape) {
 			case KShapeCircle:
 				SDL_RenderDrawCircle(
-					GDraw.Renderer, (SDL_FPoint*)&DrawCmd->PrimCircle.Center, DrawCmd->PrimCircle.Radius);
+					GDraw.Renderer,
+					(SDL_FPoint*)&DrawCmd->PrimCircle.Center,
+					DrawCmd->PrimCircle.Radius);
 				break;
 			case KShapePolygon:
 				{
 					SDL_FPoint Points[KPolygonMaxVerts + 1];
-					memcpy(
-						Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
+					memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
 					Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
 					const int32 Count = DrawCmd->PrimPolygon.VertexCount;
 					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {

@@ -310,8 +310,7 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 					P1->Position = Sub(P1->Position, DeltaV2);
 				}
 				break;
-			default:
-				break;
+			default: break;
 		}
 	}
 
@@ -346,7 +345,8 @@ static void _PhysicsApplyHeat(void)
 {
 	for (ptrdiff_t ObjectIndex = 0; ObjectIndex < arrlen(GPhysics.Objects); ObjectIndex++) {
 		PhysicsObjectAccelerate(
-			&GPhysics.Objects[ObjectIndex], Mul(GPhysics.Config.HeatForce, GPhysics.Objects[ObjectIndex].Heat));
+			&GPhysics.Objects[ObjectIndex],
+			Mul(GPhysics.Config.HeatForce, GPhysics.Objects[ObjectIndex].Heat));
 	}
 }
 

@@ -146,7 +146,8 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 		FutureEntityId: _Generic(((Component){0})COMPONENT_QUEUE_ADD_FUTURE_ENTITY_ID_GENERIC_ENTRIES(                 \
 			COMPONENT_TYPE_LIST)),                                                                                     \
 		EntityId: _Generic(((Component){0})COMPONENT_QUEUE_ADD_ENTITY_ID_GENERIC_ENTRIES(COMPONENT_TYPE_LIST)))(       \
-		(Queue), (Entity))
+		(Queue),                                                                                                       \
+		(Entity))
 
 #define QueueRemoveComponent(Component, Queue, Entity)                                                                 \
 	_Generic(                                                                                                          \
@@ -154,7 +155,8 @@ FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
 		FutureEntityId: _Generic(((Component){0})COMPONENT_QUEUE_REMOVE_FUTURE_ENTITY_ID_GENERIC_ENTRIES(              \
 			COMPONENT_TYPE_LIST)),                                                                                     \
 		EntityId: _Generic(((Component){0})COMPONENT_QUEUE_REMOVE_ENTITY_ID_GENERIC_ENTRIES(COMPONENT_TYPE_LIST)))(    \
-		(Queue), (Entity))
+		(Queue),                                                                                                       \
+		(Entity))
 
 #define GetComponent(Component, World, Entity)                                                                         \
 	_Generic(((Component){0})COMPONENT_GET_GENERIC_ENTRIES(COMPONENT_TYPE_LIST))((World), (Entity))

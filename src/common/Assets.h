@@ -44,10 +44,10 @@ typedef struct Asset {
 #define ASSET_DATA(Type) CAT(Type, Data)
 #define ASSET_CAST(Type, Asset) (ASSET(Type)*)(Asset)
 
-#define DEFINE_ASSET(Type)                                                                     \
-	typedef struct ASSET(Type) {                                                               \
-		AssetMetaData Meta;                                                                        \
-		ASSET_DATA(Type)* Data;                                                                            \
+#define DEFINE_ASSET(Type)                                                                                             \
+	typedef struct ASSET(Type) {                                                                                       \
+		AssetMetaData Meta;                                                                                            \
+		ASSET_DATA(Type) * Data;                                                                                       \
 	} ASSET(Type);
 
 AssetType GetAssetType(const Asset* Self);
