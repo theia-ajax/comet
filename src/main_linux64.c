@@ -7,13 +7,21 @@
 
 #include "common/Game.h"
 
+static SDL_Window* GWindow = NULL;
+
+void HandleExit(int Status, void* Arg)
+{
+	GameShutdown();
+	SDL_Quit();
+}
+
 int main(int argc, char* argv[])
 {
 	stm_setup();
-
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	GWindow = Window;
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
@@ -34,6 +42,8 @@ int main(int argc, char* argv[])
 		.MemorySizeInBytes = MemoryBytes,
 		.Window = Window,
 	});
+	
+	on_exit(HandleExit, NULL);
 
 	ASSERT(Success);
 
@@ -89,9 +99,11 @@ int main(int argc, char* argv[])
 		// game->game_state.game_frame++;
 	}
 
-	GameShutdown();
-
-	SDL_Quit();
-
 	return 0;
+}
+
+[[_Noreturn]] void PanicAndAbort(const char* Title, const char* Message)
+{
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Title, Message, GWindow);
+	exit(1);
 }

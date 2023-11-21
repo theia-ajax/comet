@@ -2,6 +2,7 @@
 
 #include <stb_ds.h>
 
+#include "FrameAllocator.h"
 #include "Log.h"
 #include "Util.h"
 
@@ -59,6 +60,15 @@ typedef struct GameWorldCommand {
 	void* ComponentStorage;
 } GameWorldCommand;
 
+typedef struct QueryId {
+	int32 RawValue;
+} QueryId;
+
+typedef struct QueryData {
+	EntityId* Entities;
+	void* Components[ComponentType_Count];
+} QueryData;
+
 typedef struct GameWorld {
 	// GameEntity* Entities;
 	EntityId* ActiveEntities;
@@ -76,11 +86,15 @@ typedef struct GameWorld {
 	int32 AllTimeHighGenerationFirstIndex;
 } GameWorld;
 
+static bool AssertEntityIdIsValid(GameWorld* World, EntityId Entity);
+
 static void* ReallocComponentMemory(void* Memory, int32 ElementSize, int32 LastCapacity, int32 NewCapacity);
 static EntityId* ReallocEntities(EntityId* Entities, int32 LastCapacity, int32 NewCapacity);
 static int32* ReallocIndices(int32* Indices, int32 LastCapacity, int32 NewCapacity);
 
 // Component list
+typedef int32(UntypedComponentCompareFunc)(GameWorld*, const void*, const void*);
+
 static UntypedComponentList CreateComponentList(
 	GameWorld* World,
 	ComponentType Type,
@@ -93,6 +107,8 @@ static void* ComponentListAdd(UntypedComponentList* List, EntityId Entity);
 static void ComponentListRemove(UntypedComponentList* List, EntityId Entity);
 static void* ComponentListGet(UntypedComponentList* List, EntityId Entity);
 static bool ComponentListHas(UntypedComponentList* List, EntityId Entity);
+static void ComponentListSort(UntypedComponentList* List, UntypedComponentCompareFunc* Compare);
+static void ComponentListSwapIndices(UntypedComponentList* List, int32 IndexA, int32 IndexB);
 
 // Entity-component internal API, all higher level entity-component macros call into here (AddComponent,
 // RemoveComponent, etc...)
@@ -217,12 +233,130 @@ int32 _GetNextGeneration(GameWorld* World, EntityId Entity)
 	return NextGeneration;
 }
 
-void DestroyEntity(GameWorld* World, EntityId Entity)
+int32 GetComponentForAll(
+	GameWorld* World,
+	ComponentType Type,
+	EntityId* Entities,
+	int32 EntityCount,
+	void* OutComponentBuffer,
+	int32 MaxComponents)
+{
+	UntypedComponentList* List = &World->ComponentLists[Type];
+
+	int32 Index;
+	for (Index = 0; Index < EntityCount && Index < MaxComponents; Index++) {
+		const void* ComponentSource = EntityGetComponent(World, Entities[Index], Type);
+		void* NextComponent = (uint8*)OutComponentBuffer + (Index * List->ComponentSize);
+		memcpy(NextComponent, ComponentSource, List->ComponentSize);
+	}
+	return Index;
+}
+
+int32 ChildOfComponentCompare(const ChildOfComponent* A, const ChildOfComponent* B)
+{
+	return A->Parent.RawValue - B->Parent.RawValue;
+}
+
+struct ParentEntityPair {
+	EntityId Entity;
+	EntityId Parent;
+};
+
+int32 ParentEntityPairCompareVoid(const void* A, const void* B)
+{
+	return ((struct ParentEntityPair*)A)->Parent.RawValue - ((struct ParentEntityPair*)B)->Parent.RawValue;
+}
+
+int32 ChildOfComponentCompareVoid(const void* A, const void* B)
+{
+	return ChildOfComponentCompare((ChildOfComponent*)A, (ChildOfComponent*)B);
+}
+
+int32 EntityGetChildren(GameWorld* World, EntityId Entity, EntityId* OutChildren, int32 MaxChildren)
+{
+	ASSERT(World);
+	ASSERT(OutChildren);
+	ASSERT(AssertEntityIdIsValid(World, Entity));
+
+	EntityId* Stack = NULL;
+	arrsetcap(Stack, MaxChildren);
+	int32 ChildrenCount = 0;
+
+	arrput(Stack, Entity);
+
+	EntityId* ChildOfEntities = WorldQueryEntities(World, REQUIRED(ChildOf), REJECTED());
+	int32 ChildOfQueryCount = QueryCount(ChildOfEntities);
+	size_t SizeNeeded = sizeof(ChildOfComponent) * ChildOfQueryCount;
+	ChildOfComponent* ChildOfsSortedByParent = (ChildOfComponent*)FrameAlloc(SizeNeeded);
+	int32* SortIndices = (int32*)FrameAlloc(sizeof(int32) * ChildOfQueryCount);
+	int32 ChildOfCount = GetComponentForAll(
+		World,
+		ComponentType_ChildOf,
+		ChildOfEntities,
+		QueryCount(ChildOfEntities),
+		ChildOfsSortedByParent,
+		QueryCount(ChildOfEntities));
+
+	// SDL_qsort(ChildOfsSortedByParent, ChildOfCount, sizeof(ChildOfComponent), ChildOfComponentCompareVoid);
+	AssociativeInsertSort(
+		ChildOfsSortedByParent,
+		sizeof(ChildOfComponent),
+		ChildOfCount,
+		SortIndices,
+		ChildOfComponentCompareVoid);
+	ApplyAssociativeIndices(ChildOfEntities, sizeof(EntityId), ChildOfQueryCount, SortIndices);
+
+	while (arrlen(Stack) > 0) {
+		const EntityId Next = arrpop(Stack);
+		if (ChildrenCount < MaxChildren) {
+			OutChildren[ChildrenCount] = Next;
+			ChildrenCount++;
+		} else {
+			PanicAndAbort("GameWorld", "Fix this");
+		}
+
+		_Static_assert(
+			sizeof(EntityId) == sizeof(ChildOfComponent),
+			"This casting to EntityId won't work if this isn't true.");
+		const int32 FindIndex = BinarySearch(Next, (EntityId*)ChildOfsSortedByParent, ChildOfCount);
+
+		if (FindIndex != NONE) {
+			int32 EndIndex = FindIndex;
+
+			// FindIndex will point to first instance of found value, scan forward until we find a child without a
+			// matching parent, add the entity associated with that child to
+			for (int32 ChildIndex = FindIndex; ChildIndex < ChildOfCount; ChildIndex++) {
+				ChildOfComponent* ChildOf = ChildOfsSortedByParent + ChildIndex;
+				if (ChildOf->Parent.RawValue == Next.RawValue) {
+					arrput(Stack, ChildOfEntities[ChildIndex]);
+					EndIndex++;
+				} else {
+					break;
+				}
+			}
+
+			memmove(
+				ChildOfsSortedByParent + FindIndex,
+				ChildOfsSortedByParent + EndIndex,
+				(ChildOfCount - EndIndex) * sizeof(*ChildOfsSortedByParent));
+			memmove(
+				ChildOfEntities + FindIndex,
+				ChildOfEntities + EndIndex,
+				(ChildOfCount - EndIndex) * sizeof(*ChildOfEntities));
+			const int32 RemovedCount = EndIndex - FindIndex;
+			ChildOfCount -= RemovedCount;
+		}
+	}
+
+	return ChildrenCount;
+}
+
+void _InternalDestroyEntity(GameWorld* World, EntityId Entity)
 {
 	ASSERT(World);
 	ASSERT(!World->IsLocked && "Cannot destroy entities while world is locked.");
 
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	LogInfo("Destroy Entity [%d:%d]%u", ENTITY_ID_INDEX(Entity), ENTITY_ID_GENERATION(Entity), Entity.RawValue);
 
 	const int32 EntityIndex = ENTITY_ID_INDEX(Entity);
@@ -261,7 +395,22 @@ void DestroyEntity(GameWorld* World, EntityId Entity)
 	}
 }
 
-bool EntityIdIsValid(GameWorld* World, EntityId Entity)
+void DestroyEntity(GameWorld* World, EntityId Entity)
+{
+	EntityId EntityBuffer[1024];
+	int32 Children = EntityGetChildren(World, Entity, EntityBuffer, ARRAY_COUNT(EntityBuffer));
+	for (int32 Index = 0; Index < Children; Index++) {
+		_InternalDestroyEntity(World, EntityBuffer[Index]);
+	}
+}
+
+inline bool EntityIdIsValid(GameWorld* World, EntityId Entity)
+{
+	return ENTITY_ID_NEQ(Entity, ENTITY_ID_INVALID) && VALID_INDEX(ENTITY_ID_INDEX(Entity), World->EntityCapacity) &&
+		   ENTITY_ID_GENERATION(Entity) == World->EntityGenerations[ENTITY_ID_INDEX(Entity)];
+}
+
+static bool AssertEntityIdIsValid(GameWorld* World, EntityId Entity)
 {
 	ASSERT(!ENTITY_ID_EQ(Entity, ENTITY_ID_INVALID));
 	if (ENTITY_ID_EQ(Entity, ENTITY_ID_INVALID)) {
@@ -282,7 +431,7 @@ bool EntityIdIsValid(GameWorld* World, EntityId Entity)
 
 EntitySignature EntityGetSignature(GameWorld* World, EntityId Entity)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	return World->EntitySignatures[EntityIndex];
 }
@@ -304,24 +453,40 @@ EntityId* WorldEntitiesEnd(GameWorld* World)
 
 EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntitySignature Rejected)
 {
-	EntityId* Entities = NULL;
-	arrsetcap(Entities, arrlen(World->ActiveEntities));
+	int32 EntityCount = WorldEntityCount(World);
+	size_t QuerySize = EntityCount * sizeof(EntityId) + sizeof(int32);
+	void* Query = FrameAlloc(QuerySize);
+	int32* QueryCount = (int32*)Query;
+	*QueryCount = 0;
+
+	EntityId* Entities = (EntityId*)(QueryCount + 1);
 
 	for (int32 Index = 0; Index < arrlen(World->ActiveEntities); Index++) {
 		EntityId Entity = World->ActiveEntities[Index];
 		int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 		EntitySignature Signature = World->EntitySignatures[EntityIndex];
 		if (EntitySignaturePassesFilter(Signature, Required, Rejected)) {
-			arrput(Entities, Entity);
+			Entities[*QueryCount] = Entity;
+			(*QueryCount)++;
 		}
 	}
 
 	return Entities;
 }
 
-void WorldQueryFree(EntityId* Query)
+EntityId* QueryBegin(const EntityId* Query)
 {
-	arrfree(Query);
+	return (EntityId*)Query;
+}
+
+EntityId* QueryEnd(const EntityId* Query)
+{
+	return (EntityId*)Query + QueryCount(Query);
+}
+
+inline int32 QueryCount(const EntityId* Query)
+{
+	return *((int32*)Query - 1);
 }
 
 int32 WorldEntityCount(GameWorld* World)
@@ -655,6 +820,42 @@ static bool ComponentListHas(UntypedComponentList* List, EntityId Entity)
 	return List->Indices[EntityIndex] != NONE;
 }
 
+static inline void* MemoryOffset(void* Memory, int32 ElementSize, int32 ElementIndex)
+{
+	return (uint8*)Memory + (ElementSize * ElementIndex);
+}
+
+static void ComponentListSort(UntypedComponentList* List, UntypedComponentCompareFunc* Compare)
+{
+	void* Mem = List->ComponentMemory;
+	int32 Size = List->ComponentSize;
+	for (int32 I = 1; I < List->Count; I++) {
+		int32 J = I;
+		while (J > 0 && Compare(List->World, MemoryOffset(Mem, Size, J), MemoryOffset(Mem, Size, J - 1)) >= 0) {
+			ComponentListSwapIndices(List, J, J - 1);
+			J--;
+		}
+	}
+}
+
+static void ComponentListSwapIndices(UntypedComponentList* List, int32 IndexA, int32 IndexB)
+{
+	ASSERT(List);
+	ASSERT(List->ComponentMemory);
+	ASSERT(VALID_INDEX(IndexA, List->Count));
+	ASSERT(VALID_INDEX(IndexB, List->Count));
+
+	SWAP_REF(int32, List->Indices + IndexA, List->Indices + IndexB);
+	SWAP_REF(EntityId, List->Entities + IndexA, List->Entities + IndexB);
+
+	uint8 Temp[KMaxComponentSizeInBytes];
+	void* ComponentA = MemoryOffset(List->ComponentMemory, List->ComponentSize, IndexA);
+	void* ComponentB = MemoryOffset(List->ComponentMemory, List->ComponentSize, IndexB);
+	memcpy(Temp, ComponentA, List->ComponentSize);
+	memcpy(ComponentA, ComponentB, List->ComponentSize);
+	memcpy(ComponentB, Temp, List->ComponentSize);
+}
+
 static inline UntypedComponentList* _GetComponentList(GameWorld* World, ComponentType Type)
 {
 	ASSERT(VALID_INDEX(Type, ComponentType_Count));
@@ -665,7 +866,7 @@ static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType
 {
 	ASSERT(World);
 	ASSERT(!World->IsLocked && "Cannot add components while world is locked.");
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
 	LogInfo(
@@ -680,7 +881,7 @@ static void EntityRemoveComponent(GameWorld* World, EntityId Entity, ComponentTy
 {
 	ASSERT(World);
 	ASSERT(!World->IsLocked && "Cannot remove components while world is locked.");
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue &= ~(BIT_FLAG64(Type));
 	ComponentListRemove(_GetComponentList(World, Type), Entity);
@@ -750,13 +951,13 @@ static void QueueRemoveComponentFutureEntityId(GameWorldCommandQueue* Queue, Fut
 
 static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	return ComponentListGet(_GetComponentList(World, Type), Entity);
 }
 
 static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	void* Result = NULL;
 	if (EntityHasComponent(World, Entity, Type)) {
 		Result = ComponentListGet(_GetComponentList(World, Type), Entity);
@@ -766,7 +967,7 @@ static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentT
 
 static bool EntityHasComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
-	ASSERT(EntityIdIsValid(World, Entity));
+	ASSERT(AssertEntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	return (World->EntitySignatures[EntityIndex].RawValue & BIT_FLAG64(Type)) != 0;
 }

@@ -7,6 +7,7 @@
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
+#include "FrameAllocator.h"
 #include "GameWorld.h"
 #include "Log.h"
 #include "Math2D.h"
@@ -60,6 +61,7 @@ struct {
 	// PhysWorld* Physics;
 	GameWorld* World;
 	EntityId PlayerEntity;
+	EntityId PlayerAnchorEntity;
 	EntityId LevelEntity;
 	flt32 Timer;
 	flt32 SecondTimer;
@@ -75,6 +77,8 @@ bool GameInitialize(const GameInitParams* params)
 #endif
 	LoggingInitialize(LoggingLevel);
 	LogInfo(__FUNCTION__);
+
+	FrameAllocatorInitialize(KILOBYTES(640));
 
 	uint32 RandomSeed = (uint32)SDL_GetPerformanceCounter();
 	rnd_pcg_seed(&GGame.RandomGen, RandomSeed);
@@ -217,6 +221,8 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 {
+	LogInfo(__FUNCTION__);
+
 	EntityId Entity = CreateEntity(World);
 
 	*AddComponent(TransformComponent, World, Entity) = (TransformComponent){
@@ -224,47 +230,42 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 		.Rotation = 0.25f,
 	};
 	AddComponent(VelocityComponent, World, Entity);
-
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
 		.SpriteId = SPRITE_ID(
 			SpriteSheetId_ShipObjects,
 			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("darkgrey_06"))),
 	};
-
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
 		.Group = Group_Friendly,
 		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
 	};
 
+	LogInfo("  Anchor ________________");
 	EntityId AnchorEntity = CreateEntity(World);
+	// TODO: Find this via queries or something
+	GGame.PlayerAnchorEntity = AnchorEntity;
 	AddComponent(TransformComponent, World, AnchorEntity);
-	AddComponent(LocalTransformComponent, World, AnchorEntity)->ParentEntity = Entity;
+	AddComponent(LocalTransformComponent, World, AnchorEntity);
+	AddComponent(ChildOfComponent, World, AnchorEntity)->Parent = Entity;
 
+	LogInfo("  Drone0 ________________");
 	EntityId DroneEntity0 = CreateEntity(World);
-	EntityId DroneEntity1 = CreateEntity(World);
 
 	AddComponent(TransformComponent, World, DroneEntity0);
+	AddComponent(ChildOfComponent, World, DroneEntity0)->Parent = AnchorEntity;
+	AddComponent(LocalTransformComponent, World, DroneEntity0)->LocalPosition = V2(32, 0);
+	AddComponent(SpriteComponent, World, DroneEntity0)->SpriteId =
+		SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1")));
+
+	LogInfo("  Drone1 ________________");
+	EntityId DroneEntity1 = CreateEntity(World);
+
 	AddComponent(TransformComponent, World, DroneEntity1);
-
-	*AddComponent(LocalTransformComponent, World, DroneEntity0) = (LocalTransformComponent){
-		.ParentEntity = Entity,
-		.LocalPosition = V2(32, 0),
-	};
-
-	*AddComponent(SpriteComponent, World, DroneEntity0) = (SpriteComponent){
-		.SpriteId =
-			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1"))),
-	};
-
-	*AddComponent(LocalTransformComponent, World, DroneEntity1) = (LocalTransformComponent){
-		.ParentEntity = AnchorEntity,
-		.LocalPosition = V2(-32, 0),
-	};
-	*AddComponent(SpriteComponent, World, DroneEntity1) = (SpriteComponent){
-		.SpriteId =
-			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1"))),
-	};
+	AddComponent(ChildOfComponent, World, DroneEntity1)->Parent = AnchorEntity;
+	AddComponent(LocalTransformComponent, World, DroneEntity1)->LocalPosition = V2(-32, 0);
+	AddComponent(SpriteComponent, World, DroneEntity1)->SpriteId =
+		SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1")));
 
 	return Entity;
 }
@@ -304,6 +305,7 @@ void GameShutdown(void)
 	DebugShutdown();
 	DestroyGameWorld(GGame.World);
 	StringIdPoolsShutdown();
+	FrameAllocatorShutdown();
 
 	LogInfo(__FUNCTION__);
 	LoggingShutdown();
@@ -318,7 +320,10 @@ void GameSendInput(const GameInput* input)
 void GameProcessEvent(const SDL_Event* event)
 {
 	if (event->type == SDL_EVENT_KEY_DOWN && event->key.keysym.scancode == SDL_SCANCODE_F) {
-		LogError("Error test");
+		if (EntityIdIsValid(GGame.World, GGame.PlayerEntity)) {
+			DestroyEntity(GGame.World, GGame.PlayerEntity);
+			LogError("DELETED!");
+		}
 	}
 }
 
@@ -370,30 +375,30 @@ AABB ColliderCalcAABB(const ColliderComponent* Collider, Tform2 Transform)
 
 void GameUpdate(const GameTime* gameTime)
 {
+	FrameAllocatorNextFrame();
 	DebugNextFrame();
 
 	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
 	MovementSystemUpdate(GGame.World, gameTime);
 
 	{
-		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform), REJECTED());
-		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 			// todo: very dumb and bad just getting absolute basic case working
 			// Tform2 ParentTransform;
 			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
 			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
+			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
 			Tform2 ParentT2 = (Tform2){0};
 			flt32 ParentRotation = 0.0f;
-			if (LocalTransform->ParentEntity.RawValue != 0) {
-				TransformComponent* ParentTransform =
-					GetComponent(TransformComponent, GGame.World, LocalTransform->ParentEntity);
+			if (ChildOf->Parent.RawValue != 0) {
+				TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
 				ParentT2 = T2Component(ParentTransform);
 				ParentRotation = ParentTransform->Rotation;
 			}
 			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
 			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
 		}
-		WorldQueryFree(Query);
 	}
 
 	DamageSystemUpdate(GGame.World, gameTime);
@@ -457,18 +462,22 @@ void GameRequestShutdown(void)
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
 {
-	VelocityComponent* V = GetComponent(VelocityComponent, World, GGame.PlayerEntity);
-	Vec2 MoveXY = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
-	V->Velocity = Mul(Norm(MoveXY), 84.0f);
-	V->AngularVelocity = 0.1f;
-	if (GGame.Timer > 0.0f) GGame.Timer -= Time->DeltaTimeF;
-	if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
-		GGame.Timer += 0.18f;
-		TransformComponent* T = GetComponent(TransformComponent, World, GGame.PlayerEntity);
-		Vec2 SpawnPosition = Add(T->Position, V2(16.0f, 0.0));
-		flt32 SpawnRotation = T->Rotation - 0.25f;
-		for (int i = -5; i <= 5; i += 1) {
-			CreateProjectile(World, SpawnPosition, SpawnRotation + (i * 0.015f), 256.0f);
+	if (EntityIdIsValid(World, GGame.PlayerEntity)) {
+		VelocityComponent* V = GetComponent(VelocityComponent, World, GGame.PlayerEntity);
+		Vec2 MoveXY = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
+		V->Velocity = Mul(Norm(MoveXY), 84.0f);
+		// V->AngularVelocity = 0.1f;
+		GetComponent(LocalTransformComponent, World, GGame.PlayerAnchorEntity)->LocalRotation +=
+			Time->DeltaTimeF * 0.1f;
+		if (GGame.Timer > 0.0f) GGame.Timer -= Time->DeltaTimeF;
+		if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
+			GGame.Timer += 0.18f;
+			TransformComponent* T = GetComponent(TransformComponent, World, GGame.PlayerEntity);
+			Vec2 SpawnPosition = Add(T->Position, V2(16.0f, 0.0));
+			flt32 SpawnRotation = T->Rotation - 0.25f;
+			for (int i = -5; i <= 5; i += 1) {
+				CreateProjectile(World, SpawnPosition, SpawnRotation + (i * 0.015f), 256.0f);
+			}
 		}
 	}
 }
@@ -476,7 +485,7 @@ void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
 void MovementSystemUpdate(GameWorld* World, const GameTime* Time)
 {
 	EntityId* Query = WorldQueryEntities(World, REQUIRED(Transform, Velocity), REJECTED());
-	for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 		EntityId Entity = *Iter;
 		TransformComponent* T = GetComponent(TransformComponent, World, Entity);
 		VelocityComponent* V = GetComponent(VelocityComponent, World, Entity);
@@ -484,7 +493,6 @@ void MovementSystemUpdate(GameWorld* World, const GameTime* Time)
 		T->Position = Add(T->Position, Mul(V->Velocity, Time->DeltaTimeF));
 		T->Rotation += V->AngularVelocity * Time->DeltaTimeF;
 	}
-	WorldQueryFree(Query);
 }
 
 struct DamageEvent {
@@ -508,12 +516,12 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 	arrsetcap(DamageEvents, 256);
 
 	EntityId* Query = WorldQueryEntities(World, REQUIRED(Transform, Collider), REJECTED());
-	for (EntityId* Iter0 = Query; Iter0 != arrend(Query); Iter0++) {
+	for (EntityId* Iter0 = QueryBegin(Query); Iter0 != QueryEnd(Query); Iter0++) {
 		EntityId Entity0 = *Iter0;
 		ColliderComponent* Collider0 = GetComponent(ColliderComponent, World, Entity0);
 		Tform2 Transform0 = T2Component(GetComponent(TransformComponent, World, Entity0));
 		AABB Bounds0 = ColliderCalcAABB(Collider0, Transform0);
-		for (EntityId* Iter1 = Iter0 + 1; Iter1 != arrend(Query); Iter1++) {
+		for (EntityId* Iter1 = Iter0 + 1; Iter1 != QueryEnd(Query); Iter1++) {
 			EntityId Entity1 = *Iter1;
 			if (!ENTITY_ID_EQ(Entity0, Entity1)) {
 				ColliderComponent* Collider1 = GetComponent(ColliderComponent, World, Entity1);
@@ -542,7 +550,6 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 			}
 		}
 	}
-	WorldQueryFree(Query);
 
 	SDL_qsort(DamageEvents, arrlenu(DamageEvents), sizeof(*DamageEvents), DamageEventCompareVoid);
 
@@ -562,7 +569,7 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 
 	{
 		EntityId* Query = WorldQueryEntities(World, REQUIRED(DamageReceiver, Durability), REJECTED());
-		for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 			DamageReceiverComponent* Receiver = GetComponent(DamageReceiverComponent, World, *Iter);
 			DurabilityComponent* Durability = GetComponent(DurabilityComponent, World, *Iter);
 			Durability->CurrentDurability -= Receiver->DamageAccumulator;
@@ -571,14 +578,13 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 				DestroyEntity(World, *Iter);
 			}
 		}
-		WorldQueryFree(Query);
 	}
 }
 
 void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time)
 {
 	EntityId* Query = WorldQueryEntities(World, REQUIRED(Lifetime), REJECTED());
-	for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 		EntityId Entity = *Iter;
 		LifetimeComponent* L = GetComponent(LifetimeComponent, World, Entity);
 		if (L->SecondsRemaining >= 0.0f) {
@@ -588,13 +594,12 @@ void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time)
 			}
 		}
 	}
-	WorldQueryFree(Query);
 }
 
 void SpriteSystemRender(GameWorld* World)
 {
 	EntityId* Query = WorldQueryEntities(World, REQUIRED(Transform, Sprite), REJECTED());
-	for (EntityId *Iter = Query, *Last = arrend(Query); Iter != Last; Iter++) {
+	for (EntityId *Iter = QueryBegin(Query), *Last = QueryEnd(Query); Iter != Last; Iter++) {
 		EntityId Entity = *Iter;
 		TransformComponent* T = GetComponent(TransformComponent, World, Entity);
 		SpriteComponent* S = GetComponent(SpriteComponent, World, Entity);
@@ -611,13 +616,12 @@ void SpriteSystemRender(GameWorld* World)
 			.TintColor = (Tint != NULL) ? ColorV4ToColorU8(Tint->TintColor) : (ColorU8){0},
 		});
 	}
-	WorldQueryFree(Query);
 }
 
 void ColliderSystemDebugRender(GameWorld* World)
 {
 	EntityId* Query = WorldQueryEntities(World, REQUIRED(Transform, Collider), REJECTED());
-	for (EntityId* Iter = Query; Iter != arrend(Query); Iter++) {
+	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 		EntityId Entity = *Iter;
 		TransformComponent* T = GetComponent(TransformComponent, World, Entity);
 		ColliderComponent* S = GetComponent(ColliderComponent, World, Entity);
@@ -632,7 +636,6 @@ void ColliderSystemDebugRender(GameWorld* World)
 			default: unreachable(); break;
 		}
 	}
-	WorldQueryFree(Query);
 }
 
 Tform2 T2Component(const TransformComponent* Transform)

@@ -216,3 +216,5 @@ typedef double flt64;
 
 #define IMPLEMENT_DATA_ARRAY(type) IMPLEMENT_DATA_ARRAY_INTERFACE(type)
 // -------------------------------------------------------
+
+[[_Noreturn]] void PanicAndAbort(const char* Title, const char* Message);

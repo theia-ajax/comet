@@ -7,6 +7,7 @@
 
 typedef struct GameWorld GameWorld;
 typedef struct GameWorldCommandQueue GameWorldCommandQueue;
+typedef struct ComponentList ComponentList;
 
 GameWorld* CreateGameWorld(void);
 void DestroyGameWorld(GameWorld* World);
@@ -19,7 +20,9 @@ bool EntitySignaturePassesFilter(EntitySignature Signature, EntitySignature Requ
 EntityId* WorldEntitiesBegin(GameWorld* World);
 EntityId* WorldEntitiesEnd(GameWorld* World);
 EntityId* WorldQueryEntities(GameWorld* World, EntitySignature Required, EntitySignature Rejected);
-void WorldQueryFree(EntityId* Query);
+EntityId* QueryBegin(const EntityId* Query);
+EntityId* QueryEnd(const EntityId* Query);
+int32 QueryCount(const EntityId* Query);
 int32 WorldEntityCount(GameWorld* World);
 // BufferLength is required to be at least the same size as ComponentType_Count
 void WorldComponentCounts(GameWorld* World, int32* OutBuffer, int32 BufferLength);
@@ -64,6 +67,13 @@ void WorldDeferQueueEnd(GameWorld* World);
 #define COMPONENT_TRYGET_NAME(Type) COMPONENT_FUNC_NAME(EntityTryGet, Type)
 #define COMPONENT_HAS_NAME(Type) COMPONENT_FUNC_NAME(EntityHas, Type)
 #define COMPONENT_HAS(Type) CAT(EntityHas, Type)
+#define COMPONENT_GET_LIST_NAME(Type) CAT(COMPONENT_NAME(Type), List)
+#define COMPONENT_COMPARE_NAME(Type) CAT(COMPONENT_NAME(Type), Compare)
+
+#define DEFINE_COMPONENT_COMPARE_FUNC(Type)                                                                            \
+	typedef int32(                                                                                                     \
+		CAT(COMPONENT_COMPARE_NAME(Type),                                                                              \
+			Func))(GameWorld*, const COMPONENT_NAME(Type) * A, const COMPONENT_NAME(Type) * B);
 
 #define ADD_COMPONENT_PROTOTYPE(Type)                                                                                  \
 	COMPONENT_NAME(Type) * COMPONENT_ADD_NAME(Type)(GameWorld * World, EntityId Entity)
@@ -99,6 +109,7 @@ void WorldDeferQueueEnd(GameWorld* World);
 	DECLARE_COMPONENT_INTERFACES(__VA_ARGS__)
 
 FOR_EACH(DECLARE_COMPONENT_INTERFACE, COMPONENT_TYPE_LIST);
+FOR_EACH(DEFINE_COMPONENT_COMPARE_FUNC, COMPONENT_TYPE_LIST);
 
 // _Generic setups for Add/Remove/Get/Has
 #define COMPONENT_ADD_GENERIC_ENTRY(Type) , COMPONENT_NAME(Type) : COMPONENT_ADD_NAME(Type)

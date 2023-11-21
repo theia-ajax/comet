@@ -2,9 +2,18 @@
 
 #include "Entity.h"
 #include "Math2D.h"
+#include "StringId.h"
 
 // Not really a hard limit atm just seems useful to keep track of bloated components
 enum { KMaxComponentSizeInBytes = 256 };
+
+typedef struct NameComponent {
+	StringId NameId;
+} NameComponent;
+
+typedef struct ChildOfComponent {
+	EntityId Parent;
+} ChildOfComponent;
 
 typedef struct TransformComponent {
 	Vec2 Position;
@@ -12,7 +21,6 @@ typedef struct TransformComponent {
 } TransformComponent;
 
 typedef struct LocalTransformComponent {
-	EntityId ParentEntity;
 	flt32 LocalRotation;
 	Vec2 LocalPosition;
 } LocalTransformComponent;
@@ -84,13 +92,23 @@ typedef struct DurabilityComponent {
 // clang-format off
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
-#define COMPONENT_TYPES                                                                                                \
-	(Transform)(LocalTransform)(Velocity)                                                                              \
-	(Sprite)(SpriteTiles)(RenderLayer)(RenderTint)                                                                     \
-	(Lifetime)(Collider)(DamageSource)(DamageReceiver)(Durability)
+#define COMPONENT_TYPE_LIST                                                                                            \
+	Name,                                                                                                              \
+	ChildOf,                                                                                                           \
+	Transform,                                                                                                         \
+	LocalTransform,                                                                                                    \
+	Velocity,                                                                                                          \
+	Sprite,                                                                                                            \
+	SpriteTiles,                                                                                                       \
+	RenderLayer,                                                                                                       \
+	RenderTint,                                                                                                        \
+	Lifetime,                                                                                                          \
+	Collider,                                                                                                          \
+	DamageSource,                                                                                                      \
+	DamageReceiver,                                                                                                    \
+	Durability
 // clang-format on
 
-#define COMPONENT_TYPE_LIST CHAIN_COMMA(COMPONENT_TYPES)
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
 #define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()
 typedef enum ComponentType {
