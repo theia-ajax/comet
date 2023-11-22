@@ -9,52 +9,65 @@ typedef struct SDL_Surface SDL_Surface;
 typedef enum AssetType {
 	AssetType_None,
 	AssetType_Image,
-	AssetType_SpriteSheetData,
+	AssetType_SpriteSheet,
 	AssetType_Count,
 
 	AssetType_First = AssetType_Image,
 } AssetType;
 
-typedef bool (*LoadAssetDataFunc)(const char* FileName, void* DataOut);
-typedef void (*UnloadAssetDataFunc)(void* Data);
+// typedef bool (*LoadAssetDataFunc)(const char* FileName, void* DataOut);
+// typedef void (*UnloadAssetDataFunc)(void* Data);
 
-typedef struct AssetTypeConfig {
-	AssetType Type;
-	size_t Size;
-	LoadAssetDataFunc LoadAssetData;
-	UnloadAssetDataFunc UnloadAssetData;
-} AssetTypeConfig;
+// typedef struct AssetTypeConfig {
+// 	AssetType Type;
+// 	size_t Size;
+// 	LoadAssetDataFunc LoadAssetData;
+// 	UnloadAssetDataFunc UnloadAssetData;
+// } AssetTypeConfig;
 
-typedef struct AssetsConfig {
-	AssetTypeConfig TypeConfigs[AssetType_Count];
-} AssetsConfig;
+// typedef struct AssetsConfig {
+// 	AssetTypeConfig TypeConfigs[AssetType_Count];
+// } AssetsConfig;
 
-typedef struct AssetMetaData {
-	AssetType Type;
-	StringId Path;
-	size_t Size;
-} AssetMetaData;
+// typedef struct AssetMetaData {
+// } AssetMetaData;
 
-typedef struct Asset {
-	AssetMetaData Meta;
-	void* Data;
-} Asset;
+// typedef struct Asset {
+// 	AssetType Type;
+// 	StringId Path;
+// 	size_t Size;
+// } Asset;
 
-#define ASSET(Type) CAT(Type, Asset)
-#define ASSET_DATA(Type) CAT(Type, Data)
-#define ASSET_CAST(Type, Asset) (ASSET(Type)*)(Asset)
 
-#define DEFINE_ASSET(Type)                                                                                             \
-	typedef struct ASSET(Type) {                                                                                       \
-		AssetMetaData Meta;                                                                                            \
-		ASSET_DATA(Type) * Data;                                                                                       \
-	} ASSET(Type);
 
-AssetType GetAssetType(const Asset* Self);
-const char* GetAssetPath(const Asset* Self);
+// typedef struct ImageAsset {
+// 	uint8* Pixels;
+// 	SDL_Surface* Surface;
+// } ImageAsset;
 
-void AssetsInitialize(const AssetsConfig* config);
-void AssetsShutdown(void);
+// #define ASSET(Type) CAT(Type, Asset)
+// #define ASSET_DATA(Type) CAT(Type, Data)
+// #define ASSET_CAST(Type, Asset) (ASSET(Type)*)(Asset)
 
-Asset* LoadAsset(AssetType Type, const char* FileName);
-void UnloadAsset(Asset* AssetToUnload);
+// #define DEFINE_ASSET(Type)                                                                                             \
+// 	typedef struct ASSET(Type) {                                                                                       \
+// 		AssetMetaData Meta;                                                                                            \
+// 		ASSET_DATA(Type) * Data;                                                                                       \
+// 	} ASSET(Type);
+
+// AssetType GetAssetType(const Asset* Self);
+// const char* GetAssetPath(const Asset* Self);
+
+// void AssetsInitialize(const AssetsConfig* config);
+// void AssetsShutdown(void);
+
+// Asset* LoadAsset(AssetType Type, const char* FileName);
+// void UnloadAsset(Asset* AssetToUnload);
+
+typedef struct Image Image;
+typedef struct SpriteSheet SpriteSheet;
+
+Image* LoadAssetImage(const char* FileName);
+void UnloadAssetImage(Image* Asset);
+
+SpriteSheet* LoadAssetSpriteSheet(const char* FileName);

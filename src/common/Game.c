@@ -112,7 +112,7 @@ bool GameInitialize(const GameInitParams* params)
 				{.LoadAssetData = (LoadAssetDataFunc)LoadImageData,
 				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadImageData,
 				 .Size = sizeof(ImageData)},
-			[AssetType_SpriteSheetData] =
+			[AssetType_SpriteSheet] =
 				{.LoadAssetData = (LoadAssetDataFunc)LoadSpriteSheetData,
 				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadSpriteSheetData,
 				 .Size = sizeof(SpriteSheetData)},
@@ -124,7 +124,7 @@ bool GameInitialize(const GameInitParams* params)
 	GetImage(SpriteSheetId_BGObjects0) = (ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
 	GGame.ShipObjectsSheet =
-		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
+		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheet, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
