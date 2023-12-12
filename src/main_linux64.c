@@ -99,6 +99,9 @@ int main(int argc, char* argv[])
 		// game->game_state.game_frame++;
 	}
 
+	// Should actually figure out if I'm going to do things this way or not...
+	free(Memory);
+
 	return 0;
 }
 

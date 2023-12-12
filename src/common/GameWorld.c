@@ -278,13 +278,12 @@ int32 EntityGetChildren(GameWorld* World, EntityId Entity, EntityId* OutChildren
 	ASSERT(OutChildren);
 	ASSERT(AssertEntityIdIsValid(World, Entity));
 
-	EntityId* Stack = NULL;
-	arrsetcap(Stack, MaxChildren);
-	int32 ChildrenCount = 0;
-
-	arrput(Stack, Entity);
+	EntityId* Stack = (EntityId*)FrameAlloc(MaxChildren * sizeof(EntityId));
+	Stack[0] = Entity;
+	int32 StackCount = 1;
 
 	EntityId* ChildOfEntities = WorldQueryEntities(World, REQUIRED(ChildOf), REJECTED());
+	int32 ChildrenCount = 0;
 	int32 ChildOfQueryCount = QueryCount(ChildOfEntities);
 	size_t SizeNeeded = sizeof(ChildOfComponent) * ChildOfQueryCount;
 	ChildOfComponent* ChildOfsSortedByParent = (ChildOfComponent*)FrameAlloc(SizeNeeded);
@@ -306,8 +305,8 @@ int32 EntityGetChildren(GameWorld* World, EntityId Entity, EntityId* OutChildren
 		ChildOfComponentCompareVoid);
 	ApplyAssociativeIndices(ChildOfEntities, sizeof(EntityId), ChildOfQueryCount, SortIndices);
 
-	while (arrlen(Stack) > 0) {
-		const EntityId Next = arrpop(Stack);
+	while (StackCount > 0) {
+		const EntityId Next = Stack[--StackCount];
 		if (ChildrenCount < MaxChildren) {
 			OutChildren[ChildrenCount] = Next;
 			ChildrenCount++;
@@ -328,7 +327,7 @@ int32 EntityGetChildren(GameWorld* World, EntityId Entity, EntityId* OutChildren
 			for (int32 ChildIndex = FindIndex; ChildIndex < ChildOfCount; ChildIndex++) {
 				ChildOfComponent* ChildOf = ChildOfsSortedByParent + ChildIndex;
 				if (ChildOf->Parent.RawValue == Next.RawValue) {
-					arrput(Stack, ChildOfEntities[ChildIndex]);
+					Stack[StackCount++] = ChildOfEntities[ChildIndex];
 					EndIndex++;
 				} else {
 					break;
