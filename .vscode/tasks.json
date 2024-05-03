@@ -3,7 +3,7 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "MSVC Build Debug",
+            "label": "(MSVC) Build Debug",
             "command": "powershell",
             "args": [
                 "-ExecutionPolicy",
@@ -28,7 +28,7 @@
         },
         {
             "type": "shell",
-            "label": "MSVC Build Release",
+            "label": "(MSVC) Build Release",
             "command": "powershell",
             "args": [
                 "-ExecutionPolicy",
@@ -75,14 +75,20 @@
         },
         {
             "type": "shell",
-            "label": "(Linux GCC) Build Debug",
+            "label": "(GCC) Build Debug",
             "command": "./build.sh debug",
+            "windows": {
+                "command": ".\\build_mingw64.bat debug"
+            },
             "group": "build"
         },
         {
             "type": "shell",
-            "label": "(Linux GCC) Build Release",
+            "label": "(GCC) Build Release",
             "command": "./build.sh release",
+            "windows": {
+                "command": ".\\build_mingw64.bat release"
+            },
             "group": "build"
         }
     ]

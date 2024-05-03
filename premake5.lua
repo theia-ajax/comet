@@ -52,6 +52,7 @@ project "comet"
 
 	filter "platforms:Win64"
 		links { "SDL3" }
+		
 
 
 

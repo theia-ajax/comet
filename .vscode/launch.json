@@ -46,48 +46,68 @@
             "environment": []
         },
         {
-            "name": "(Linux GCC) Build & Run Debug",
+            "name": "(GCC) Build & Run Debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            "preLaunchTask": "(Linux GCC) Build Debug",
+            "preLaunchTask": "(GCC) Build Debug",
             "visualizerFile": "${workspaceRoot}/CustomTypes.natvis",
             "showDisplayString": true,
             "linux": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
+            },
+            "windows": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb.exe"
             }
         },
         {
-            "name": "(Linux GCC) Build & Run Release",
+            "name": "(GCC) Build & Run Release",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+            "linux": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+            },
+            "windows": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}",
+            },
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
-            "preLaunchTask": "(Linux GCC) Build Release",
+            "preLaunchTask": "(GCC) Build Release",
         },
         {
-            "name": "(Linux GCC) Run Debug",
+            "name": "(GCC) Run Debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
             "visualizerFile": "${workspaceFolder}/CustomTypes.natvis",
             "showDisplayString": true,
             "linux": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
+            },
+            "windows": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
+                "MIMode": "gdb",
+                "miDebuggerPath": "gdb.exe"
             }
         },
         {
-            "name": "(Linux GCC) Run Release",
+            "name": "(GCC) Run Release",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+            "linux": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+            },
+            "windows": {
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}",
+            },
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
         }
