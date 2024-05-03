@@ -61,7 +61,8 @@
         "componenttypes.h": "c",
         "sdl_platform_defines.h": "c",
         "bitset": "c",
-        "string_view": "c"
+        "string_view": "c",
+        "xtr1common": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

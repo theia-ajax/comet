@@ -71,7 +71,7 @@ struct {
 
 bool GameInitialize(const GameInitParams* params)
 {
-	LogLevel LoggingLevel = LogLevel_Info;
+	LogLevel LoggingLevel = LogLevel_Warning;
 #ifndef _DEBUG
 	LoggingLevel = LogLevel_Error;
 #endif

@@ -22,6 +22,13 @@ typedef int64_t int64;
 typedef float flt32;
 typedef double flt64;
 
+
+#if defined(__GNUC__)
+#define NORETURN [[_Noreturn]]
+#elif defined(_MSC_VER)
+#define NORETURN _Noreturn
+#endif
+
 #ifndef unreachable
 #if defined(__GNUC__)
 #define unreachable() (__builtin_unreachable())
@@ -131,13 +138,13 @@ typedef double flt64;
 #define DATA_ARRAY_NAME(type) CAT(type, _data_array)
 #define DATA_ARRAY(type) STRUCT(DATA_ARRAY_NAME(type))
 
-#define INVALID_HANDLE_VALUE 0
+#define COMET_INVALID_HANDLE_VALUE 0
 #define INVALID_HANDLE                                                                                                 \
 	{                                                                                                                  \
-		INVALID_HANDLE_VALUE                                                                                           \
+		COMET_INVALID_HANDLE_VALUE                                                                                           \
 	}
 
-#define HANDLE_IS_VALID(handle) ((handle).value > INVALID_HANDLE_VALUE)
+#define HANDLE_IS_VALID(handle) ((handle).value > COMET_INVALID_HANDLE_VALUE)
 #define HANDLE_CREATE_FROM_INDEX(type, index)                                                                          \
 	(HANDLE(type))                                                                                                     \
 	{                                                                                                                  \
@@ -146,7 +153,7 @@ typedef double flt64;
 #define HANDLE_INDEX(handle) ((handle).value - 1)
 #define HANDLE_CONVERT_TO(new_type, handle) ((HANDLE(new_type)){(handle).value})
 
-#define DECLARE_HANDLE(type)                                                                                           \
+#define DECLARE_DATA_HANDLE(type)                                                                                           \
 	typedef struct HANDLE(type) {                                                                                      \
 		int32 value;                                                                                                   \
 	} HANDLE(type)
@@ -170,7 +177,7 @@ typedef double flt64;
 #define DATA_ARRAY_CAPACITY(type) CONSTANT_SUFFIX(type, _capacity)
 
 #define DECLARE_DATA_ARRAY(type, capacity)                                                                             \
-	DECLARE_HANDLE(type);                                                                                              \
+	DECLARE_DATA_HANDLE(type);                                                                                              \
 	DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)
 
 #define DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)                                                                   \
@@ -217,4 +224,4 @@ typedef double flt64;
 #define IMPLEMENT_DATA_ARRAY(type) IMPLEMENT_DATA_ARRAY_INTERFACE(type)
 // -------------------------------------------------------
 
-[[_Noreturn]] void PanicAndAbort(const char* Title, const char* Message);
+NORETURN void PanicAndAbort(const char* Title, const char* Message);

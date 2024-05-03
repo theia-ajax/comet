@@ -29,7 +29,7 @@ filter "configurations:Release"
 project "comet"
 	kind "WindowedApp"
 	language "C"
-	cdialect "C11"
+	cdialect "gnu11"
 	location "bin/comet"
 	files { 
 		"src/common/**.c",
@@ -38,7 +38,7 @@ project "comet"
 		"src/main_%{cfg.platform:lower()}.c",
 	}
 	includedirs { "include" }
-	libdirs { "lib/%{cfg.platform}" }
+	libdirs { "lib/%{cfg.platform}/%{cfg.buildcfg}" }
 	debugdir "."
 
 	if os.istarget("windows") then
@@ -49,5 +49,9 @@ project "comet"
 	filter "platforms:Linux64"
 		cdialect "gnu11"
 		links { "SDL3", "m", "stdc++" }
+
+	filter "platforms:Win64"
+		links { "SDL3" }
+
 
 

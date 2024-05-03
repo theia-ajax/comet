@@ -4,7 +4,7 @@
 
 typedef struct ini_t ini_t;
 
-DECLARE_HANDLE(config);
+DECLARE_DATA_HANDLE(config);
 
 typedef void (*t_on_apply_config)(h_config config_handle);
 
