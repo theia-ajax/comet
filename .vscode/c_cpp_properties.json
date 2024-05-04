@@ -1,6 +1,17 @@
 {
     "configurations": [
         {
+            "name": "Windows",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include/"
+            ],
+            "defines": [],
+            "compilerPath": "C:\\Users\\ted\\bin\\mingw64\\bin\\gcc.exe",
+            "cStandard": "gnu17",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",

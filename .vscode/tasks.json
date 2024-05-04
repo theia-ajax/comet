@@ -87,9 +87,23 @@
             "label": "(GCC) Build Release",
             "command": "./build.sh release",
             "windows": {
-                "command": ".\\build_mingw64.bat release"
+                "command": ".\\build_mingw64.bat release",
             },
             "group": "build"
+        },
+        {
+            "type": "shell" ,
+            "label": "Copy Debug DLLs",
+            "windows": {
+                "command": "${workspaceRoot}/copy_dlls.bat debug",
+            }
+        },
+        {
+            "type": "shell" ,
+            "label": "Copy Release DLLs",
+            "windows": {
+                "command": "${workspaceRoot}/copy_dlls.bat release",
+            }
         }
     ]
 }

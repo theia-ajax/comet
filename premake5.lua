@@ -29,7 +29,8 @@ filter "configurations:Release"
 project "comet"
 	kind "WindowedApp"
 	language "C"
-	cdialect "gnu11"
+	cdialect "gnu17"
+	toolset "gcc"
 	location "bin/comet"
 	files { 
 		"src/common/**.c",
@@ -47,7 +48,6 @@ project "comet"
 	end
 
 	filter "platforms:Linux64"
-		cdialect "gnu11"
 		links { "SDL3", "m", "stdc++" }
 
 	filter "platforms:Win64"

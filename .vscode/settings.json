@@ -62,9 +62,11 @@
         "sdl_platform_defines.h": "c",
         "bitset": "c",
         "string_view": "c",
-        "xtr1common": "c"
+        "xtr1common": "c",
+        "assettypes.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,
-    "dotnet.defaultSolution": "disable"
+    "dotnet.defaultSolution": "disable",
+    "C_Cpp.errorSquiggles": "enabled"
 }

@@ -93,6 +93,7 @@
                 "miDebuggerPath": "/usr/bin/gdb"
             },
             "windows": {
+                "preLaunchTask": "Copy Debug DLLs",
                 "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "gdb.exe"
@@ -106,6 +107,7 @@
                 "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
             },
             "windows": {
+                "preLaunchTask": "Copy Release DLLs",
                 "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}",
             },
             "cwd": "${workspaceRoot}",
