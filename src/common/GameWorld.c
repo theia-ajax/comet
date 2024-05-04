@@ -208,7 +208,7 @@ EntityId CreateEntity(GameWorld* World)
 			LastCapacity,
 			World->EntityCapacity);
 	}
-	LogInfo("Create Entity %d[%u:%u]", Result.RawValue, ENTITY_ID_INDEX(Result), ENTITY_ID_GENERATION(Result));
+	LogVerbose("Create Entity %d[%u:%u]", Result.RawValue, ENTITY_ID_INDEX(Result), ENTITY_ID_GENERATION(Result));
 	return Result;
 }
 
@@ -356,7 +356,7 @@ void _InternalDestroyEntity(GameWorld* World, EntityId Entity)
 	ASSERT(!World->IsLocked && "Cannot destroy entities while world is locked.");
 
 	ASSERT(AssertEntityIdIsValid(World, Entity));
-	LogInfo("Destroy Entity [%d:%d]%u", ENTITY_ID_INDEX(Entity), ENTITY_ID_GENERATION(Entity), Entity.RawValue);
+	LogVerbose("Destroy Entity [%d:%d]%u", ENTITY_ID_INDEX(Entity), ENTITY_ID_GENERATION(Entity), Entity.RawValue);
 
 	const int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 
@@ -381,11 +381,11 @@ void _InternalDestroyEntity(GameWorld* World, EntityId Entity)
 			}
 		}
 	} else {
-		LogError("GameWorld:Entities:DestroyEntity: Could not find entity '%d' in ActiveEntities", Entity.RawValue);
-		LogError("GameWorld:Entities:DestroyEntity: Dumping Active Entities List:");
+		LogVerbose("GameWorld:Entities:DestroyEntity: Could not find entity '%d' in ActiveEntities", Entity.RawValue);
+		LogVerbose("GameWorld:Entities:DestroyEntity: Dumping Active Entities List:");
 		for (int32 Index = 0; Index < EntityCount; Index++) {
 			EntityId Entity = World->ActiveEntities[Index];
-			LogError(
+			LogVerbose(
 				"GameWorld:Entities:DestroyEntity: [%d:%d]%u",
 				ENTITY_ID_INDEX(Entity),
 				ENTITY_ID_GENERATION(Entity),
@@ -868,7 +868,7 @@ static void* EntityAddComponent(GameWorld* World, EntityId Entity, ComponentType
 	ASSERT(AssertEntityIdIsValid(World, Entity));
 	int32 EntityIndex = ENTITY_ID_INDEX(Entity);
 	World->EntitySignatures[EntityIndex].RawValue |= BIT_FLAG64(Type);
-	LogInfo(
+	LogVerbose(
 		"GameWorld:EntityAddComponent: added %s component to entity %d[%d]",
 		ComponentTypeName(Type),
 		ENTITY_ID_INDEX(Entity),

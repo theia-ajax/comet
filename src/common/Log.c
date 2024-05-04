@@ -13,6 +13,7 @@ enum TermColor {
 	TermColor_Magenta,
 	TermColor_Cyan,
 	TermColor_White,
+	TermColor_LightGrey,
 	TermColor_Count,
 };
 
@@ -21,6 +22,8 @@ const char* LogLevelNames[] = {
 	"Error",
 	"Warning",
 	"Info",
+	"Verbose",
+	"<Disabled>",
 };
 _Static_assert(ARRAY_COUNT(LogLevelNames) == LogLevel_Count, "");
 
@@ -29,6 +32,8 @@ const enum TermColor LogLevelColors[] = {
 	TermColor_Red,
 	TermColor_Yellow,
 	TermColor_White,
+	TermColor_LightGrey,
+	TermColor_Normal,
 };
 _Static_assert(ARRAY_COUNT(LogLevelColors) == LogLevel_Count, "");
 
@@ -59,44 +64,58 @@ void LoggingSetLogLevel(LogLevel Level)
 	GLogLevel = Level;
 }
 
+void LogVerbose(const char* Format, ...)
+{
+	if (GLogLevel >= LogLevel_Verbose) {
+		va_list Args;
+		va_start(Args, Format);
+		_InternalLogV(LogLevel_Verbose, Format, Args);
+		va_end(Args);
+	}
+}
+
 void LogInfo(const char* Format, ...)
 {
-	va_list Args;
-	va_start(Args, Format);
-	_InternalLogV(LogLevel_Info, Format, Args);
-	va_end(Args);
+	if (GLogLevel >= LogLevel_Info) {
+		va_list Args;
+		va_start(Args, Format);
+		_InternalLogV(LogLevel_Info, Format, Args);
+		va_end(Args);
+	}
 }
 
 void LogWarning(const char* Format, ...)
 {
-	va_list Args;
-	va_start(Args, Format);
-	_InternalLogV(LogLevel_Warning, Format, Args);
-	va_end(Args);
+	if (GLogLevel >= LogLevel_Warning) {
+		va_list Args;
+		va_start(Args, Format);
+		_InternalLogV(LogLevel_Warning, Format, Args);
+		va_end(Args);
+	}
 }
 
 void LogError(const void* Format, ...)
 {
-	va_list Args;
-	va_start(Args, Format);
-	_InternalLogV(LogLevel_Error, Format, Args);
-	va_end(Args);
+	if (GLogLevel >= LogLevel_Error) {
+		va_list Args;
+		va_start(Args, Format);
+		_InternalLogV(LogLevel_Error, Format, Args);
+		va_end(Args);
+	}
 }
 
 static void _InternalLogV(LogLevel Level, const char* Format, va_list Args)
 {
-	if (GLogLevel >= Level) {
-		_InternalSetTerminalColor(LogLevelColors[Level]);
+	_InternalSetTerminalColor(LogLevelColors[Level]);
 
-		FixedArray(char, 1024) Formatted;
-		SDL_vsnprintf(Formatted.Data, FixedArrayCapacity(Formatted), Format, Args);
+	FixedArray(char, 1024) Formatted;
+	SDL_vsnprintf(Formatted.Data, FixedArrayCapacity(Formatted), Format, Args);
 
-		FixedArray(char, 1024) Output;
-		SDL_snprintf(Output.Data, FixedArrayCapacity(Output), "[%s] %s\n", LogLevelNames[Level], Formatted.Data);
+	FixedArray(char, 1024) Output;
+	SDL_snprintf(Output.Data, FixedArrayCapacity(Output), "[%s] %s\n", LogLevelNames[Level], Formatted.Data);
 
-		fprintf(stdout, Output.Data);
-		fprintf(GLogFile, Output.Data);
-	}
+	fprintf(stdout, Output.Data);
+	fprintf(GLogFile, Output.Data);
 }
 
 #include <SDL3/SDL_platform_defines.h>
@@ -112,6 +131,7 @@ const char* TermColorCodes[] = {
 	"\x1B[35m",
 	"\x1B[36m",
 	"\x1B[37m",
+	"\x1B[37m",
 };
 
 _Static_assert(ARRAY_COUNT(TermColorCodes) == TermColor_Count, "");
@@ -119,7 +139,7 @@ _Static_assert(ARRAY_COUNT(TermColorCodes) == TermColor_Count, "");
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-const WORD TermColorCodes[] = {15, 4, 10, 14, 9, 13, 3, 15};
+const WORD TermColorCodes[] = {15, 4, 10, 14, 9, 13, 3, 15, 7};
 _Static_assert(ARRAY_COUNT(TermColorCodes) == TermColor_Count, "");
 // BLACK 0
 // BLUE 1

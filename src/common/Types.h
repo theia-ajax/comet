@@ -86,20 +86,6 @@ typedef double flt64;
 #define ZERO_STRUCT(struct_ptr) ZERO(struct_ptr, sizeof(*(struct_ptr)))
 #define ZERO_ARRAY(array_ptr) ZERO(array_ptr, ARRAY_COUNT(array_ptr) * sizeof(*(array_ptr)))
 
-#ifndef fixed_buffer
-// fixed_buffer(name, size) creates a char array e.g. char name[size]
-// as well as an accompanying const size_t name_size= size
-#define fixed_buffer(name, size)                                                                                       \
-	const size_t name##_size = size;                                                                                   \
-	char name[size]
-#endif
-
-#ifndef static_fixed_buffer
-#define static_fixed_buffer(name, size)                                                                                \
-	static const size_t name##_size = size;                                                                            \
-	static char name[size]
-#endif
-
 #define FixedArray(type, cap)                                                                                          \
 	struct {                                                                                                           \
 		type Data[cap];                                                                                                \
@@ -118,7 +104,7 @@ typedef double flt64;
 #define FixedListBegin(list) &((list).Data[0])
 #define FixedListEnd(list) &((list).Data[(list).Count])
 #define FixedListCapacity(list) ARRAY_COUNT((list).Data)
-#define FixedListAt(list, index) &((list).Data[index])
+#define FixedListAt(list, index) (&(list).Data[(index)])
 #define FixedListLast(list) FixedListAt(list, (list).Count - 1)
 #define FixedListIndexOf(list, item) ((item) - &(list).Data[0])
 #define FixedListIsEmpty(list) ((list).Count == 0)
@@ -127,101 +113,10 @@ typedef double flt64;
 #define FixedListPop(list) (list).Count--
 #define FixedListRemoveAt(list, index) (FixedListPop(list), (list).Data[index] = (list).Data[(list).Count])
 
-// Data Array
-// -------------------------------------------------------
-// $TODO: Revisit this entire data array thing and move it to it's own file if it's still going to be a thing
-// -------------------------------------------------------
-#define STRUCT(type) CAT(s_, type)
-#define HANDLE(type) CAT(h_, type)
-#define CONSTANT(type) CAT(k_, type)
-#define CONSTANT_SUFFIX(type, suffix) CAT(CAT(k_, type), suffix)
-#define DATA_ARRAY_NAME(type) CAT(type, _data_array)
-#define DATA_ARRAY(type) STRUCT(DATA_ARRAY_NAME(type))
+#define HANDLE_INTERNAL_TYPE int32
+#define DEFINE_HANDLE(Type) typedef struct Type { HANDLE_INTERNAL_TYPE Value; } Type
+#define VALID_HANDLE(Handle) ((Handle).Value != NONE)
 
-#define COMET_INVALID_HANDLE_VALUE 0
-#define INVALID_HANDLE                                                                                                 \
-	{                                                                                                                  \
-		COMET_INVALID_HANDLE_VALUE                                                                                           \
-	}
-
-#define HANDLE_IS_VALID(handle) ((handle).value > COMET_INVALID_HANDLE_VALUE)
-#define HANDLE_CREATE_FROM_INDEX(type, index)                                                                          \
-	(HANDLE(type))                                                                                                     \
-	{                                                                                                                  \
-		(index) + 1                                                                                                    \
-	}
-#define HANDLE_INDEX(handle) ((handle).value - 1)
-#define HANDLE_CONVERT_TO(new_type, handle) ((HANDLE(new_type)){(handle).value})
-
-#define DECLARE_DATA_HANDLE(type)                                                                                           \
-	typedef struct HANDLE(type) {                                                                                      \
-		int32 value;                                                                                                   \
-	} HANDLE(type)
-
-#define DATA_ARRAY_FUNC_NAME(type, func) CAT(DATA_ARRAY_NAME(type), CAT(_, func))
-
-#define DECLARE_DATA_ARRAY_GET(type)                                                                                   \
-	STRUCT(type) * DATA_ARRAY_FUNC_NAME(type, get)(DATA_ARRAY(type) * array, HANDLE(type) handle)
-#define DECLARE_DATA_ARRAY_TRY_GET(type)                                                                               \
-	STRUCT(type)                                                                                                       \
-	*DATA_ARRAY_FUNC_NAME(type, try_get)(DATA_ARRAY(type) * array, HANDLE(type) handle)
-#define DECLARE_DATA_ARRAY_ALLOC(type) HANDLE(type) DATA_ARRAY_FUNC_NAME(type, alloc)(DATA_ARRAY(type) * array)
-
-#define DECLARE_DATA_ARRAY_INTERFACE(type)                                                                             \
-	DECLARE_DATA_ARRAY_ALLOC(type);                                                                                    \
-	DECLARE_DATA_ARRAY_GET(type);                                                                                      \
-	DECLARE_DATA_ARRAY_TRY_GET(type)
-
-#define FORWARD_DECLARE_DATA_ARRAY(type) typedef struct DATA_ARRAY(type) DATA_ARRAY(type)
-
-#define DATA_ARRAY_CAPACITY(type) CONSTANT_SUFFIX(type, _capacity)
-
-#define DECLARE_DATA_ARRAY(type, capacity)                                                                             \
-	DECLARE_DATA_HANDLE(type);                                                                                              \
-	DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)
-
-#define DECLARE_DATA_ARRAY_NO_HANDLE(type, capacity)                                                                   \
-	enum { DATA_ARRAY_CAPACITY(type) = capacity };                                                                     \
-	typedef struct DATA_ARRAY(type) {                                                                                  \
-		STRUCT(type) data[DATA_ARRAY_CAPACITY(type) + 1];                                                              \
-		int32 count;                                                                                                   \
-	} DATA_ARRAY(type);                                                                                                \
-	DECLARE_DATA_ARRAY_INTERFACE(type)
-
-#define IMPLEMENT_DATA_ARRAY_GET(type)                                                                                 \
-	DECLARE_DATA_ARRAY_GET(type)                                                                                       \
-	{                                                                                                                  \
-		ASSERT(HANDLE_IS_VALID(handle));                                                                               \
-		ASSERT(VALID_INDEX(HANDLE_INDEX(handle), DATA_ARRAY_CAPACITY(type)));                                          \
-		return array->data + HANDLE_INDEX(handle);                                                                     \
-	}
-
-#define IMPLEMENT_DATA_ARRAY_TRY_GET(type)                                                                             \
-	DECLARE_DATA_ARRAY_TRY_GET(type)                                                                                   \
-	{                                                                                                                  \
-		STRUCT(type)* result = NULL;                                                                                   \
-		if (VALID_INDEX(HANDLE_INDEX(handle), DATA_ARRAY_CAPACITY(type))) {                                            \
-			result = array->data + HANDLE_INDEX(handle);                                                               \
-		}                                                                                                              \
-		return result;                                                                                                 \
-	}
-
-#define IMPLEMENT_DATA_ARRAY_ALLOC(type)                                                                               \
-	DECLARE_DATA_ARRAY_ALLOC(type)                                                                                     \
-	{                                                                                                                  \
-		HANDLE(type) result = INVALID_HANDLE;                                                                          \
-		ASSERT(array->count < DATA_ARRAY_CAPACITY(type));                                                              \
-		result.value = array->count + 1;                                                                               \
-		array->count++;                                                                                                \
-		return result;                                                                                                 \
-	}
-
-#define IMPLEMENT_DATA_ARRAY_INTERFACE(type)                                                                           \
-	IMPLEMENT_DATA_ARRAY_ALLOC(type)                                                                                   \
-	IMPLEMENT_DATA_ARRAY_GET(type)                                                                                     \
-	IMPLEMENT_DATA_ARRAY_TRY_GET(type)
-
-#define IMPLEMENT_DATA_ARRAY(type) IMPLEMENT_DATA_ARRAY_INTERFACE(type)
 // -------------------------------------------------------
 
 NORETURN void PanicAndAbort(const char* Title, const char* Message);

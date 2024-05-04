@@ -2,6 +2,7 @@
 
 #include "Entity.h"
 #include "Math2D.h"
+#include "SpriteDatabase.h"
 #include "StringId.h"
 
 // Not really a hard limit atm just seems useful to keep track of bloated components
@@ -31,7 +32,7 @@ typedef struct VelocityComponent {
 } VelocityComponent;
 
 typedef struct SpriteComponent {
-	int32 SpriteId;
+	SpriteId SpriteId;
 	flt32 Rotation;
 	Vec2 Offset;
 } SpriteComponent;

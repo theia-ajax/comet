@@ -8,11 +8,6 @@
 
 // Private Definitions
 
-typedef struct SpriteNameIdMap {
-	StringId Key;
-	int32 Value;
-} SpriteNameIdMap;
-
 // Private Prototypes
 
 static bool ParseSpriteSheetMetaData(struct json_value_s* MetaObjectValue, SpriteSheetMetaData* DataOut);
@@ -77,9 +72,9 @@ bool LoadSpriteSheetData(const char* FileName, SpriteSheetData* DataOut)
 	}
 
 	hmdefault(DataOut->NameIdMap, NONE);
-	for (int32 SpriteId = 0; SpriteId < DataOut->Frames.Count; SpriteId++) {
-		StringId NameId = DataOut->Frames.Name[SpriteId];
-		hmput(DataOut->NameIdMap, NameId, SpriteId);
+	for (int32 SpriteIndex = 0; SpriteIndex < DataOut->Frames.Count; SpriteIndex++) {
+		StringId NameId = DataOut->Frames.Name[SpriteIndex];
+		hmput(DataOut->NameIdMap, NameId, SpriteIndex);
 	}
 
 CleanUp:
@@ -91,12 +86,6 @@ void UnloadSpriteSheetData(SpriteSheetData* Data)
 {
 	hmfree(Data->NameIdMap);
 	ZERO_STRUCT(Data);
-}
-
-int32 FindSpriteByName(SpriteSheetData* Data, StringId Name)
-{
-	// hmdefault set to NONE
-	return hmget(Data->NameIdMap, Name);
 }
 
 // Private Implementations

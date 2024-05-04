@@ -13,6 +13,7 @@
 #include "Math2D.h"
 #include "Physics.h"
 #include "Random.h"
+#include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
 
@@ -21,14 +22,12 @@ enum {
 	Group_Hostile,
 };
 
-enum SpriteSheetId {
-	SpriteSheetId_Default,
-	SpriteSheetId_ShipObjects,
-	SpriteSheetId_BGObjects0,
-	SpriteSheetId_Count,
+enum SpriteSheets {
+	SpriteSheets_Default,
+	SpriteSheets_ShipObjects,
+	SpriteSheets_BackgroundObjects,
+	SpriteSheets_Count,
 };
-
-#define GetImage(Id) GGame.ImageAssets[Id]
 
 Tform2 T2Component(const TransformComponent* Transform);
 static bool ColliderIntersectsCollider(
@@ -54,10 +53,11 @@ struct {
 	SDL_Renderer* Renderer;
 	GameInput Input;
 	GameInput LastInput;
-	ImageAsset* ImageAssets[16];
-	SpriteSheetAsset* ShipObjectsSheet;
 	int32 Frame;
 	rnd_pcg_t RandomGen;
+	SpriteSheetId DefaultSpriteSheetHandle;
+	SpriteSheetId ShipObjectsSpriteSheetHandle;
+	SpriteSheetId BackgroundObjectsSpriteSheetHandle;
 	// PhysWorld* Physics;
 	GameWorld* World;
 	EntityId PlayerEntity;
@@ -71,9 +71,9 @@ struct {
 
 bool GameInitialize(const GameInitParams* params)
 {
-	LogLevel LoggingLevel = LogLevel_Warning;
+	LogLevel LoggingLevel = LogLevel_Info;
 #ifndef _DEBUG
-	LoggingLevel = LogLevel_Error;
+	LoggingLevel = LogLevel_Warning;
 #endif
 	LoggingInitialize(LoggingLevel);
 	LogInfo(__FUNCTION__);
@@ -118,23 +118,24 @@ bool GameInitialize(const GameInitParams* params)
 				 .Size = sizeof(SpriteSheetData)},
 		}});
 
-	GetImage(SpriteSheetId_Default) = (ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
-	GetImage(SpriteSheetId_ShipObjects) =
+	ImageAsset* DefaultSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
+	ImageAsset* ShipObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
-	GetImage(SpriteSheetId_BGObjects0) = (ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
+	ImageAsset* BackgroundObjectsSpriteSheetImageAsset =
+		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 
-	GGame.ShipObjectsSheet =
+	SpriteSheetAsset* ShipObjectsSpriteSheetDataAsset =
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
+
+	SpriteDatabaseInitialize(GGame.Renderer);
+	GGame.DefaultSpriteSheetHandle = SpriteDatabaseCreateGridSpriteSheet(DefaultSpriteSheetImageAsset, 8, 8);
+	GGame.ShipObjectsSpriteSheetHandle =
+		SpriteDatabaseCreateFrameDataSpriteSheet(ShipObjectsSpriteSheetImageAsset, ShipObjectsSpriteSheetDataAsset);
+	GGame.BackgroundObjectsSpriteSheetHandle =
+		SpriteDatabaseCreateGridSpriteSheet(BackgroundObjectsSpriteSheetImageAsset, 32, 32);
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
-		.SpriteSheets =
-			{
-				[SpriteSheetId_Default] = CreateSpriteSheetGrid(GetImage(SpriteSheetId_Default), 8, 8),
-				[SpriteSheetId_ShipObjects] =
-					CreateSpriteSheetFrameData(GetImage(SpriteSheetId_ShipObjects), GGame.ShipObjectsSheet),
-				[SpriteSheetId_BGObjects0] = CreateSpriteSheetGrid(GetImage(SpriteSheetId_BGObjects0), 32, 32),
-			},
 	});
 
 	LogInfo("Game Systems Initialized");
@@ -160,7 +161,7 @@ bool GameInitialize(const GameInitParams* params)
 			.Position = V2(372, 128),
 		};
 		*AddComponent(SpriteComponent, GGame.World, BackgroundEntity) = (SpriteComponent){
-			.SpriteId = SPRITE_ID(SpriteSheetId_BGObjects0, 44),
+			.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
 		};
 		*AddComponent(SpriteTilesComponent, GGame.World, BackgroundEntity) = (SpriteTilesComponent){
 			.Tiles = {4, 4},
@@ -190,9 +191,7 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 	};
 	SpriteComponent* S = AddComponent(SpriteComponent, World, Entity);
 	*S = (SpriteComponent){
-		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects,
-			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("projectile01-3"))),
+		.SpriteId = SpriteFindByName("projectile01-3"),
 		.Rotation = 0.25f,
 	};
 
@@ -231,9 +230,7 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 	};
 	AddComponent(VelocityComponent, World, Entity);
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
-		.SpriteId = SPRITE_ID(
-			SpriteSheetId_ShipObjects,
-			FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("darkgrey_06"))),
+		.SpriteId = SpriteFindByName("darkgrey_06"),
 	};
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
@@ -255,8 +252,7 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 	AddComponent(TransformComponent, World, DroneEntity0);
 	AddComponent(ChildOfComponent, World, DroneEntity0)->Parent = AnchorEntity;
 	AddComponent(LocalTransformComponent, World, DroneEntity0)->LocalPosition = V2(32, 0);
-	AddComponent(SpriteComponent, World, DroneEntity0)->SpriteId =
-		SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1")));
+	AddComponent(SpriteComponent, World, DroneEntity0)->SpriteId = SpriteFindByName("mini_1");
 
 	LogInfo("  Drone1 ________________");
 	EntityId DroneEntity1 = CreateEntity(World);
@@ -264,8 +260,7 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 	AddComponent(TransformComponent, World, DroneEntity1);
 	AddComponent(ChildOfComponent, World, DroneEntity1)->Parent = AnchorEntity;
 	AddComponent(LocalTransformComponent, World, DroneEntity1)->LocalPosition = V2(-32, 0);
-	AddComponent(SpriteComponent, World, DroneEntity1)->SpriteId =
-		SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("mini_1")));
+	AddComponent(SpriteComponent, World, DroneEntity1)->SpriteId = SpriteFindByName("mini_1");
 
 	return Entity;
 }
@@ -280,8 +275,7 @@ static EntityId CreateEnemy(GameWorld* World, Vec2 Position)
 	};
 
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
-		.SpriteId =
-			SPRITE_ID(SpriteSheetId_ShipObjects, FindSpriteByName(GGame.ShipObjectsSheet->Data, GetStringId("red_01"))),
+		.SpriteId = SpriteFindByName("red_01"),
 	};
 
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
@@ -298,6 +292,7 @@ static EntityId CreateEnemy(GameWorld* World, Vec2 Position)
 
 void GameShutdown(void)
 {
+	SpriteDatabaseShutdown();
 	DrawShutdown();
 	LogInfo("Destrying Renderer");
 	SDL_DestroyRenderer(GGame.Renderer);

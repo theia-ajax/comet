@@ -2,6 +2,8 @@
 
 #include "Assets.h"
 
+// -------- ImageAsset
+
 typedef struct ImageData {
 	uint8* Pixels;
 	SDL_Surface* Surface;
@@ -11,6 +13,11 @@ DEFINE_ASSET(Image);
 enum {
 	KSpriteSheetAssetMaxSprites = 256,
 };
+
+bool LoadImageData(const char* FileName, ImageData* DataOut);
+void UnloadImageData(ImageData* Data);
+
+// -------- SpriteSheetAsset
 
 typedef struct SpriteSheetFramesData {
 	int32 Count;
@@ -28,7 +35,10 @@ typedef struct SpriteSheetMetaData {
 	flt64 Scale;
 } SpriteSheetMetaData;
 
-typedef struct SpriteNameIdMap SpriteNameIdMap;
+typedef struct SpriteNameIdMap {
+	StringId Key;
+	int32 Value;
+} SpriteNameIdMap;
 
 typedef struct SpriteSheetData {
 	SpriteSheetFramesData Frames;
@@ -37,9 +47,5 @@ typedef struct SpriteSheetData {
 } SpriteSheetData;
 DEFINE_ASSET(SpriteSheet);
 
-bool LoadImageData(const char* FileName, ImageData* DataOut);
-void UnloadImageData(ImageData* Data);
-
 bool LoadSpriteSheetData(const char* FileName, SpriteSheetData* DataOut);
 void UnloadSpriteSheetData(SpriteSheetData* Data);
-int32 FindSpriteByName(SpriteSheetData* Data, StringId Name);
