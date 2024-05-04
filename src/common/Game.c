@@ -224,6 +224,7 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 
 	EntityId Entity = CreateEntity(World);
 
+	NameEntity(World, Entity, "PlayerShip");
 	*AddComponent(TransformComponent, World, Entity) = (TransformComponent){
 		.Position = Position,
 		.Rotation = 0.25f,
@@ -238,25 +239,25 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
 	};
 
-	LogInfo("  Anchor ________________");
 	EntityId AnchorEntity = CreateEntity(World);
 	// TODO: Find this via queries or something
+	NameEntity(World, AnchorEntity, "Anchor");
 	GGame.PlayerAnchorEntity = AnchorEntity;
 	AddComponent(TransformComponent, World, AnchorEntity);
 	AddComponent(LocalTransformComponent, World, AnchorEntity);
 	AddComponent(ChildOfComponent, World, AnchorEntity)->Parent = Entity;
 
-	LogInfo("  Drone0 ________________");
 	EntityId DroneEntity0 = CreateEntity(World);
 
+	NameEntity(World, DroneEntity0, "Drone0");
 	AddComponent(TransformComponent, World, DroneEntity0);
 	AddComponent(ChildOfComponent, World, DroneEntity0)->Parent = AnchorEntity;
 	AddComponent(LocalTransformComponent, World, DroneEntity0)->LocalPosition = V2(32, 0);
 	AddComponent(SpriteComponent, World, DroneEntity0)->SpriteId = SpriteFindByName("mini_1");
 
-	LogInfo("  Drone1 ________________");
 	EntityId DroneEntity1 = CreateEntity(World);
 
+	NameEntity(World, DroneEntity1, "Drone1");
 	AddComponent(TransformComponent, World, DroneEntity1);
 	AddComponent(ChildOfComponent, World, DroneEntity1)->Parent = AnchorEntity;
 	AddComponent(LocalTransformComponent, World, DroneEntity1)->LocalPosition = V2(-32, 0);

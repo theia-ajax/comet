@@ -13,6 +13,7 @@ GameWorld* CreateGameWorld(void);
 void DestroyGameWorld(GameWorld* World);
 
 EntityId CreateEntity(GameWorld* World);
+void NameEntity(GameWorld* World, EntityId Entity, const char* Name);
 void DestroyEntity(GameWorld* World, EntityId Entity);
 bool EntityIdIsValid(GameWorld* World, EntityId Entity);
 EntitySignature EntityGetSignature(GameWorld* World, EntityId Entity);

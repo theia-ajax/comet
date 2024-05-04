@@ -212,6 +212,12 @@ EntityId CreateEntity(GameWorld* World)
 	return Result;
 }
 
+void NameEntity(GameWorld* World, EntityId Entity, const char* Name)
+{
+	LogInfo("GameWorld: Named Entity %d '%s'", Entity.RawValue, Name);
+	GetOrAddComponent(NameComponent, World, Entity)->NameId = GetStringId(Name);
+}
+
 int32 _GetNextGeneration(GameWorld* World, EntityId Entity)
 {
 	const int32 EntityIndex = ENTITY_ID_INDEX(Entity);
