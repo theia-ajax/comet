@@ -371,26 +371,87 @@ AABB ColliderCalcAABB(const ColliderComponent* Collider, Tform2 Transform)
 	};
 }
 
+struct EntityParentPair {
+	EntityId Entity;
+	EntityId Parent;
+	int32 Depth;
+};
+
+int EntityParentPairCompare(const struct EntityParentPair* A, const struct EntityParentPair* B)
+{
+	if (A->Parent.RawValue == B->Parent.RawValue)
+	{
+		return A->Entity.RawValue - B->Entity.RawValue;
+	}
+	else if (A->Parent.RawValue == 0)
+	{
+		return -1;
+	}
+	else if (B->Parent.RawValue == 0)
+	{
+		return 1;
+	}
+	else {
+
+	}
+
+	if (A->Parent.RawValue == 0 && B->Parent.RawValue != 0)
+	{
+		return -1;
+	}
+	else if (A->Parent.RawValue != 0 && B->Parent.RawValue == 0)
+	{
+		return 1;
+	}
+	else
+	{
+
+	}
+}
+
+int EntityParentPairCompareVoid(const void* A, const void* B)
+{
+	return EntityParentPairCompare((struct EntityParentPair*)A, (struct EntityParentPair*)B);
+}
+
 void GameUpdate(const GameTime* gameTime)
 {
 	FrameAllocatorNextFrame();
 	DebugNextFrame();
 
-	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
-	MovementSystemUpdate(GGame.World, gameTime);
+	GameWorld* World = GGame.World;
+
+	ApplyPlayerControl(World, gameTime, GGame.PlayerEntity);
+	MovementSystemUpdate(World, gameTime);
 
 	{
-		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+		EntityId* Query = WorldQueryEntities(World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+		int32 Count = QueryCount(Query);
+		struct EntityParentPair* EntityParents =
+			(struct EntityParentPair*)FrameAlloc(sizeof(struct EntityParentPair) * Count);
+		for (int32 Index = 0; Index < Count; Index++) {
+			EntityId Entity = Query[Index];
+			EntityId Parent = GetComponent(ChildOfComponent, World, Entity)->Parent;
+
+			EntityParents[Index] = (struct EntityParentPair){
+				.Entity = Entity,
+				.Parent = Parent,
+				.Depth = (Parent.RawValue == 0) ? 0 : -1,
+			};
+		}
+
+		SDL_qsort(EntityParents, Count, sizeof(struct EntityParentPair), EntityParentPairCompareVoid);
+
 		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
 			// todo: very dumb and bad just getting absolute basic case working
 			// Tform2 ParentTransform;
-			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
-			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
-			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
+			TransformComponent* Transform = GetComponent(TransformComponent, World, *Iter);
+			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, World, *Iter);
+			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, World, *Iter);
 			Tform2 ParentT2 = (Tform2){0};
 			flt32 ParentRotation = 0.0f;
 			if (ChildOf->Parent.RawValue != 0) {
-				TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
+				TransformComponent* ParentTransform = GetComponent(TransformComponent, World, ChildOf->Parent);
 				ParentT2 = T2Component(ParentTransform);
 				ParentRotation = ParentTransform->Rotation;
 			}
@@ -399,8 +460,8 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	DamageSystemUpdate(GGame.World, gameTime);
-	LifetimeSystemUpdate(GGame.World, gameTime);
+	DamageSystemUpdate(World, gameTime);
+	LifetimeSystemUpdate(World, gameTime);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -410,11 +471,11 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.FramesThisSecond = 0;
 	}
 	DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
-	DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
+	DebugPrintf("Entities: %d", WorldEntityCount(World));
 	static bool ShowComponentCounts = false;
 	if (ShowComponentCounts) {
 		int32 ComponentCounts[ComponentType_Count];
-		WorldComponentCounts(GGame.World, ComponentCounts, ComponentType_Count);
+		WorldComponentCounts(World, ComponentCounts, ComponentType_Count)1;
 		for (int32 Index = 0; Index < ComponentType_Count; Index++) {
 			DebugPrintf(" %s: %d", ComponentTypeName(Index), ComponentCounts[Index]);
 		}
@@ -425,13 +486,15 @@ void GameUpdate(const GameTime* gameTime)
 
 void GameRender(const GameTime* gameTime)
 {
+	GameWorld* World = GGame.World;
+
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderClear(GGame.Renderer);
 
 	int RenderWidth, RenderHeight;
 	SDL_GetRenderLogicalPresentation(GGame.Renderer, &RenderWidth, &RenderHeight, NULL, NULL);
 
-	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
+	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, World, GGame.LevelEntity);
 	if (BackgroundTint != NULL) {
 		SDL_FRect ScreenRect = {0, 0, RenderWidth, RenderHeight};
 		ColorU8 Color = ColorV4ToColorU8(BackgroundTint->TintColor);
@@ -439,8 +502,8 @@ void GameRender(const GameTime* gameTime)
 		SDL_RenderFillRect(GGame.Renderer, &ScreenRect);
 	}
 
-	SpriteSystemRender(GGame.World);
-	ColliderSystemDebugRender(GGame.World);
+	SpriteSystemRender(World);
+	ColliderSystemDebugRender(World);
 
 	DrawRender();
 
