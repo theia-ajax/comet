@@ -23,8 +23,7 @@ filter "configurations:Debug"
 	defines { "_DEBUG" }
 	
 filter "configurations:Release"
-	optimize "Full"
-	defines { "_NDEBUG" }
+	optimize "On"
 
 project "comet"
 	kind "WindowedApp"
@@ -39,7 +38,6 @@ project "comet"
 		"src/main_%{cfg.platform:lower()}.c",
 	}
 	includedirs { "include" }
-	libdirs { "lib/%{cfg.platform}/%{cfg.buildcfg}" }
 	debugdir "."
 
 	if os.istarget("windows") then
@@ -49,9 +47,11 @@ project "comet"
 
 	filter "platforms:Linux64"
 		links { "SDL3", "m", "stdc++" }
+		libdirs { "lib/Linux64" }
 
 	filter "platforms:Win64"
 		links { "SDL3" }
+		libdirs { "lib/Win64/%{cfg.buildcfg}" }
 		
 
 
