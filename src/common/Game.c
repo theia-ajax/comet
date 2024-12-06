@@ -29,13 +29,6 @@ enum SpriteSheets {
 	SpriteSheets_Count,
 };
 
-Tform2 T2Component(const TransformComponent* Transform);
-static bool ColliderIntersectsCollider(
-	const ColliderComponent* A,
-	Tform2 TransformA,
-	const ColliderComponent* B,
-	Tform2 TransformB);
-
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation, flt32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
 static EntityId CreateEnemy(GameWorld* World, Vec2 Position);
@@ -55,7 +48,6 @@ struct {
 	GameInput LastInput;
 	int32 Frame;
 	rnd_pcg_t RandomGen;
-	SpriteSheetId DefaultSpriteSheetHandle;
 	SpriteSheetId ShipObjectsSpriteSheetHandle;
 	SpriteSheetId BackgroundObjectsSpriteSheetHandle;
 	// PhysWorld* Physics;
@@ -120,7 +112,6 @@ bool GameInitialize(const GameInitParams* params)
 				 .Size = sizeof(SpriteSheetData)},
 		}});
 
-	ImageAsset* DefaultSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/sprite_sheet.png");
 	ImageAsset* ShipObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
 	ImageAsset* BackgroundObjectsSpriteSheetImageAsset =
@@ -130,7 +121,6 @@ bool GameInitialize(const GameInitParams* params)
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	SpriteDatabaseInitialize(GGame.Renderer);
-	GGame.DefaultSpriteSheetHandle = SpriteDatabaseCreateGridSpriteSheet(DefaultSpriteSheetImageAsset, 8, 8);
 	GGame.ShipObjectsSpriteSheetHandle =
 		SpriteDatabaseCreateFrameDataSpriteSheet(ShipObjectsSpriteSheetImageAsset, ShipObjectsSpriteSheetDataAsset);
 	GGame.BackgroundObjectsSpriteSheetHandle =
@@ -212,11 +202,6 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 		.DamageAmount = 1.0f,
 	};
 
-	//  GetComponent(TransformComponent, GGame.World, Entity);
-	if (T->Position.Y < 10) {
-		LogError("HELP");
-		int p = 0;
-	}
 	return Entity;
 }
 
@@ -397,6 +382,7 @@ void GameUpdate(const GameTime* gameTime)
 			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
 			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
 		}
+		QueryFree(Query);
 	}
 
 	DamageSystemUpdate(GGame.World, gameTime);
@@ -491,6 +477,7 @@ void MovementSystemUpdate(GameWorld* World, const GameTime* Time)
 		T->Position = Add(T->Position, Mul(V->Velocity, Time->DeltaTimeF));
 		T->Rotation += V->AngularVelocity * Time->DeltaTimeF;
 	}
+	QueryFree(Query);
 }
 
 struct DamageEvent {
@@ -548,6 +535,7 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 			}
 		}
 	}
+	QueryFree(Query);
 
 	SDL_qsort(DamageEvents, arrlenu(DamageEvents), sizeof(*DamageEvents), DamageEventCompareVoid);
 
@@ -576,6 +564,7 @@ void DamageSystemUpdate(GameWorld* World, const GameTime* Time)
 				DestroyEntity(World, *Iter);
 			}
 		}
+		QueryFree(Query);
 	}
 }
 
@@ -592,6 +581,7 @@ void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time)
 			}
 		}
 	}
+	QueryFree(Query);
 }
 
 void SpriteSystemRender(GameWorld* World)
@@ -614,6 +604,7 @@ void SpriteSystemRender(GameWorld* World)
 			.TintColor = (Tint != NULL) ? ColorV4ToColorU8(Tint->TintColor) : (ColorU8){0},
 		});
 	}
+	QueryFree(Query);
 }
 
 void ColliderSystemDebugRender(GameWorld* World)
@@ -634,42 +625,5 @@ void ColliderSystemDebugRender(GameWorld* World)
 			default: unreachable(); break;
 		}
 	}
-}
-
-Tform2 T2Component(const TransformComponent* Transform)
-{
-	ASSERT(Transform != NULL);
-	return T2(Transform->Position, R2(Transform->Rotation));
-}
-
-static bool ColliderIntersectsCollider(
-	const ColliderComponent* A,
-	Tform2 TransformA,
-	const ColliderComponent* B,
-	Tform2 TransformB)
-{
-	switch (A->Type) {
-		case ColliderType_Circle:
-			switch (B->Type) {
-				case ColliderType_Circle: return CircleIntersectsCircle(&A->Circle, TransformA, &B->Circle, TransformB);
-				case ColliderType_Polygon:
-					return CircleIntersectsPolygon(&A->Circle, TransformA, &B->Polygon, TransformB);
-				default: unreachable(); break;
-			}
-			break;
-
-		case ColliderType_Polygon:
-			switch (B->Type) {
-				case ColliderType_Circle:
-					return PolygonIntersectsCircle(&A->Polygon, TransformA, &B->Circle, TransformB);
-				case ColliderType_Polygon:
-					return PolygonIntersectsPolygon(&A->Polygon, TransformA, &B->Polygon, TransformB);
-				default: unreachable(); break;
-			}
-			break;
-
-		default: unreachable(); break;
-	}
-
-	return false;
+	QueryFree(Query);
 }

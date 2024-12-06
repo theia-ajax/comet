@@ -90,6 +90,14 @@ typedef struct DurabilityComponent {
 	flt32 CurrentDurability;
 } DurabilityComponent;
 
+bool ColliderIntersectsCollider(
+	const ColliderComponent* A,
+	Tform2 TransformA,
+	const ColliderComponent* B,
+	Tform2 TransformB);
+
+Tform2 T2Component(const TransformComponent* Transform);
+
 // clang-format off
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
@@ -113,7 +121,8 @@ typedef struct DurabilityComponent {
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
 #define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()
 typedef enum ComponentType {
-	FOR_EACH(COMPONENT_TYPE_ENUM_VALUE_ENTRY, COMPONENT_TYPE_LIST) ComponentType_Count,
+	FOR_EACH(COMPONENT_TYPE_ENUM_VALUE_ENTRY, COMPONENT_TYPE_LIST)
+	ComponentType_Count,
 } ComponentType;
 
 _Static_assert(ComponentType_Count <= 64, "More work to be done before more than 64 component types can be supported.");
@@ -130,3 +139,4 @@ enum { FOR_EACH(COMPONENT_SIZE_ENUM_ENTRY, COMPONENT_TYPE_LIST) };
 FOR_EACH(VALIDATE_COMPONENT_TYPE, COMPONENT_TYPE_LIST);
 
 const char* ComponentTypeName(ComponentType Type);
+bool ComponentTypeTryParse(const char *TypeString, int32 TypeStringLength, ComponentType *OutType);

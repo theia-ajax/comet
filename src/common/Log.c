@@ -37,7 +37,7 @@ const enum TermColor LogLevelColors[] = {
 };
 _Static_assert(ARRAY_COUNT(LogLevelColors) == LogLevel_Count, "");
 
-LogLevel GLogLevel;
+LogLevel GLogLevel = LogLevel_Disabled;
 FILE* GLogFile;
 
 static void _InternalLogV(LogLevel Level, const char* Format, va_list Args);

@@ -7,3 +7,4 @@ void FrameAllocatorShutdown(void);
 void FrameAllocatorNextFrame(void);
 
 void* FrameAlloc(size_t Size);
+void FrameFree(void* Pointer);

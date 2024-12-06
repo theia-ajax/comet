@@ -11,10 +11,6 @@
 const int32 KInitialEntityCapacity = 256;
 const int32 KDefaultInitialComponentCapacity = 32;
 
-#define COMPONENT_NAME_ENTRY(Type) #Type,
-static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};
-_Static_assert(ARRAY_COUNT(ComponentTypeNames) == ComponentType_Count, "");
-
 // TODO: Revisit this
 const int32 ComponentInitialCapacities[ComponentType_Count] = {
 	0, // Transform
@@ -353,6 +349,11 @@ int32 EntityGetChildren(GameWorld* World, EntityId Entity, EntityId* OutChildren
 		}
 	}
 
+	QueryFree(ChildOfEntities);
+	FrameFree(ChildOfsSortedByParent);
+	FrameFree(Stack);
+	FrameFree(SortIndices);
+
 	return ChildrenCount;
 }
 
@@ -492,6 +493,11 @@ EntityId* QueryEnd(const EntityId* Query)
 inline int32 QueryCount(const EntityId* Query)
 {
 	return *((int32*)Query - 1);
+}
+
+void QueryFree(EntityId* Query)
+{
+	FrameFree((int32*)Query - 1);
 }
 
 int32 WorldEntityCount(GameWorld* World)
@@ -679,12 +685,6 @@ void QueueDestroyFutureEntityId(GameWorldCommandQueue* Queue, FutureEntityId Fut
 		.FutureEntity = FutureEntity,
 	};
 	arrput(Queue->CommandQueue, Command);
-}
-
-// TODO: This is implemented in a weird place, maybe move this to a component specific translation unit
-inline const char* ComponentTypeName(ComponentType Type)
-{
-	return ComponentTypeNames[Type];
 }
 
 // Private Implementations

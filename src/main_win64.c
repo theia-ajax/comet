@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "common/Game.h"
+#include "common/Log.h"
 
 static SDL_Window* GWindow = NULL;
 
@@ -18,8 +19,19 @@ void HandleExit(void)
 
 int main(int argc, char* argv[])
 {
+	LoggingInitialize(LogLevel_Info);
+
+	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Critical Error", SDL_GetError(), NULL);
+		exit(1);
+	}
+
+	SDL_version SdlVersion;
+	SDL_GetVersion(&SdlVersion);
+
+	LogInfo("System: Initialized SDL v%d.%d.%d", SdlVersion.major, SdlVersion.minor, SdlVersion.patch);
+
 	stm_setup();
-	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
 	GWindow = Window;
@@ -43,7 +55,7 @@ int main(int argc, char* argv[])
 		.MemorySizeInBytes = MemoryBytes,
 		.Window = Window,
 	});
-	
+
 	atexit(HandleExit);
 
 	ASSERT(Success);

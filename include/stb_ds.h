@@ -588,7 +588,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
     ((void) stbds_hmgeti_ts(t,k,temp), &(t)[temp])
 
 #define stbds_hmdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) STBDS_ADDRESSOF((t)->Key, (k)), sizeof (t)->Key, STBDS_OFFSETOF((t),key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) STBDS_ADDRESSOF((t)->Key, (k)), sizeof (t)->Key, STBDS_OFFSETOF((t),Key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_hmdefault(t, v) \
     ((t) = stbds_hmput_default_wrapper((t), sizeof *(t)), (t)[-1].Value = (v))
@@ -638,9 +638,9 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
     ((void) stbds_pshgeti(t,k), (t)[stbds_temp((t)-1)])
 
 #define stbds_shdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (t)->Key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (t)->Key, STBDS_OFFSETOF((t),Key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
 #define stbds_pshdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (*(t))->Key, STBDS_OFFSETOF(*(t),key), STBDS_HM_PTR_TO_STRING)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (*(t))->Key, STBDS_OFFSETOF(*(t),Key), STBDS_HM_PTR_TO_STRING)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_sh_new_arena(t)  \
     ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_ARENA))
