@@ -90,6 +90,16 @@ typedef struct DurabilityComponent {
 	flt32 CurrentDurability;
 } DurabilityComponent;
 
+typedef struct TimerComponent {
+	flt32 SecondsElapsed;
+} TimerComponent;
+
+typedef struct BehaviorComponent {
+	int32 State;
+	int32 SubState;
+} BehaviorComponent;
+
+// TODO: Move these------------------------------
 bool ColliderIntersectsCollider(
 	const ColliderComponent* A,
 	Tform2 TransformA,
@@ -97,26 +107,14 @@ bool ColliderIntersectsCollider(
 	Tform2 TransformB);
 
 Tform2 T2Component(const TransformComponent* Transform);
+// -----------------------------------------------
 
 // clang-format off
 // Add new components here to get component lists added to the gameworld
 // Will create component interface, enum value, etc..
 #define COMPONENT_TYPE_LIST                                                                                            \
-	Name,                                                                                                              \
-	ChildOf,                                                                                                           \
-	Transform,                                                                                                         \
-	LocalTransform,                                                                                                    \
-	Velocity,                                                                                                          \
-	Sprite,                                                                                                            \
-	SpriteTiles,                                                                                                       \
-	RenderLayer,                                                                                                       \
-	RenderTint,                                                                                                        \
-	Lifetime,                                                                                                          \
-	Collider,                                                                                                          \
-	DamageSource,                                                                                                      \
-	DamageReceiver,                                                                                                    \
-	Durability
-// clang-format on
+	Name, ChildOf, Transform, LocalTransform, Velocity, Sprite, SpriteTiles, RenderLayer, RenderTint, Lifetime,        \
+		Collider, DamageSource, DamageReceiver, Durability, Timer, Behavior
 
 #define COMPONENT_TYPE_ENUM_VALUE(CType) CAT(ComponentType_, CType)
 #define COMPONENT_TYPE_ENUM_VALUE_ENTRY(CType) COMPONENT_TYPE_ENUM_VALUE(CType) COMMA()

@@ -22,12 +22,19 @@ enum {
 	Group_Hostile,
 };
 
-enum SpriteSheets {
-	SpriteSheets_Default,
-	SpriteSheets_ShipObjects,
-	SpriteSheets_BackgroundObjects,
-	SpriteSheets_Count,
-};
+enum { KSpriteAnimationMaxFrames = 64 };
+
+typedef struct SpriteAnimationFrameData {
+	SpriteId Sprite;
+	Vec2 PositionOffset;
+	flt32 RotationOffset;
+} SpriteAnimationFrameData;
+
+typedef struct SpriteAnimationData {
+	SpriteAnimationFrameData Frames[KSpriteAnimationMaxFrames];
+	int32 FrameCount;
+	flt32 SecondsPerFrame;
+} SpriteAnimationData;
 
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation, flt32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
@@ -37,6 +44,7 @@ void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
 void MovementSystemUpdate(GameWorld* World, const GameTime* Time);
 void DamageSystemUpdate(GameWorld* World, const GameTime* Time);
 void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time);
+void BehaviorSystemUpdate(GameWorld* World, const GameTime* Time);
 void SpriteSystemRender(GameWorld* World);
 void ColliderSystemDebugRender(GameWorld* World);
 
@@ -53,13 +61,15 @@ struct {
 	// PhysWorld* Physics;
 	GameWorld* World;
 	EntityId PlayerEntity;
-	EntityId PlayerAnchorEntity;
 	EntityId LevelEntity;
 	flt32 Timer;
 	flt32 SecondTimer;
 	int32 LastFPS;
 	int32 FramesThisSecond;
 } GGame;
+
+SpriteAnimationData GBossIdleAnimationData;
+EntityId GBossEntity;
 
 bool GameInitialize(const GameInitParams* params)
 {
@@ -139,29 +149,54 @@ bool GameInitialize(const GameInitParams* params)
 		exit(1);
 	}
 
-	GGame.LevelEntity = CreateEntity(GGame.World);
-	*AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
+	GameWorld* World = GGame.World;
+
+	GGame.LevelEntity = CreateEntity(World);
+	*AddComponent(RenderTintComponent, World, GGame.LevelEntity) = (RenderTintComponent){
 		.TintColor = V4(0.01f, 0.02f, 0.1f, 1.0f),
 	};
 
-	GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));
-	CreateEnemy(GGame.World, V2(256, 128));
+	GGame.PlayerEntity = CreatePlayerShip(World, V2(64, 128));
+	CreateEnemy(World, V2(256, 128));
 
 	{
-		EntityId BackgroundEntity = CreateEntity(GGame.World);
-		*AddComponent(TransformComponent, GGame.World, BackgroundEntity) = (TransformComponent){
+		EntityId BackgroundEntity = CreateEntity(World);
+		*AddComponent(TransformComponent, World, BackgroundEntity) = (TransformComponent){
 			.Position = V2(372, 128),
 		};
-		*AddComponent(SpriteComponent, GGame.World, BackgroundEntity) = (SpriteComponent){
+		*AddComponent(SpriteComponent, World, BackgroundEntity) = (SpriteComponent){
 			.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
 		};
-		*AddComponent(SpriteTilesComponent, GGame.World, BackgroundEntity) = (SpriteTilesComponent){
+		*AddComponent(SpriteTilesComponent, World, BackgroundEntity) = (SpriteTilesComponent){
 			.Tiles = {4, 4},
 		};
-		*AddComponent(RenderLayerComponent, GGame.World, BackgroundEntity) = (RenderLayerComponent){
+		*AddComponent(RenderLayerComponent, World, BackgroundEntity) = (RenderLayerComponent){
 			.Layer = -1000,
 		};
 	}
+
+	GBossIdleAnimationData = (SpriteAnimationData){
+		.Frames =
+			{
+				{.Sprite = SpriteFindByName("boss-01-1")}, {.Sprite = SpriteFindByName("boss-01-2")},
+				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-4")},
+				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-6")},
+				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-6")},
+				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-4")},
+				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-2")},
+				{.Sprite = SpriteFindByName("boss-01-1")},
+			},
+		.FrameCount = 19,
+		.SecondsPerFrame = 1.0f / 6.0f,
+	};
+
+	GBossEntity = CreateEntity(World);
+	AddComponent(TransformComponent, World, GBossEntity)->Position = V2(600, 100);
+	AddComponent(SpriteComponent, World, GBossEntity);
+	AddComponent(TimerComponent, World, GBossEntity);
 
 	LogInfo("Game Initialization Complete");
 
@@ -211,14 +246,14 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 
 	EntityId Entity = CreateEntity(World);
 
-	NameEntity(World, Entity, "PlayerShip");
+	NameEntity(World, Entity, "PlayerTank");
 	*AddComponent(TransformComponent, World, Entity) = (TransformComponent){
 		.Position = Position,
 		.Rotation = 0.25f,
 	};
 	AddComponent(VelocityComponent, World, Entity);
 	*AddComponent(SpriteComponent, World, Entity) = (SpriteComponent){
-		.SpriteId = SpriteFindByName("darkgrey_06"),
+		.SpriteId = SpriteFindByName("tankbase_02"),
 	};
 	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
 		.Type = ColliderType_Polygon,
@@ -226,29 +261,13 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 		.Polygon = PolygonCreateBox(V2(20.0f, 22.0f), V2(0, 0), 0.0f),
 	};
 
-	EntityId AnchorEntity = CreateEntity(World);
-	// TODO: Find this via queries or something
-	NameEntity(World, AnchorEntity, "Anchor");
-	GGame.PlayerAnchorEntity = AnchorEntity;
-	AddComponent(TransformComponent, World, AnchorEntity);
-	AddComponent(LocalTransformComponent, World, AnchorEntity);
-	AddComponent(ChildOfComponent, World, AnchorEntity)->Parent = Entity;
-
-	EntityId DroneEntity0 = CreateEntity(World);
-
-	NameEntity(World, DroneEntity0, "Drone0");
-	AddComponent(TransformComponent, World, DroneEntity0);
-	AddComponent(ChildOfComponent, World, DroneEntity0)->Parent = AnchorEntity;
-	AddComponent(LocalTransformComponent, World, DroneEntity0)->LocalPosition = V2(32, 0);
-	AddComponent(SpriteComponent, World, DroneEntity0)->SpriteId = SpriteFindByName("mini_1");
-
-	EntityId DroneEntity1 = CreateEntity(World);
-
-	NameEntity(World, DroneEntity1, "Drone1");
-	AddComponent(TransformComponent, World, DroneEntity1);
-	AddComponent(ChildOfComponent, World, DroneEntity1)->Parent = AnchorEntity;
-	AddComponent(LocalTransformComponent, World, DroneEntity1)->LocalPosition = V2(-32, 0);
-	AddComponent(SpriteComponent, World, DroneEntity1)->SpriteId = SpriteFindByName("mini_1");
+	EntityId TurretEntity = CreateEntity(World);
+	NameEntity(World, TurretEntity, "PlayerTankTurret");
+	AddComponent(TransformComponent, World, TurretEntity);
+	AddComponent(LocalTransformComponent, World, TurretEntity);
+	AddComponent(ChildOfComponent, World, TurretEntity)->Parent = Entity;
+	AddComponent(SpriteComponent, World, TurretEntity)->SpriteId = SpriteFindByName("tankcannon-01A");
+	AddComponent(BehaviorComponent, World, TurretEntity);
 
 	return Entity;
 }
@@ -361,7 +380,24 @@ void GameUpdate(const GameTime* gameTime)
 	FrameAllocatorNextFrame();
 	DebugNextFrame();
 
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Timer), REJECTED());
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
+			TimerComponent* Timer = GetComponent(TimerComponent, GGame.World, *Iter);
+			Timer->SecondsElapsed += gameTime->DeltaTimeF;
+		}
+	}
+
 	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
+
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Behavior), REJECTED());
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++)
+		{
+			
+		}
+	}
+
 	MovementSystemUpdate(GGame.World, gameTime);
 
 	{
@@ -387,6 +423,14 @@ void GameUpdate(const GameTime* gameTime)
 
 	DamageSystemUpdate(GGame.World, gameTime);
 	LifetimeSystemUpdate(GGame.World, gameTime);
+
+	{
+		flt32 Time = GetComponent(TimerComponent, GGame.World, GBossEntity)->SecondsElapsed;
+		int32 FrameIndex =
+			floor(fmod(Time / GBossIdleAnimationData.SecondsPerFrame, (flt32)GBossIdleAnimationData.FrameCount));
+		SpriteId Sprite = GBossIdleAnimationData.Frames[FrameIndex].Sprite;
+		GetComponent(SpriteComponent, GGame.World, GBossEntity)->SpriteId = Sprite;
+	}
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -451,8 +495,6 @@ void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
 		Vec2 MoveXY = InputXY(SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN);
 		V->Velocity = Mul(Norm(MoveXY), 84.0f);
 		// V->AngularVelocity = 0.1f;
-		GetComponent(LocalTransformComponent, World, GGame.PlayerAnchorEntity)->LocalRotation +=
-			Time->DeltaTimeF * 0.1f;
 		if (GGame.Timer > 0.0f) GGame.Timer -= Time->DeltaTimeF;
 		if (InputKey(SDL_SCANCODE_Z) && GGame.Timer <= 0.0f) {
 			GGame.Timer += 0.18f;
