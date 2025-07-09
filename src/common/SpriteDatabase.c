@@ -46,6 +46,8 @@ SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(ImageAsset* Image, int32 Sprit
 		.Texture = SDL_CreateTextureFromSurface(GSpriteDatabase.Renderer, Image->Data->Surface),
 	};
 
+	SDL_SetTextureScaleMode(NewSheet->Texture, SDL_SCALEMODE_NEAREST);
+
 	NewSheet->SpritesPerRow = NewSheet->Image->Data->Surface->w / SpriteWidth;
 	NewSheet->SpritesPerCol = NewSheet->Image->Data->Surface->h / SpriteHeight;
 

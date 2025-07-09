@@ -17,7 +17,7 @@ bool ComponentTypeTryParse(const char *TypeString, int32 TypeStringLength, Compo
 	bool Success = false;
 	for (int32 ComponentTypeIndex = 0; ComponentTypeIndex < ComponentType_Count; ComponentTypeIndex++)
 	{
-		if (strnicmp(ComponentTypeNames[ComponentTypeIndex], TypeString, TypeStringLength) == 0) {
+		if (SDL_strncasecmp(ComponentTypeNames[ComponentTypeIndex], TypeString, TypeStringLength) == 0) {
 			*OutType = (ComponentType)ComponentTypeIndex;
 			Success = true;
 		}
