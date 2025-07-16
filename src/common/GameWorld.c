@@ -962,10 +962,11 @@ static void* EntityGetComponent(GameWorld* World, EntityId Entity, ComponentType
 
 static void* EntityTryGetComponent(GameWorld* World, EntityId Entity, ComponentType Type)
 {
-	ASSERT(AssertEntityIdIsValid(World, Entity));
 	void* Result = NULL;
-	if (EntityHasComponent(World, Entity, Type)) {
-		Result = ComponentListGet(_GetComponentList(World, Type), Entity);
+	if (EntityIdIsValid(World, Entity)) {
+		if (EntityHasComponent(World, Entity, Type)) {
+			Result = ComponentListGet(_GetComponentList(World, Type), Entity);
+		}
 	}
 	return Result;
 }

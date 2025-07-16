@@ -62,6 +62,11 @@ void PhysicsInitialize(const PhysicsConfig* Config)
 {
 	GPhysics.Config = (Config != NULL) ? *Config : KDefaultPhysicsConfig;
 
+	GPhysics.Config.Bounds.X -= GPhysics.Config.CellSize;
+	GPhysics.Config.Bounds.Y -= GPhysics.Config.CellSize;
+	GPhysics.Config.Bounds.Z += GPhysics.Config.CellSize;
+	GPhysics.Config.Bounds.W += GPhysics.Config.CellSize;
+
 	Vec2 WorldMin = GPhysics.Config.Bounds.XY;
 	Vec2 WorldMax = GPhysics.Config.Bounds.ZW;
 
@@ -70,6 +75,7 @@ void PhysicsInitialize(const PhysicsConfig* Config)
 	GPhysics.GridWidth = (int32)ceil(WorldWidth / GPhysics.Config.CellSize);
 	GPhysics.GridHeight = (int32)ceil(WorldHeight / GPhysics.Config.CellSize);
 	arrsetlen(GPhysics.Grid, GPhysics.GridWidth * GPhysics.GridHeight);
+	SDL_memset(GPhysics.Grid, 0, GPhysics.GridWidth * GPhysics.GridHeight * sizeof(*GPhysics.Grid));
 
 	arrsetcap(GPhysics.Objects, 1024);
 	arrsetcap(GPhysics.Constraints, 1024);
@@ -197,7 +203,7 @@ bool PhysicsIsAreaClear(Vec2 Position)
 	for (int32 Y = CellPoint.Y - 1; Y <= CellPoint.Y + 1 && Result; Y++) {
 		for (int32 X = CellPoint.X - 1; X <= CellPoint.X + 1 && Result; X++) {
 			PhysCell* Cell = _PhysicsGetCellGridXY(X, Y);
-			if (Cell->Objects.Count > 0) {
+			if (Cell && Cell->Objects.Count > 0) {
 				Result = false;
 				break;
 			}
@@ -267,7 +273,7 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
 
 	flt32 HeaterDistance = 20.0f;
-	flt32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterDistance;
+	flt32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterDistance - GPhysics.Config.CellSize;
 
 	if (Object->Position.Y > HeaterThreshold) {
 		Object->Heat += 2.0f * DeltaTime;

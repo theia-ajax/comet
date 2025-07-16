@@ -61,8 +61,8 @@
             },
             "windows": {
                 "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
-                "MIMode": "gdb",
-                "miDebuggerPath": "gdb.exe"
+                "MIMode":"gdb",
+                "miDebuggerPath": "gdb.exe",
             }
         },
         {

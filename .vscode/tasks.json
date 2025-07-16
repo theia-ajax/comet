@@ -80,7 +80,14 @@
             "windows": {
                 "command": ".\\build_mingw64.bat debug"
             },
-            "group": "build"
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation":[
+                    "relative",
+                    "${workspaceFolder}/bin/comet"
+                ]
+            },
+            "group": "build",
         },
         {
             "type": "shell",
@@ -88,6 +95,13 @@
             "command": "./build.sh release",
             "windows": {
                 "command": ".\\build_mingw64.bat release",
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation":[
+                    "relative",
+                    "${workspaceFolder}/bin/comet"
+                ]
             },
             "group": "build"
         },

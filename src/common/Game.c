@@ -11,6 +11,7 @@
 #include "GameWorld.h"
 #include "Log.h"
 #include "Math2D.h"
+#include "ParticlePhysics.h"
 #include "Physics.h"
 #include "Random.h"
 #include "SpriteDatabase.h"
@@ -91,8 +92,8 @@ bool GameInitialize(const GameInitParams* params)
 
 	StringIdPoolsInitialize();
 
-	int32 GameResWidth = 640;
-	int32 GameResHeight = 360;
+	int32 GameResWidth = 1440;
+	int32 GameResHeight = 320;
 
 	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
@@ -110,17 +111,16 @@ bool GameInitialize(const GameInitParams* params)
 		.CanvasHeight = GameResHeight,
 	});
 
-	AssetsInitialize(&(AssetsConfig){
-		.TypeConfigs = {
-			[AssetType_Image] =
-				{.LoadAssetData = (LoadAssetDataFunc)LoadImageData,
-				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadImageData,
-				 .Size = sizeof(ImageData)},
-			[AssetType_SpriteSheetData] =
-				{.LoadAssetData = (LoadAssetDataFunc)LoadSpriteSheetData,
-				 .UnloadAssetData = (UnloadAssetDataFunc)UnloadSpriteSheetData,
-				 .Size = sizeof(SpriteSheetData)},
-		}});
+	AssetsInitialize(&(AssetsConfig){.TypeConfigs = {
+										 [AssetType_Image] =
+											 {.LoadAssetData = (LoadAssetDataFunc)LoadImageData,
+											  .UnloadAssetData = (UnloadAssetDataFunc)UnloadImageData,
+											  .Size = sizeof(ImageData)},
+										 [AssetType_SpriteSheetData] =
+											 {.LoadAssetData = (LoadAssetDataFunc)LoadSpriteSheetData,
+											  .UnloadAssetData = (UnloadAssetDataFunc)UnloadSpriteSheetData,
+											  .Size = sizeof(SpriteSheetData)},
+									 }});
 
 	ImageAsset* ShipObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
@@ -140,6 +140,13 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
+	PhysicsInitialize(&(PhysicsConfig){
+		.Bounds = {0.0f, 0.0f, 1440, 320},
+		.CellSize = 16.0f,
+		.Gravity = V2(0, 300.0f),
+		.HeatForce = V2(0, -500),
+	});
+
 	LogInfo("Game Systems Initialized");
 
 	GGame.World = CreateGameWorld();
@@ -156,24 +163,24 @@ bool GameInitialize(const GameInitParams* params)
 		.TintColor = V4(0.01f, 0.02f, 0.1f, 1.0f),
 	};
 
-	GGame.PlayerEntity = CreatePlayerShip(World, V2(64, 128));
-	CreateEnemy(World, V2(256, 128));
+	// GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));
+	// CreateEnemy(GGame.World, V2(256, 128));
 
-	{
-		EntityId BackgroundEntity = CreateEntity(World);
-		*AddComponent(TransformComponent, World, BackgroundEntity) = (TransformComponent){
-			.Position = V2(372, 128),
-		};
-		*AddComponent(SpriteComponent, World, BackgroundEntity) = (SpriteComponent){
-			.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
-		};
-		*AddComponent(SpriteTilesComponent, World, BackgroundEntity) = (SpriteTilesComponent){
-			.Tiles = {4, 4},
-		};
-		*AddComponent(RenderLayerComponent, World, BackgroundEntity) = (RenderLayerComponent){
-			.Layer = -1000,
-		};
-	}
+	// {
+	// 	EntityId BackgroundEntity = CreateEntity(GGame.World);
+	// 	*AddComponent(TransformComponent, GGame.World, BackgroundEntity) = (TransformComponent){
+	// 		.Position = V2(372, 128),
+	// 	};
+	// 	*AddComponent(SpriteComponent, GGame.World, BackgroundEntity) = (SpriteComponent){
+	// 		.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
+	// 	};
+	// 	*AddComponent(SpriteTilesComponent, GGame.World, BackgroundEntity) = (SpriteTilesComponent){
+	// 		.Tiles = {4, 4},
+	// 	};
+	// 	*AddComponent(RenderLayerComponent, GGame.World, BackgroundEntity) = (RenderLayerComponent){
+	// 		.Layer = -1000,
+	// 	};
+	// }
 
 	GBossIdleAnimationData = (SpriteAnimationData){
 		.Frames =
@@ -222,12 +229,11 @@ static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation
 		.Rotation = 0.25f,
 	};
 
-	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){
-		.Type = ColliderType_Circle,
-		.Group = Group_Friendly,
-		.Circle = {
-			.Radius = 8.0f,
-		}};
+	*AddComponent(ColliderComponent, World, Entity) = (ColliderComponent){.Type = ColliderType_Circle,
+																		  .Group = Group_Friendly,
+																		  .Circle = {
+																			  .Radius = 8.0f,
+																		  }};
 
 	*AddComponent(LifetimeComponent, World, Entity) = (LifetimeComponent){
 		.SecondsRemaining = 2.0f,
@@ -424,13 +430,32 @@ void GameUpdate(const GameTime* gameTime)
 	DamageSystemUpdate(GGame.World, gameTime);
 	LifetimeSystemUpdate(GGame.World, gameTime);
 
-	{
-		flt32 Time = GetComponent(TimerComponent, GGame.World, GBossEntity)->SecondsElapsed;
-		int32 FrameIndex =
-			floor(fmod(Time / GBossIdleAnimationData.SecondsPerFrame, (flt32)GBossIdleAnimationData.FrameCount));
-		SpriteId Sprite = GBossIdleAnimationData.Frames[FrameIndex].Sprite;
-		GetComponent(SpriteComponent, GGame.World, GBossEntity)->SpriteId = Sprite;
+	flt32 Spawners[4 * 2] = {
+		24,
+		100,
+		100000,
+		25000,
+		1440 - 24,
+		100,
+		-100000,
+		25000,
+	};
+
+	for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 4) {
+		flt32* Spawner = &Spawners[SpawnerIndex];
+		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
+		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
+		if (/*gameTime->SimTimeMS < (1000.0 / 60.0)*/ PhysicsGetObjectCount() < 1200 && PhysicsIsAreaClear(SpawnPos)) {
+			PhysicsAddObject(&(PhysicsObject){
+				.Position = SpawnPos,
+				.Radius = 8.0f,
+				.Acceleration = SpawnAccel,
+				.Heat = 1.0f,
+			});
+		}
 	}
+
+	PhysicsUpdate(gameTime->DeltaTimeF);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -472,7 +497,40 @@ void GameRender(const GameTime* gameTime)
 	SpriteSystemRender(GGame.World);
 	ColliderSystemDebugRender(GGame.World);
 
+	{
+		size_t ObjectCount = 0;
+		const PhysicsObject* Objects = PhysicsGetObjects();
+		for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
+			const PhysicsObject* Object = &Objects[Index];
+			Vec2 Pos = Object->Position;
+			flt32 Radius = Object->Radius;
+			SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
+			uint32 TintColor;
+			// if ((Object->Flags & 1) != 0) {
+			// 	TintColor = Object->Tint;
+			// } else {
+			// 	TintColor = GGame.HeatRampColors[(int32)(MIN(Object->Heat, 1.0f - KEpsilon32) *
+			// 											 GGame.HeatRampCount)];
+			// }
+
+			flt32 Scale = (Radius + Object->Heat * 2.0f) / 26.0f;
+
+			DrawCircle(Pos, Radius, 0xFFFFFFFF);
+			// DrawSprite(&(SpriteDraw){
+			// 	.SpriteId = ExplosionsSpriteIds[3],
+			// 	.Position = Pos,
+			// 	.Scale = V2(Scale, Scale),
+			// 	.UseTint = true,
+			// 	.TintColor = 0xFFFFFFFF,
+			// });
+			// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
+			// SDL_RenderFillRectF(GGame.Renderer, &PosRect);
+		}
+	}
+
 	DrawRender();
+
+	// PhysicsDebugDraw(GGame.Renderer);
 
 	DebugDraw(GGame.Renderer);
 	SDL_RenderPresent(GGame.Renderer);

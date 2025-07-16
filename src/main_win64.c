@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 
 	stm_setup();
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1440, 320, 0);
 	GWindow = Window;
 	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
