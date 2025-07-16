@@ -38,6 +38,10 @@ bool LoadImageData(const char* FileName, ImageData* DataOut)
 	}
 
 	DataOut->Pixels = Pixels;
+	DataOut->Width = Surface->w;
+	DataOut->Height = Surface->h;
+	DataOut->BytesPerPixel = Surface->format->BytesPerPixel;
+	DataOut->Pitch = Surface->pitch;
 	DataOut->Surface = Surface;
 	return true;
 }

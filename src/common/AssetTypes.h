@@ -7,6 +7,10 @@
 typedef struct ImageData {
 	uint8* Pixels;
 	SDL_Surface* Surface;
+	int32 Width;
+	int32 Height;
+	int32 BytesPerPixel;
+	int32 Pitch;
 } ImageData;
 DEFINE_ASSET(Image);
 

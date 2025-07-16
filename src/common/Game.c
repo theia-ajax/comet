@@ -37,6 +37,10 @@ typedef struct SpriteAnimationData {
 	flt32 SecondsPerFrame;
 } SpriteAnimationData;
 
+typedef struct ParticlePhysicsRenderConfig {
+	uint32* HeatRampColors;
+} ParticlePhysicsRenderConfig;
+
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, flt32 Rotation, flt32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
 static EntityId CreateEnemy(GameWorld* World, Vec2 Position);
@@ -48,6 +52,7 @@ void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time);
 void BehaviorSystemUpdate(GameWorld* World, const GameTime* Time);
 void SpriteSystemRender(GameWorld* World);
 void ColliderSystemDebugRender(GameWorld* World);
+void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderConfig* Config);
 
 struct {
 	bool IsRunning;
@@ -67,6 +72,7 @@ struct {
 	flt32 SecondTimer;
 	int32 LastFPS;
 	int32 FramesThisSecond;
+	ParticlePhysicsRenderConfig ParticleRenderConfig;
 } GGame;
 
 SpriteAnimationData GBossIdleAnimationData;
@@ -126,6 +132,7 @@ bool GameInitialize(const GameInitParams* params)
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
 	ImageAsset* BackgroundObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
+	ImageAsset* HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, "assets/heat_color_ramp2.png");
 
 	SpriteSheetAsset* ShipObjectsSpriteSheetDataAsset =
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
@@ -140,12 +147,21 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	PhysicsInitialize(&(PhysicsConfig){
-		.Bounds = {0.0f, 0.0f, 1440, 320},
-		.CellSize = 16.0f,
-		.Gravity = V2(0, 300.0f),
-		.HeatForce = V2(0, -500),
-	});
+	{
+		PhysicsConfig Config = PhysicsDefaultConfig();
+		Config.Bounds.ZW = V2(1440, 320);
+		Config.CellSize = 8.0f;
+		Config.HeatForce = V2(0, -600);
+		PhysicsInitialize(&Config);
+
+		for (uint8* Pixel = HeatRampImage->Data->Pixels;
+			 Pixel != HeatRampImage->Data->Pixels + (HeatRampImage->Data->Width * HeatRampImage->Data->BytesPerPixel);
+			 Pixel += HeatRampImage->Data->BytesPerPixel)
+		{
+			uint32 Color = *((uint32*)Pixel);
+			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
+		}
+	}
 
 	LogInfo("Game Systems Initialized");
 
@@ -433,11 +449,11 @@ void GameUpdate(const GameTime* gameTime)
 	flt32 Spawners[4 * 2] = {
 		24,
 		100,
-		100000,
+		1000000,
 		25000,
 		1440 - 24,
 		100,
-		-100000,
+		-1000000,
 		25000,
 	};
 
@@ -445,10 +461,10 @@ void GameUpdate(const GameTime* gameTime)
 		flt32* Spawner = &Spawners[SpawnerIndex];
 		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
 		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
-		if (/*gameTime->SimTimeMS < (1000.0 / 60.0)*/ PhysicsGetObjectCount() < 1200 && PhysicsIsAreaClear(SpawnPos)) {
+		if (/*gameTime->SimTimeMS < (1000.0 / 60.0)*/ PhysicsGetObjectCount() < 12000 /*&& PhysicsIsAreaClear(SpawnPos)*/) {
 			PhysicsAddObject(&(PhysicsObject){
 				.Position = SpawnPos,
-				.Radius = 8.0f,
+				.Radius = 1.0f,
 				.Acceleration = SpawnAccel,
 				.Heat = 1.0f,
 			});
@@ -497,36 +513,7 @@ void GameRender(const GameTime* gameTime)
 	SpriteSystemRender(GGame.World);
 	ColliderSystemDebugRender(GGame.World);
 
-	{
-		size_t ObjectCount = 0;
-		const PhysicsObject* Objects = PhysicsGetObjects();
-		for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
-			const PhysicsObject* Object = &Objects[Index];
-			Vec2 Pos = Object->Position;
-			flt32 Radius = Object->Radius;
-			SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
-			uint32 TintColor;
-			// if ((Object->Flags & 1) != 0) {
-			// 	TintColor = Object->Tint;
-			// } else {
-			// 	TintColor = GGame.HeatRampColors[(int32)(MIN(Object->Heat, 1.0f - KEpsilon32) *
-			// 											 GGame.HeatRampCount)];
-			// }
-
-			flt32 Scale = (Radius + Object->Heat * 2.0f) / 26.0f;
-
-			DrawCircle(Pos, Radius, 0xFFFFFFFF);
-			// DrawSprite(&(SpriteDraw){
-			// 	.SpriteId = ExplosionsSpriteIds[3],
-			// 	.Position = Pos,
-			// 	.Scale = V2(Scale, Scale),
-			// 	.UseTint = true,
-			// 	.TintColor = 0xFFFFFFFF,
-			// });
-			// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
-			// SDL_RenderFillRectF(GGame.Renderer, &PosRect);
-		}
-	}
+	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 
 	DrawRender();
 
@@ -726,4 +713,36 @@ void ColliderSystemDebugRender(GameWorld* World)
 		}
 	}
 	QueryFree(Query);
+}
+
+void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderConfig* Config)
+{
+	size_t ObjectCount = 0;
+	const PhysicsObject* Objects = PhysicsGetObjects();
+	for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
+		const PhysicsObject* Object = &Objects[Index];
+		Vec2 Pos = Object->Position;
+		flt32 Radius = Object->Radius;
+		SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
+		uint32 TintColor;
+		if ((Object->Flags & 1) != 0) {
+			TintColor = Object->Tint;
+		} else {
+			int32 Index = (int32)(MIN(Object->Heat, 1.0f - KEpsilonFloat32) * arrlen(Config->HeatRampColors));
+			TintColor = Config->HeatRampColors[Index];
+		}
+
+		flt32 Scale = (Radius + Object->Heat * 2.0f) / 26.0f;
+
+		DrawCircle(Pos, Radius, TintColor);
+		// DrawSprite(&(SpriteDraw){
+		// 	.SpriteId = ExplosionsSpriteIds[3],
+		// 	.Position = Pos,
+		// 	.Scale = V2(Scale, Scale),
+		// 	.UseTint = true,
+		// 	.TintColor = 0xFFFFFFFF,
+		// });
+		// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
+		// SDL_RenderFillRectF(GGame.Renderer, &PosRect);
+	}
 }
