@@ -63,7 +63,8 @@
         "bitset": "c",
         "string_view": "c",
         "xtr1common": "c",
-        "assettypes.h": "c"
+        "assettypes.h": "c",
+        "spritedatabase.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

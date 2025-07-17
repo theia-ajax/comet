@@ -19,9 +19,8 @@ typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
 
-typedef float flt32;
-typedef double flt64;
-
+typedef float float32;
+typedef double float64;
 
 #if defined(__GNUC__)
 #define NORETURN [[_Noreturn]]

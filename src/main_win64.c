@@ -16,20 +16,25 @@ void HandleExit(void)
 	SDL_Quit();
 }
 
-
 int main(int argc, char* argv[])
 {
 	LoggingInitialize(LogLevel_Info);
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Critical Error", SDL_GetError(), NULL);
 		exit(1);
 	}
 
-	SDL_version SdlVersion;
-	SDL_GetVersion(&SdlVersion);
+	int SdlVersion = SDL_GetVersion();
 
-	LogInfo("System: Initialized SDL v%d.%d.%d", SdlVersion.major, SdlVersion.minor, SdlVersion.patch);
+	LogInfo(
+		"System: Initialized SDL v%d.%d.%d compiled with v%d.%d.%d",
+		SDL_VERSIONNUM_MAJOR(SdlVersion),
+		SDL_VERSIONNUM_MINOR(SdlVersion),
+		SDL_VERSIONNUM_MICRO(SdlVersion),
+		SDL_VERSIONNUM_MAJOR(SDL_VERSION),
+		SDL_VERSIONNUM_MINOR(SDL_VERSION),
+		SDL_VERSIONNUM_MICRO(SDL_VERSION));
 
 	stm_setup();
 
@@ -78,10 +83,10 @@ int main(int argc, char* argv[])
 			switch (Event.type) {
 				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
 				case SDL_EVENT_KEY_DOWN:
-					if (Event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
-					InputState.KeyStates[Event.key.keysym.scancode] = true;
+					if (Event.key.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
+					InputState.KeyStates[Event.key.scancode] = true;
 					break;
-				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.keysym.scancode] = false; break;
+				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.scancode] = false; break;
 				default: break;
 			}
 			GameProcessEvent(&Event);

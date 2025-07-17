@@ -4,5 +4,5 @@ if "%1"=="" (
 ) else (
 	set "CONFIG=%1"
 )
-copy_dlls %CONFIG%
-bin\comet\bin\Win64\Debug\comet.exe
+rem copy_dlls %CONFIG%
+.\bin\comet\bin\Win64\%CONFIG%\comet.exe

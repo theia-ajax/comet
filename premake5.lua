@@ -26,7 +26,7 @@ filter "configurations:Release"
 	optimize "On"
 
 project "comet"
-	kind "WindowedApp"
+	kind "ConsoleApp"
 	language "C"
 	cdialect "gnu17"
 	toolset "gcc"
@@ -40,19 +40,21 @@ project "comet"
 	includedirs { "include" }
 	debugdir "."
 
-	if os.istarget("windows") then
-		filter "configurations:Debug"
-			kind "ConsoleApp"
-	end
-
 	filter "platforms:Linux64"
 		links { "SDL3", "m", "stdc++" }
 		libdirs { "lib/Linux64" }
 
 	filter "platforms:Win64"
 		links { "SDL3" }
-		libdirs { "lib/Win64/%{cfg.buildcfg}" }
-		
+		defines { "__WINDOWS__" }
+		includedirs { "vcpkg_installed/x64-windows/include" }
+
+	filter {"platforms:Win64", "configurations:Release"}
+		libdirs { "lib/Win64/Release/" }
+
+	filter {"platforms:Win64", "configurations:Debug"}
+		kind "ConsoleApp"
+		libdirs { "lib/Win64/Debug/" }
 
 
 

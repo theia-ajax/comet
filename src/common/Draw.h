@@ -16,7 +16,7 @@ typedef struct SpriteDraw {
 	SpriteId SpriteId;
 	Vec2 Position;
 	Vec2 Scale;
-	flt32 Rotation;
+	float32 Rotation;
 	Point SpriteTiles;
 	ColorU8 TintColor;
 	bool UseTint;
@@ -27,11 +27,12 @@ void DrawInitialize(const DrawConfig* config);
 void DrawShutdown(void);
 
 void DrawSprite(const SpriteDraw* spriteDraw);
-void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color);
+void DrawCircle(Vec2 Center, float32 Radius, uint32 Color);
 void DrawAABB(AABB AABB_, uint32 Color);
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color);
 void DrawRender(void);
 
 void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A);
-ColorU8 ColorV4ToColorU8(Vec4 Color);
-ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A);
+ColorU8 ColorU8FromVec4(Vec4 Color);
+ColorU8 ColorU8FromColorU32(uint32 Color);
+ColorU8 ColorU8FromHSV(float32 H, float32 S, float32 V, float32 A);

@@ -14,7 +14,7 @@
 	BINARY_SEARCH_PROTOTYPE(type);                                                                                     \
 	BINARY_SEARCH_INSERT_INDEX_PROTOTYPE(type);
 
-#define BINARY_SEARCH_TYPES int8, int16, int32, int64, uint8, uint16, uint32, uint64, flt32, flt64, EntityId
+#define BINARY_SEARCH_TYPES int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, EntityId
 FOR_EACH(BINARY_SEARCH_TOOLS_DEFINE_INTERFACE, BINARY_SEARCH_TYPES);
 
 #define BINARY_SEARCH_GENERIC_ENTRY(Type) , Type : BINARY_SEARCH_NAME(Type)
@@ -38,8 +38,8 @@ FOR_EACH(BINARY_SEARCH_TOOLS_DEFINE_INTERFACE, BINARY_SEARCH_TYPES);
 
 // Any new types added to this will get a swap function defined for it and make it available via the Swap _Generic
 #define SWAP_TYPES_LIST                                                                                                \
-	bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, flt32, flt64, Vec2, Vec3, Vec4, Quat, Mat2, Mat3,  \
-		Mat4, EntityId
+	bool, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, Vec2, Vec3, Vec4, Quat, Mat2,    \
+		Mat3, Mat4, EntityId
 
 FOR_EACH(DEFINE_SWAP, SWAP_TYPES_LIST);
 
@@ -78,12 +78,12 @@ static inline int64 TrueModuloInt64(int64 A, int64 B)
 	return (A >= 0) ? A % B : ((B >= 0 ? B : -B) - 1 + (A + 1) % B);
 }
 
-static inline flt32 TrueModuloFlt32(flt32 A, flt32 B)
+static inline float32 TrueModuloFloat32(float32 A, float32 B)
 {
 	return A - B * floor(A / B);
 }
 
-static inline flt64 TrueModuloFlt64(flt64 A, flt64 B)
+static inline float64 TrueModuloFloat64(float64 A, float64 B)
 {
 	return A - B * floor(A / B);
 }
@@ -95,8 +95,8 @@ static inline flt64 TrueModuloFlt64(flt64 A, flt64 B)
 		int16: TrueModuloInt16,                                                                                        \
 		int32: TrueModuloInt32,                                                                                        \
 		int64: TrueModuloInt64,                                                                                        \
-		flt32: TrueModuloFlt32,                                                                                        \
-		flt64: TrueModuloFlt64)(A, B)
+		float32: TrueModuloFloat32,                                                                                    \
+		float64: TrueModuloFloat64)(A, B)
 
 // Associative sorts provide a list of indices indicating what swaps occurs so they can be applied to arrays that have
 // an associative relationship with the sorted array

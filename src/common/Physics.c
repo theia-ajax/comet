@@ -35,7 +35,7 @@ void PhysDestroyWorld(PhysWorld* World)
 	free(World);
 }
 
-PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, flt32 Radius)
+PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, float32 Radius)
 {
 	PhysShapeHandle HShape = _PhysAllocateShape(World, PhysShapeType_Circle);
 	CircleShape* Circle = PhysTryGetCircleShape(World, HShape);

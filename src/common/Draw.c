@@ -71,7 +71,7 @@ void DrawSprite(const SpriteDraw* spriteDraw)
 	}
 }
 
-void DrawCircle(Vec2 Center, flt32 Radius, uint32 Color)
+void DrawCircle(Vec2 Center, float32 Radius, uint32 Color)
 {
 	if (GDraw.PrimitiveCount < KMaxPrimitiveDrawCalls) {
 		GDraw.PrimitiveQueue[GDraw.PrimitiveCount++] = (PrimDrawCmd){
@@ -127,7 +127,9 @@ static int SpriteDrawLayerCompareVoid(const void* A, const void* B)
 
 void DrawRender(void)
 {
-	SDL_qsort(GDraw.SpriteQueue, GDraw.SpriteCount, sizeof(GDraw.SpriteQueue[0]), SpriteDrawLayerCompareVoid);
+	// SDL_qsort(GDraw.SpriteQueue, GDraw.SpriteCount, sizeof(GDraw.SpriteQueue[0]), SpriteDrawLayerCompareVoid);
+
+	// SDL_SetRenderDrawColor(GDraw.Renderer, 255, 255, 255, 255);
 
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
@@ -170,50 +172,50 @@ void DrawRender(void)
 		}
 	}
 
-	for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
-		const PrimDrawCmd* DrawCmd = &GDraw.PrimitiveQueue[PrimIndex];
-		uint32 Color = DrawCmd->Color;
-		uint8 R = (Color >> 0) & 0xFF;
-		uint8 G = (Color >> 8) & 0xFF;
-		uint8 B = (Color >> 16) & 0xFF;
-		uint8 A = (Color >> 24);
-		SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+	// for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
+	// 	const PrimDrawCmd* DrawCmd = &GDraw.PrimitiveQueue[PrimIndex];
+	// 	uint32 Color = DrawCmd->Color;
+	// 	uint8 R = (Color >> 0) & 0xFF;
+	// 	uint8 G = (Color >> 8) & 0xFF;
+	// 	uint8 B = (Color >> 16) & 0xFF;
+	// 	uint8 A = (Color >> 24);
+	// 	SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
 
-		Vec4 ColorF0 = V4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
-		flt32 Grey = VecSort(ColorF0.RGB).G;
-		Vec4 ColorF1 = V4V(Splat(Grey).RGB, A);
+	// 	Vec4 ColorF0 = V4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+	// 	float32 Grey = VecSort(ColorF0.RGB).G;
+	// 	Vec4 ColorF1 = V4V(Splat(Grey).RGB, A);
 
-		switch (DrawCmd->Shape) {
-			case KShapeCircle:
-				SDL_RenderDrawCircle(
-					GDraw.Renderer,
-					(SDL_FPoint*)&DrawCmd->PrimCircle.Center,
-					DrawCmd->PrimCircle.Radius);
-				break;
-			case KShapePolygon:
-				{
-					SDL_FPoint Points[KPolygonMaxVerts + 1];
-					memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
-					Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
-					const int32 Count = DrawCmd->PrimPolygon.VertexCount;
-					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
-						flt32 EdgeRatio = (flt32)EdgeIndex / Count;
-						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
-						ColorV4ToBytes(ColorF, &R, &G, &B, &A);
-						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
-						SDL_RenderLine(
-							GDraw.Renderer,
-							Points[EdgeIndex].x,
-							Points[EdgeIndex].y,
-							Points[EdgeIndex + 1].x,
-							Points[EdgeIndex + 1].y);
-					}
-					// SDL_RenderDrawLinesF(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
-				}
-				break;
-			default: break;
-		}
-	}
+	// 	switch (DrawCmd->Shape) {
+	// 		case KShapeCircle:
+	// 			SDL_RenderDrawCircle(
+	// 				GDraw.Renderer,
+	// 				(SDL_FPoint*)&DrawCmd->PrimCircle.Center,
+	// 				DrawCmd->PrimCircle.Radius);
+	// 			break;
+	// 		case KShapePolygon:
+	// 			{
+	// 				SDL_FPoint Points[KPolygonMaxVerts + 1];
+	// 				memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
+	// 				Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
+	// 				const int32 Count = DrawCmd->PrimPolygon.VertexCount;
+	// 				for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
+	// 					float32 EdgeRatio = (float32)EdgeIndex / Count;
+	// 					Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
+	// 					ColorV4ToBytes(ColorF, &R, &G, &B, &A);
+	// 					SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+	// 					SDL_RenderLine(
+	// 						GDraw.Renderer,
+	// 						Points[EdgeIndex].x,
+	// 						Points[EdgeIndex].y,
+	// 						Points[EdgeIndex + 1].x,
+	// 						Points[EdgeIndex + 1].y);
+	// 				}
+	// 				// SDL_RenderDrawLinesF(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+	// 			}
+	// 			break;
+	// 		default: break;
+	// 	}
+	// }
 
 	GDraw.SpriteCount = 0;
 	GDraw.PrimitiveCount = 0;
@@ -255,7 +257,7 @@ void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A)
 	if (A != NULL) *A = (uint8)round(Color.A * 255.0f);
 }
 
-ColorU8 ColorV4ToColorU8(Vec4 Color)
+ColorU8 ColorU8FromVec4(Vec4 Color)
 {
 	ColorU8 Result;
 	Result.R = (uint8)round(Color.R * 255.0f);
@@ -265,7 +267,17 @@ ColorU8 ColorV4ToColorU8(Vec4 Color)
 	return Result;
 }
 
-ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A)
+ColorU8 ColorU8FromColorU32(uint32 Color)
+{
+	ColorU8 Result;
+	Result.R = Color & 0xFF;
+	Result.G = Color >> 8;
+	Result.B = Color >> 16;
+	Result.A = Color >> 24;
+	return Result;
+}
+
+ColorU8 ColorU8FromHSV(float32 H, float32 S, float32 V, float32 A)
 {
 	if (S == 0.0f) {
 		uint8 V8 = (uint8)(V * 255.0f);
@@ -275,12 +287,12 @@ ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A)
 
 	H = (H - floor(H)) * 6.0f;
 	int32 HI = (int32)H;
-	flt32 Frac = H - HI;
-	flt32 N0 = V * (1.0f - S);
-	flt32 N1 = V * (1.0f - S * Frac);
-	flt32 N2 = V * (1.0f - S * (1.0f - Frac));
+	float32 Frac = H - HI;
+	float32 N0 = V * (1.0f - S);
+	float32 N1 = V * (1.0f - S * Frac);
+	float32 N2 = V * (1.0f - S * (1.0f - Frac));
 
-	flt32 RP = V, GP = V, BP = V;
+	float32 RP = V, GP = V, BP = V;
 	// clang-format off
 	switch (HI)
 	{
@@ -294,5 +306,5 @@ ColorU8 HsvToColorU8(flt32 H, flt32 S, flt32 V, flt32 A)
 	}
 	// clang-format on
 
-	return ColorV4ToColorU8(V4(RP, GP, BP, A));
+	return ColorU8FromVec4(V4(RP, GP, BP, A));
 }

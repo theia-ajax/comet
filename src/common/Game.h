@@ -16,10 +16,10 @@ typedef struct GameInput {
 } GameInput;
 
 typedef struct GameTime {
-	flt64 ElapsedSeconds;
-	flt64 DeltaTime;
-	flt64 SimTimeMS;
-	flt32 DeltaTimeF;
+	float64 ElapsedSeconds;
+	float64 DeltaTime;
+	float64 SimTimeMS;
+	float32 DeltaTimeF;
 } GameTime;
 
 bool GameInitialize(const GameInitParams* params);

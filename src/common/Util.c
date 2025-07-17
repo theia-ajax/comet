@@ -51,7 +51,7 @@
 	BINARY_SEARCH_IMPL(type)                                                                                           \
 	BINARY_SEARCH_INSERT_INDEX_IMPL(type)
 
-#define BINARY_SEARCH_DEFAULT_IMPL_TYPES int8, int16, int32, int64, uint8, uint16, uint32, uint64, flt32, flt64
+#define BINARY_SEARCH_DEFAULT_IMPL_TYPES int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64
 FOR_EACH(BINARY_SEARCH_DEFAULT_IMPLEMENTATION, BINARY_SEARCH_DEFAULT_IMPL_TYPES)
 
 BINARY_SEARCH_PROTOTYPE(EntityId)

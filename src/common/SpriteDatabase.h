@@ -25,7 +25,7 @@ typedef struct SpriteSheet {
 DEFINE_HANDLE(SpriteSheetId);
 
 typedef struct SpriteRect {
-	flt32 X, Y, W, H;
+	float32 X, Y, W, H;
 } SpriteRect;
 DEFINE_HANDLE(SpriteId);
 

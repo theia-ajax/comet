@@ -36,7 +36,7 @@ typedef struct SpriteSheetMetaData {
 	StringId ImageNameId;
 	StringId FormatNameId;
 	Point Size;
-	flt64 Scale;
+	float64 Scale;
 } SpriteSheetMetaData;
 
 typedef struct SpriteNameIdMap {

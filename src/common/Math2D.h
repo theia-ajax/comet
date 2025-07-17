@@ -2,7 +2,7 @@
 
 #include "Types.h"
 
-#define HANDMADE_FLOAT flt32
+#define HANDMADE_FLOAT float32
 #define HANDMADE_MATH_USE_TURNS
 #include <HandmadeMath.h>
 
@@ -29,7 +29,7 @@ typedef struct AABB {
 
 typedef struct CircleShape {
 	Vec2 Center;
-	flt32 Radius;
+	float32 Radius;
 } CircleShape;
 
 typedef struct PolygonShape {
@@ -42,12 +42,12 @@ typedef struct PolygonShape {
 typedef struct RaycastIn {
 	Vec2 Start;
 	Vec2 End;
-	flt32 MaxFraction;
+	float32 MaxFraction;
 } RaycastIn;
 
 typedef struct RaycastOut {
 	Vec2 Normal;
-	flt32 Fraction;
+	float32 Fraction;
 } RaycastOut;
 
 typedef Vec2 Rot2;
@@ -63,16 +63,16 @@ typedef struct Tform2 {
 // version of Cross()
 // Produces scalar equivalent to area of parallelogram formed by A and B
 // Equivalent calculation to 2x2 Matrix Determinant
-flt32 CrossV2(Vec2 A, Vec2 B);
+float32 CrossV2(Vec2 A, Vec2 B);
 // Produces a vector perpendicular to A and with magnitude |A|*S
 // If S == 1 simply produces perpendicular vector
-Vec2 CrossV2F(Vec2 A, flt32 S);
+Vec2 CrossV2F(Vec2 A, float32 S);
 
 // 2D specific math, maybe find a place for this in HandmadeMath.h at some point.
 // These represent 2d rotations as V2(Cos(Angle), Sin(Angle))
-Rot2 R2(flt32 Angle);
+Rot2 R2(float32 Angle);
 Rot2 R2Ident(void);
-flt32 R2Angle(Rot2 R);
+float32 R2Angle(Rot2 R);
 Vec2 R2AxisX(Rot2 R);
 Vec2 R2AxisY(Rot2 R);
 Vec2 R2Rotate(Rot2 R, Vec2 V);
@@ -93,7 +93,7 @@ AABB AABBTranslate(AABB Self, Vec2 Translation);
 bool AABBIsValid(AABB Self);
 Vec2 AABBCenter(AABB Self);
 Vec2 AABBExtents(AABB Self);
-flt32 AABBPerimeter(AABB Self);
+float32 AABBPerimeter(AABB Self);
 AABB AABBCombine(AABB A, AABB B);
 bool AABBContains(AABB Self, AABB Other);
 bool AABBTestOverlap(AABB A, AABB B);
@@ -107,9 +107,9 @@ bool CircleRaycast(const CircleShape* Self, Tform2 Transform, const RaycastIn* I
 bool CircleIntersectsCircle(const CircleShape* A, Tform2 TransformA, const CircleShape* B, Tform2 TransformB);
 bool CircleIntersectsPolygon(const CircleShape* A, Tform2 TransformA, const PolygonShape* B, Tform2 TransformB);
 
-PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, flt32 Angle);
+PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, float32 Angle);
 void PolygonMakeAABB(PolygonShape* Self, Vec2 HalfSize);
-void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle);
+void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, float32 Angle);
 void PolygonMakeHull(PolygonShape* Self, const Vec2* Vertices, int32 VertexCount);
 void PolygonLocalize(const PolygonShape* Self, Tform2 Transform, PolygonShape* Out);
 bool PolygonTestPoint(const PolygonShape* Self, Tform2 Transform, Vec2 TestPoint);
@@ -138,8 +138,8 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count);
 		uint16: SwapUInt16,                                                                                            \
 		uint32: SwapUInt32,                                                                                            \
 		uint64: SwapUInt64,                                                                                            \
-		flt32: SwapFloat32,                                                                                            \
-		flt64: SwapFloat64,                                                                                            \
+		float32: SwapFloat32,                                                                                          \
+		float64: SwapFloat64,                                                                                          \
 		Vec2: SwapVec2,                                                                                                \
 		Vec3: SwapVec3,                                                                                                \
 		Vec4: SwapVec4,                                                                                                \

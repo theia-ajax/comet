@@ -18,22 +18,22 @@ typedef struct ChildOfComponent {
 
 typedef struct TransformComponent {
 	Vec2 Position;
-	flt32 Rotation;
+	float32 Rotation;
 } TransformComponent;
 
 typedef struct LocalTransformComponent {
-	flt32 LocalRotation;
+	float32 LocalRotation;
 	Vec2 LocalPosition;
 } LocalTransformComponent;
 
 typedef struct VelocityComponent {
 	Vec2 Velocity;
-	flt32 AngularVelocity;
+	float32 AngularVelocity;
 } VelocityComponent;
 
 typedef struct SpriteComponent {
 	SpriteId SpriteId;
-	flt32 Rotation;
+	float32 Rotation;
 	Vec2 Offset;
 } SpriteComponent;
 
@@ -65,7 +65,7 @@ typedef struct ColliderComponent {
 } ColliderComponent;
 
 typedef struct LifetimeComponent {
-	flt32 SecondsRemaining;
+	float32 SecondsRemaining;
 } LifetimeComponent;
 
 enum { KMaxSensorEntities = 8 };
@@ -79,15 +79,15 @@ typedef struct HitReceiverComponent {
 } HitReceiverComponent;
 
 typedef struct DamageSourceComponent {
-	flt32 DamageAmount;
+	float32 DamageAmount;
 } DamageSourceComponent;
 
 typedef struct DamageReceiverComponent {
-	flt32 DamageAccumulator;
+	float32 DamageAccumulator;
 } DamageReceiverComponent;
 
 typedef struct DurabilityComponent {
-	flt32 CurrentDurability;
+	float32 CurrentDurability;
 } DurabilityComponent;
 
 typedef struct TimerComponent {

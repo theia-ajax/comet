@@ -21,10 +21,10 @@ typedef struct PhysicsObject {
 	int32 LastGridCell;
 	Vec2 LastPosition;
 	Vec2 Acceleration;
-	flt32 Radius;
-	flt32 Heat;
+	float32 Radius;
+	float32 Heat;
 	uint32 Tint;
-	flt32 SecondsAlive;
+	float32 SecondsAlive;
 } PhysicsObject;
 
 typedef enum PhysConstraintType {
@@ -42,7 +42,7 @@ typedef struct PhysPinConstraint {
 typedef struct PhysLinkConstraint {
 	PhysicsObjectHandle HObject0;
 	PhysicsObjectHandle HObject1;
-	flt32 TargetDistance;
+	float32 TargetDistance;
 } PhysLinkConstraint;
 
 typedef struct PhysConstraint {
@@ -56,8 +56,10 @@ typedef struct PhysConstraint {
 typedef struct PhysicsConfig {
 	Vec2 Gravity;
 	Vec2 HeatForce;
+	float32 HeatTransferRate;
 	Vec4 Bounds;
-	flt32 CellSize;
+	float32 CellSize;
+	int32 MaxPhysicsObjects;
 } PhysicsConfig;
 
 void PhysicsInitialize(const PhysicsConfig* Config);
@@ -65,8 +67,11 @@ void PhysicsShutdown(void);
 void PhysicsUpdate(float DeltaTime);
 PhysicsConfig PhysicsDefaultConfig(void);
 
+const PhysicsConfig* PhysicsGetConfig(void);
 const PhysicsObject* PhysicsGetObjects(void);
+PhysicsObject* PhysicsGetObjectsMutable(void);
 size_t PhysicsGetObjectCount(void);
+void PhysicsClearAllObjects(void);
 PhysicsObjectHandle PhysicsAddObject(const PhysicsObject* OptionalConfig);
 void PhysicsObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration);
 bool PhysObjectHandleIsValid(PhysicsObjectHandle Handle);
@@ -75,7 +80,7 @@ PhysicsConstraintHandle PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec
 PhysicsConstraintHandle PhysicsAddLinkConstraint(
 	PhysicsObjectHandle HObject0,
 	PhysicsObjectHandle HObject1,
-	flt32 TargetDistance);
+	float32 TargetDistance);
 PhysConstraint* PhysicsGetConstraint(PhysicsConstraintHandle Handle);
 PhysicsObject* PhysicsGetPinConstraintObject(PhysicsConstraintHandle Handle);
 bool PhysicsIsAreaClear(Vec2 Position);

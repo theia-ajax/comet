@@ -30,7 +30,7 @@ bool LoadImageData(const char* FileName, ImageData* DataOut)
 		return false;
 	}
 
-	SDL_Surface* Surface = SDL_CreateSurfaceFrom(Pixels, Width, Height, Width * 4, SDL_PIXELFORMAT_ABGR8888);
+	SDL_Surface* Surface = SDL_CreateSurfaceFrom(Width, Height, SDL_PIXELFORMAT_ABGR8888, Pixels, Width * 4);
 
 	if (Surface == NULL) {
 		stbi_image_free(Pixels);
@@ -40,7 +40,7 @@ bool LoadImageData(const char* FileName, ImageData* DataOut)
 	DataOut->Pixels = Pixels;
 	DataOut->Width = Surface->w;
 	DataOut->Height = Surface->h;
-	DataOut->BytesPerPixel = Surface->format->BytesPerPixel;
+	DataOut->BytesPerPixel = SDL_GetPixelFormatDetails(Surface->format)->bytes_per_pixel;
 	DataOut->Pitch = Surface->pitch;
 	DataOut->Surface = Surface;
 	return true;

@@ -51,7 +51,7 @@ Vec2 AABBExtents(AABB Self)
 	return Mul(Sub(Self.MaxBound, Self.MinBound), 0.5f);
 }
 
-flt32 AABBPerimeter(AABB Self)
+float32 AABBPerimeter(AABB Self)
 {
 	return 2.0f * ((Self.MaxBound.X - Self.MinBound.X) + (Self.MaxBound.Y - Self.MinBound.Y));
 }
@@ -87,8 +87,8 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 	ASSERT(In != NULL);
 	ASSERT(Out != NULL);
 
-	flt32 TMin = -INFINITY;
-	flt32 TMax = INFINITY;
+	float32 TMin = -INFINITY;
+	float32 TMax = INFINITY;
 	Vec2 Normal = V2(0, 0);
 	ZERO_STRUCT(Out);
 
@@ -101,10 +101,10 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 			return false;
 		}
 	} else {
-		flt32 InvDirX = 1.0f / Dir.X;
-		flt32 T1 = (Self.MinBound.X - Point.X) * InvDirX;
-		flt32 T2 = (Self.MaxBound.X - Point.X) * InvDirX;
-		flt32 S = -1.0f;
+		float32 InvDirX = 1.0f / Dir.X;
+		float32 T1 = (Self.MinBound.X - Point.X) * InvDirX;
+		float32 T2 = (Self.MaxBound.X - Point.X) * InvDirX;
+		float32 S = -1.0f;
 
 		if (T1 > T2) {
 			Swap(T1, T2);
@@ -130,10 +130,10 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 			return false;
 		}
 	} else {
-		flt32 InvDirY = 1.0f / Dir.Y;
-		flt32 T1 = (Self.MinBound.Y - Point.Y) * InvDirY;
-		flt32 T2 = (Self.MaxBound.Y - Point.Y) * InvDirY;
-		flt32 S = -1.0f;
+		float32 InvDirY = 1.0f / Dir.Y;
+		float32 T1 = (Self.MinBound.Y - Point.Y) * InvDirY;
+		float32 T2 = (Self.MaxBound.Y - Point.Y) * InvDirY;
+		float32 S = -1.0f;
 
 		if (T1 > T2) {
 			Swap(T1, T2);
@@ -160,7 +160,7 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 	return true;
 }
 
-Vec2 R2(flt32 Angle)
+Vec2 R2(float32 Angle)
 {
 	return (Vec2){
 		.X = CosF(Angle),
@@ -173,7 +173,7 @@ Rot2 R2Ident(void)
 	return (Rot2){1, 0};
 }
 
-flt32 R2Angle(Rot2 R)
+float32 R2Angle(Rot2 R)
 {
 	return atan2(R.Y, R.X);
 }
@@ -210,14 +210,14 @@ Tform2 T2Ident(void)
 
 // Produces scalar equivalent to area of parallelogram formed by A and B
 // Equivalent calculation to 2x2 Matrix Determinant
-flt32 CrossV2(Vec2 A, Vec2 B)
+float32 CrossV2(Vec2 A, Vec2 B)
 {
 	return A.X * B.Y - B.X * A.Y;
 }
 
 // Produces a vector perpendicular to A and with magnitude |A|*S
 // If S == 1 simply produces perpendicular vector
-Vec2 CrossV2F(Vec2 A, flt32 S)
+Vec2 CrossV2F(Vec2 A, float32 S)
 {
 	return V2(-A.Y * S, A.X * S);
 }
@@ -254,7 +254,7 @@ bool PolygonTestPoint(const PolygonShape* Self, Tform2 Transform, Vec2 TestPoint
 
 	for (int32 VertIndex = 0; VertIndex < Self->VertexCount; VertIndex++) {
 		Vec2 Delta = Sub(LocalPoint, Self->Vertices[VertIndex]);
-		flt32 D = Dot(Self->Normals[VertIndex], Delta);
+		float32 D = Dot(Self->Normals[VertIndex], Delta);
 		if (D > 0.0f) {
 			Result = false;
 			break;
@@ -278,17 +278,17 @@ bool CircleRaycast(const CircleShape* Self, Tform2 Transform, const RaycastIn* I
 {
 	Vec2 Center = TransformV2(Transform, Self->Center);
 	Vec2 StartToCenter = Sub(In->Start, Center);
-	flt32 StartCircDistSqr = LenSqr(StartToCenter) - SQUARE(Self->Radius);
+	float32 StartCircDistSqr = LenSqr(StartToCenter) - SQUARE(Self->Radius);
 
 	Vec2 Ray = Sub(In->End, In->Start);
-	flt32 InvTheta = Dot(StartToCenter, Ray);
-	flt32 RayLenSqr = LenSqr(Ray);
-	flt32 Sigma = SQUARE(InvTheta) - RayLenSqr * StartCircDistSqr;
+	float32 InvTheta = Dot(StartToCenter, Ray);
+	float32 RayLenSqr = LenSqr(Ray);
+	float32 Sigma = SQUARE(InvTheta) - RayLenSqr * StartCircDistSqr;
 
 	bool Result = false;
 
 	if (Sigma >= 0.0f && RayLenSqr >= KEpsilonFloat32) {
-		flt32 IntersectDistSqr = -(InvTheta + SqrtF(Sigma));
+		float32 IntersectDistSqr = -(InvTheta + SqrtF(Sigma));
 
 		if (IntersectDistSqr >= 0.0f && IntersectDistSqr <= In->MaxFraction * RayLenSqr) {
 			Out->Fraction = IntersectDistSqr / RayLenSqr;
@@ -304,8 +304,8 @@ bool CircleIntersectsCircle(const CircleShape* A, Tform2 TransformA, const Circl
 {
 	Vec2 SelfCenter = TransformV2(TransformA, A->Center);
 	Vec2 OtherCenter = TransformV2(TransformB, B->Center);
-	flt32 DistSqr = LenSqr(Sub(OtherCenter, SelfCenter));
-	flt32 RadSqr = SQUARE(A->Radius + B->Radius);
+	float32 DistSqr = LenSqr(Sub(OtherCenter, SelfCenter));
+	float32 RadSqr = SQUARE(A->Radius + B->Radius);
 	return DistSqr <= RadSqr;
 }
 
@@ -350,14 +350,14 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count)
 	ASSERT(Count >= 3);
 
 	Vec2 Center = V2(0, 0);
-	flt32 Area = 0.0f;
+	float32 Area = 0.0f;
 	Vec2 Base = Verts[0];
 
 	for (int32 Index = 0; Index < Count; Index++) {
 		Vec2 E1 = Sub(Verts[Index], Base);
 		Vec2 E2 = (Index + 1 < Count) ? Sub(Verts[Index + 1], Base) : V2(0, 0);
-		flt32 D = CrossV2(E1, E2);
-		flt32 TriArea = 0.5f * D;
+		float32 D = CrossV2(E1, E2);
+		float32 TriArea = 0.5f * D;
 		Area += TriArea;
 		Center = Add(Center, Div(Mul(Add(E1, E2), TriArea), 3.0f));
 	}
@@ -367,7 +367,7 @@ Vec2 CalculateCentroid(const Vec2* Verts, int32 Count)
 	return Center;
 }
 
-PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, flt32 Angle)
+PolygonShape PolygonCreateBox(Vec2 HalfSize, Vec2 Center, float32 Angle)
 {
 	PolygonShape Result;
 	PolygonMakeBox(&Result, HalfSize, Center, Angle);
@@ -388,7 +388,7 @@ void PolygonMakeAABB(PolygonShape* Self, Vec2 HalfSize)
 	Self->Centroid = V2(0, 0);
 }
 
-void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, flt32 Angle)
+void PolygonMakeBox(PolygonShape* Self, Vec2 HalfSize, Vec2 Center, float32 Angle)
 {
 	PolygonMakeAABB(Self, HalfSize);
 	Self->Centroid = Center;
@@ -427,12 +427,12 @@ bool PolygonRaycast(const PolygonShape* Self, Tform2 Transform, const RaycastIn*
 	Vec2 P1 = InvTransformV2(Transform, In->End);
 	Vec2 Delta = Sub(P1, P0);
 
-	flt32 Lower = 0.0f, Upper = In->MaxFraction;
+	float32 Lower = 0.0f, Upper = In->MaxFraction;
 	int32 HitIndex = NONE;
 
 	for (int32 Index = 0; Index < Self->VertexCount; Index++) {
-		flt32 Numerator = Dot(Self->Normals[Index], Sub(Self->Vertices[Index], P0));
-		flt32 Denominator = Dot(Self->Normals[Index], Delta);
+		float32 Numerator = Dot(Self->Normals[Index], Sub(Self->Vertices[Index], P0));
+		float32 Denominator = Dot(Self->Normals[Index], Delta);
 
 		if (Denominator == 0) {
 			if (Numerator < 0) {
@@ -482,23 +482,23 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 			Normal = LocalB.Normals[EdgeIndex - A->VertexCount];
 		}
 
-		flt32 DotA = Dot(LocalA.Vertices[0], Normal);
-		flt32 MinA = DotA, MaxA = DotA;
+		float32 DotA = Dot(LocalA.Vertices[0], Normal);
+		float32 MinA = DotA, MaxA = DotA;
 		for (int32 Index = 1; Index < A->VertexCount; Index++) {
 			DotA = Dot(LocalA.Vertices[Index], Normal);
 			MinA = Min(MinA, DotA);
 			MaxA = Max(MaxA, DotA);
 		}
 
-		flt32 DotB = Dot(LocalB.Vertices[0], Normal);
-		flt32 MinB = DotB, MaxB = DotB;
+		float32 DotB = Dot(LocalB.Vertices[0], Normal);
+		float32 MinB = DotB, MaxB = DotB;
 		for (int32 Index = 1; Index < B->VertexCount; Index++) {
 			DotB = Dot(LocalB.Vertices[Index], Normal);
 			MinB = Min(MinB, DotB);
 			MaxB = Max(MaxB, DotB);
 		}
 
-		flt32 IntervalDistance = (MinA < MinB) ? MinB - MaxA : MinA - MaxB;
+		float32 IntervalDistance = (MinA < MinB) ? MinB - MaxA : MinA - MaxB;
 		if (IntervalDistance > 0) {
 			return false;
 		}
@@ -525,7 +525,7 @@ bool PolygonIntersectsPolygon(const PolygonShape* A, Tform2 TransformA, const Po
 		Vec2 Delta = Sub(P, Center1);
 		for (int32 Index1 = 0; Index1 < Other->VertexCount; Index1++)
 		{
-			flt32 D = Dot(Delta, RotatedNormals1[Index1]);
+			float32 D = Dot(Delta, RotatedNormals1[Index1]);
 			if (D < 0)
 			{
 				return true;

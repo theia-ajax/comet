@@ -36,7 +36,7 @@ void DebugInitialize(const DebugConfig* config)
 												.CanvasHeight = 180,
 											};
 
-	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_ARGB8888);
+	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_RGBA8888);
 	ASSERT(GDebug.Canvas);
 }
 
@@ -78,6 +78,7 @@ void DebugDraw(SDL_Renderer* renderer)
 			SDL_TEXTUREACCESS_STREAMING,
 			GDebug.Canvas->w,
 			GDebug.Canvas->h);
+		SDL_SetTextureScaleMode(GDebug.CanvasTexture, SDL_SCALEMODE_NEAREST);
 		SDL_SetTextureBlendMode(GDebug.CanvasTexture, SDL_BLENDMODE_BLEND);
 	}
 

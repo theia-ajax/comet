@@ -13,6 +13,8 @@ const PhysicsConfig KDefaultPhysicsConfig = (PhysicsConfig){
 	.CellSize = 24.0f,
 	.Gravity = (Vec2){0.0f, 100.0f},
 	.HeatForce = (Vec2){0.0f, -200.0f},
+	.HeatTransferRate = 0.005f,
+	.MaxPhysicsObjects = 1000,
 };
 
 enum { KMaxObjectsPerCell = 64 };
@@ -70,8 +72,8 @@ void PhysicsInitialize(const PhysicsConfig* Config)
 	Vec2 WorldMin = GPhysics.Config.Bounds.XY;
 	Vec2 WorldMax = GPhysics.Config.Bounds.ZW;
 
-	flt32 WorldWidth = WorldMax.X - WorldMin.X;
-	flt32 WorldHeight = WorldMax.Y - WorldMin.Y;
+	float32 WorldWidth = WorldMax.X - WorldMin.X;
+	float32 WorldHeight = WorldMax.Y - WorldMin.Y;
 	GPhysics.GridWidth = (int32)ceil(WorldWidth / GPhysics.Config.CellSize);
 	GPhysics.GridHeight = (int32)ceil(WorldHeight / GPhysics.Config.CellSize);
 	arrsetlen(GPhysics.Grid, GPhysics.GridWidth * GPhysics.GridHeight);
@@ -90,7 +92,7 @@ void PhysicsShutdown(void)
 void PhysicsUpdate(float DeltaTime)
 {
 	enum { KSubSteps = 8 };
-	flt32 SubDeltaTime = DeltaTime / KSubSteps;
+	float32 SubDeltaTime = DeltaTime / KSubSteps;
 
 	for (int32 SubStepIndex = 0; SubStepIndex < KSubSteps; SubStepIndex++) {
 		_PhysicsApplyGravity();
@@ -107,7 +109,17 @@ PhysicsConfig PhysicsDefaultConfig(void)
 	return KDefaultPhysicsConfig;
 }
 
+const PhysicsConfig* PhysicsGetConfig(void)
+{
+	return &GPhysics.Config;
+}
+
 const PhysicsObject* PhysicsGetObjects(void)
+{
+	return GPhysics.Objects;
+}
+
+PhysicsObject* PhysicsGetObjectsMutable(void)
 {
 	return GPhysics.Objects;
 }
@@ -130,7 +142,7 @@ PhysicsConstraintHandle PhysicsAddPinConstraint(PhysicsObjectHandle HObject, Vec
 PhysicsConstraintHandle PhysicsAddLinkConstraint(
 	PhysicsObjectHandle HObject0,
 	PhysicsObjectHandle HObject1,
-	flt32 TargetDistance)
+	float32 TargetDistance)
 {
 	PhysConstraint Constraint = (PhysConstraint){
 		.Type = PhysConstraintType_Link,
@@ -151,16 +163,26 @@ size_t PhysicsGetObjectCount(void)
 	return arrlenu(GPhysics.Objects);
 }
 
+void PhysicsClearAllObjects(void)
+{
+	SDL_memset(GPhysics.Grid, 0, sizeof(PhysCell) * GPhysics.GridWidth * GPhysics.GridHeight);
+	arrsetlen(GPhysics.Objects, 0);
+}
+
 PhysicsObjectHandle PhysicsAddObject(const PhysicsObject* OptionalConfig)
 {
-	PhysicsObject Object = (OptionalConfig) ? *OptionalConfig : (PhysicsObject){0};
-	Object.LastPosition = Object.Position;
-	Object.LastGridCell = NONE;
-	Object.Radius = MAX(Object.Radius, 0.1f);
+	PhysicsObjectHandle Result = (PhysicsObjectHandle){KInvalidHandle};
 
-	arrput(GPhysics.Objects, Object);
-	uint32 RawHandle = (uint32)(arrlenu(GPhysics.Objects) - 1);
-	return (PhysicsObjectHandle){RawHandle};
+	if (arrlen(GPhysics.Objects) < GPhysics.Config.MaxPhysicsObjects) {
+		PhysicsObject Object = (OptionalConfig) ? *OptionalConfig : (PhysicsObject){0};
+		Object.LastPosition = Object.Position;
+		Object.LastGridCell = NONE;
+		Object.Radius = MAX(Object.Radius, 0.1f);
+
+		arrput(GPhysics.Objects, Object);
+		Result.Value = (uint32)(arrlenu(GPhysics.Objects) - 1);
+	}
+	return Result;
 }
 
 bool PhysObjectHandleIsValid(PhysicsObjectHandle Handle)
@@ -270,18 +292,31 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Vec2 Velocity = Sub(Object->Position, Object->LastPosition);
 	Object->LastPosition = Object->Position;
 	Object->Position = Add(Add(Object->Position, Velocity), Mul(Object->Acceleration, DeltaTime * DeltaTime));
+
+	ZERO_STRUCT(&Object->Acceleration);
+
 	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
 
-	flt32 HeaterDistance = 20.0f;
-	flt32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterDistance - GPhysics.Config.CellSize;
+	const float32 HeaterZoneSize = GPhysics.Config.CellSize * 3;
+	const float32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterZoneSize;
 
 	if (Object->Position.Y > HeaterThreshold) {
-		Object->Heat += 2.0f * DeltaTime;
-	} else if (Object->Position.Y < 24) {
-		// Object->Heat -= 2.0f * DeltaTime;
+		Object->Heat += 1.0f * DeltaTime;
+	} else if (Object->Position.Y < GPhysics.Config.CellSize * 4) {
+		Object->Heat -= 0.5f * DeltaTime;
 	}
 	Object->Heat = Clamp(Object->Heat, 0, 1);
-	ZERO_STRUCT(&Object->Acceleration);
+
+	Vec2 SideAccel = V2(0, 0);
+	const float32 SideForceZoneSize = GPhysics.Config.CellSize * 8;
+	const float32 SideForce = 200;
+	const float32 SideForceThreshold = GPhysics.Config.Bounds.Z - SideForceZoneSize;
+	if (Object->Position.X < SideForceZoneSize) {
+		SideAccel = V2(SideForce * (Object->Position.X / SideForceZoneSize), 0);
+	} else if (Object->Position.X > SideForceThreshold) {
+		SideAccel = V2(-SideForce * ((Object->Position.X - SideForceThreshold) / SideForceZoneSize), 0);
+	}
+	PhysicsObjectAccelerate(Object, SideAccel);
 
 	// Object->GridCell = _PhysicsGetWorldPositionGridIndex(Object->Position);
 }
@@ -308,9 +343,9 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 					PhysicsObject* P0 = PhysicsGetObject(Constraint->Link.HObject0);
 					PhysicsObject* P1 = PhysicsGetObject(Constraint->Link.HObject1);
 					Vec2 Diff = Sub(P0->Position, P1->Position);
-					flt32 Dist = Len(Diff);
+					float32 Dist = Len(Diff);
 					Vec2 Dir = DivV2F(Diff, Dist);
-					flt32 Delta = (Constraint->Link.TargetDistance - Dist) * 0.5f;
+					float32 Delta = (Constraint->Link.TargetDistance - Dist) * 0.5f;
 					Vec2 DeltaV2 = Mul(Dir, Delta);
 					P0->Position = Add(P0->Position, DeltaV2);
 					P1->Position = Sub(P1->Position, DeltaV2);
@@ -332,7 +367,7 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 		if (Object->Position.Y > WorldMax.Y - Object->Radius) Object->Position.Y = WorldMax.Y - Object->Radius;
 		if (Object->Position.Y < WorldMin.Y + Object->Radius) Object->Position.Y = WorldMin.Y + Object->Radius;
 		// Vec2 CenterToObject = Sub(Object->Position, KCenter);
-		// flt32 Distance = Len(CenterToObject);
+		// float32 Distance = Len(CenterToObject);
 		// if (Distance > KRadius - Object->Radius) {
 		// 	Vec2 DirToObject = DivV2F(CenterToObject, Distance);
 		// 	Object->Position = Add(KCenter, Mul(DirToObject, KRadius));
@@ -399,7 +434,7 @@ int _PhysicsSolveChunkWorker(void* Data)
 static void _PhysicsSolveAllCollisions(void)
 {
 #ifdef USE_GRID_SOLVER
-	enum { KChunks = 2 };
+	enum { KChunks = 8 };
 	_Static_assert(KChunks > 0, "");
 
 	if (KChunks == 1) {
@@ -450,8 +485,8 @@ static void _PhysicsSolveAllCollisions(void)
 static void _PhysicsSolveCollision(PhysicsObject* Object0, PhysicsObject* Object1)
 {
 	const Vec2 CollisionVec = Sub(Object0->Position, Object1->Position);
-	flt32 Distance = Len(CollisionVec);
-	flt32 ContactDistance = Object0->Radius + Object1->Radius;
+	float32 Distance = Len(CollisionVec);
+	float32 ContactDistance = Object0->Radius + Object1->Radius;
 	if (Distance < ContactDistance) {
 		const Vec2 Direction = DivV2F(CollisionVec, Distance);
 		Vec2 Delta = Mul(Direction, (ContactDistance - Distance) * 0.5f);
@@ -460,11 +495,11 @@ static void _PhysicsSolveCollision(PhysicsObject* Object0, PhysicsObject* Object
 		Object1->Position = Sub(Object1->Position, Delta);
 
 		if (Object0->Heat > Object1->Heat) {
-			flt32 Transfer = Object0->Heat * 0.05f;
+			float32 Transfer = Object0->Heat * GPhysics.Config.HeatTransferRate;
 			Object0->Heat -= Transfer;
 			Object1->Heat += Transfer;
 		} else if (Object0->Heat < Object1->Heat) {
-			flt32 Transfer = Object1->Heat * 0.05f;
+			float32 Transfer = Object1->Heat * GPhysics.Config.HeatTransferRate;
 			Object0->Heat += Transfer;
 			Object1->Heat -= Transfer;
 		}

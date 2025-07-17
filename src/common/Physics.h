@@ -26,7 +26,7 @@ void PhysDestroyWorld(PhysWorld* World);
 
 //
 // Create calls return handles,
-PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, flt32 Radius);
+PhysShapeHandle PhysCreateCircleShape(PhysWorld* World, Vec2 Center, float32 Radius);
 PhysShapeHandle PhysCreatePolygonShape(PhysWorld* World, Vec2* Points, size_t PointsCount);
 PhysShapeHandle PhysCreateBoxShape(PhysWorld* World, Vec2 HalfSize);
 
