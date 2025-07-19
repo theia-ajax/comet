@@ -44,11 +44,16 @@ typedef struct ParticlePhysicsConfigFile {
 		int32 Width;
 		int32 Height;
 		char HeatColorsImageFileName[256];
+		float32 SpriteScale;
+		float32 ExtraRadius;
+		float32 HeatScale;
+		char ParticleSpriteName[64];
 	} Rendering;
 	struct {
 		Vec2 Offset;
 		float32 Spacing;
 		float32 Interval;
+		float32 ObjectRadius;
 	} Spawners;
 	PhysicsConfig Physics;
 	struct {
@@ -59,6 +64,7 @@ typedef struct ParticlePhysicsConfigFile {
 
 typedef struct ParticlePhysicsRenderConfig {
 	uint32* HeatRampColors;
+	SpriteId ParticleSpriteId;
 } ParticlePhysicsRenderConfig;
 
 typedef struct ParticleSpawner {
@@ -66,6 +72,7 @@ typedef struct ParticleSpawner {
 	Vec2 SpawnAcceleration;
 	float32 SpawnInterval;
 	float32 SpawnTimer;
+	float32 ObjectRadius;
 } ParticleSpawner;
 
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, float32 Rotation, float32 Speed);
@@ -196,6 +203,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	PhysicsInitialize(&GGame.ParticlePhysicsConfigFile.Physics);
 	LoadHeatRamp(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName);
+	GGame.ParticleRenderConfig.ParticleSpriteId = SpriteFindByName(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
 	CreateSpawners();
 
 	LogInfo("Game Systems Initialized");
@@ -504,7 +512,7 @@ void GameUpdate(const GameTime* gameTime)
 				Spawner->SpawnTimer += Spawner->SpawnInterval;
 				PhysicsAddObject(&(PhysicsObject){
 					.Position = Spawner->Position,
-					.Radius = 1.0f,
+					.Radius = Spawner->ObjectRadius,
 					.Acceleration = Spawner->SpawnAcceleration,
 					.Heat = 0.0f,
 					.Flags = PhysicsObjectFlags_None,
@@ -797,11 +805,14 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 			TintColor = Config->HeatRampColors[Index];
 		}
 
-		float32 Scale = (Radius + Object->Heat * 4.0f + 4.0f) / 26.0f;
+		float32 SpriteScale = GGame.ParticlePhysicsConfigFile.Rendering.SpriteScale;
+		float32 HeatScale = GGame.ParticlePhysicsConfigFile.Rendering.HeatScale;
+		float32 ExtraRadius = GGame.ParticlePhysicsConfigFile.Rendering.ExtraRadius;
+		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
 
 		// DrawCircle(Pos, Scale, TintColor);
 		DrawSprite(&(SpriteDraw){
-			.SpriteId = SpriteFindByName("explosion-01"),
+			.SpriteId = GGame.ParticleRenderConfig.ParticleSpriteId,
 			.Position = Pos,
 			.Scale = V2(Scale, Scale),
 			.UseTint = true,
@@ -906,6 +917,12 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 				ConfigOut->Rendering.HeatColorsImageFileName,
 				HeatImageFileName,
 				sizeof(ConfigOut->Rendering.HeatColorsImageFileName));
+			ConfigOut->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
+			ConfigOut->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
+			ConfigOut->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
+			const char* ParticleSpriteName = IniReadString(Ini, Section, "ParticleSprite", "explosion-01");
+			SDL_zeroa(ConfigOut->Rendering.ParticleSpriteName);
+			SDL_strlcpy(ConfigOut->Rendering.ParticleSpriteName, ParticleSpriteName, sizeof(ConfigOut->Rendering.ParticleSpriteName));
 		}
 
 		{
@@ -915,6 +932,7 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 			ConfigOut->Spawners.Offset.Y = IniReadFloat(Ini, Section, "OffsetY", 0.0);
 			ConfigOut->Spawners.Interval = IniReadFloat(Ini, Section, "Interval", 0.0);
 			ConfigOut->Spawners.Spacing = IniReadFloat(Ini, Section, "Spacing", 32.0);
+			ConfigOut->Spawners.ObjectRadius = IniReadFloat(Ini, Section, "ObjectRadius", 1.0);
 		}
 
 		{
@@ -963,12 +981,15 @@ void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const Particle
 			GGame.SpawnersEnabled = true;
 		}
 
-		
 		PhysicsReconfigure(&New->Physics);
 	}
-	
-	if (SDL_strcmp(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName)) {
+
+	if (SDL_strcmp(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName) != 0) {
 		LoadHeatRamp(New->Rendering.HeatColorsImageFileName);
+	}
+
+	if (SDL_strcmp(Old->Rendering.ParticleSpriteName, New->Rendering.ParticleSpriteName) != 0) {
+		GGame.ParticleRenderConfig.ParticleSpriteId = SpriteFindByName(New->Rendering.ParticleSpriteName);
 	}
 
 	if (SDL_memcmp(&Old->Physics.Bounds, &New->Physics.Bounds, sizeof(Old->Physics.Bounds)) != 0 ||
@@ -1027,6 +1048,7 @@ void CreateSpawners()
 				.Position = V2(SpawnerX, GGame.ParticlePhysicsConfigFile.Spawners.Offset.Y),
 				.SpawnAcceleration = V2(0, 10000.0f),
 				.SpawnInterval = GGame.ParticlePhysicsConfigFile.Spawners.Interval,
+				.ObjectRadius = Max(GGame.ParticlePhysicsConfigFile.Spawners.ObjectRadius, 0.1f),
 			}));
 	}
 }
