@@ -48,13 +48,13 @@ project "comet"
 		links { "SDL3" }
 		defines { "__WINDOWS__" }
 		includedirs { "vcpkg_installed/x64-windows/include" }
-
+		
 	filter {"platforms:Win64", "configurations:Release"}
-		libdirs { "lib/Win64/Release/" }
+		libdirs { "vcpkg_installed/x64-windows/lib" }
 
 	filter {"platforms:Win64", "configurations:Debug"}
 		kind "ConsoleApp"
-		libdirs { "lib/Win64/Debug/" }
+		libdirs { "vcpkg_installed/x64-windows/debug/lib" }
 
 
 
