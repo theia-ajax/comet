@@ -74,7 +74,7 @@ void DebugDraw(SDL_Renderer* renderer)
 	if (GDebug.CanvasTexture == NULL) {
 		GDebug.CanvasTexture = SDL_CreateTexture(
 			renderer,
-			SDL_PIXELFORMAT_ARGB8888,
+			SDL_PIXELFORMAT_RGBA8888,
 			SDL_TEXTUREACCESS_STREAMING,
 			GDebug.Canvas->w,
 			GDebug.Canvas->h);

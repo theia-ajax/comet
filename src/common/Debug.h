@@ -10,6 +10,7 @@ typedef struct Color {
 
 typedef struct DebugConfig {
 	int32 CanvasWidth, CanvasHeight;
+	SDL_Renderer *Renderer;
 } DebugConfig;
 
 void DebugInitialize(const DebugConfig* config);

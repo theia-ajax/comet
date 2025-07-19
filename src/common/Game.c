@@ -47,7 +47,7 @@ typedef struct ParticlePhysicsConfigFile {
 		} Rendering;
 	} Particles;
 	struct {
-		const char *FileName;
+		const char* FileName;
 	} Meta;
 } ParticlePhysicsConfigFile;
 
@@ -130,15 +130,12 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.SpawnersEnabled = true;
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, NULL);
-	SDL_SetRenderLogicalPresentation(
-		GGame.Renderer,
-		GameResWidth,
-		GameResHeight,
-		SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_SetRenderLogicalPresentation(GGame.Renderer, GameResWidth, GameResHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GameResWidth,
 		.CanvasHeight = GameResHeight,
+		.Renderer = GGame.Renderer,
 	});
 
 	AssetsInitialize(&(AssetsConfig){.TypeConfigs = {
@@ -454,32 +451,32 @@ void GameUpdate(const GameTime* gameTime)
 	// FrameAllocatorNextFrame();
 	DebugNextFrame();
 
-	// ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
-	// MovementSystemUpdate(GGame.World, gameTime);
+	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
+	MovementSystemUpdate(GGame.World, gameTime);
 
-	// {
-	// 	EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
-	// 	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
-	// 		// todo: very dumb and bad just getting absolute basic case working
-	// 		// Tform2 ParentTransform;
-	// 		TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
-	// 		LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
-	// 		ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
-	// 		Tform2 ParentT2 = (Tform2){0};
-	// 		float32 ParentRotation = 0.0f;
-	// 		if (ChildOf->Parent.RawValue != 0) {
-	// 			TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
-	// 			ParentT2 = T2Component(ParentTransform);
-	// 			ParentRotation = ParentTransform->Rotation;
-	// 		}
-	// 		Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
-	// 		Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
-	// 	}
-	// 	QueryFree(Query);
-	// }
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
+			// todo: very dumb and bad just getting absolute basic case working
+			// Tform2 ParentTransform;
+			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
+			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
+			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
+			Tform2 ParentT2 = (Tform2){0};
+			float32 ParentRotation = 0.0f;
+			if (ChildOf->Parent.RawValue != 0) {
+				TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
+				ParentT2 = T2Component(ParentTransform);
+				ParentRotation = ParentTransform->Rotation;
+			}
+			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
+			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
+		}
+		QueryFree(Query);
+	}
 
-	// DamageSystemUpdate(GGame.World, gameTime);
-	// LifetimeSystemUpdate(GGame.World, gameTime);
+	DamageSystemUpdate(GGame.World, gameTime);
+	LifetimeSystemUpdate(GGame.World, gameTime);
 
 	// if (GGame.Frame == 1 && false) {
 	// 	const float32 SpacingX = 16.0f;
@@ -499,34 +496,34 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// }
 
-	// if (GGame.SpawnersEnabled) {
+	if (GGame.SpawnersEnabled) {
 
-	// 	for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 5) {
-	// 		float32* Spawner = &Spawners[SpawnerIndex];
-	// 		Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
-	// 		Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
-	// 		float32* SpawnTimer = &Spawner[4];
-	// 		if (*SpawnTimer <= 0.0f) {
-	// 			*SpawnTimer += SpawnInterval;
-	// 			PhysicsAddObject(&(PhysicsObject){
-	// 				.Position = SpawnPos,
-	// 				.Radius = 1.0f,
-	// 				.Acceleration = SpawnAccel,
-	// 				.Heat = 0.0f,
-	// 				.Flags = 0,
-	// 				.Tint = 0xFFCC00CC,
-	// 			});
-	// 		} else {
-	// 			*SpawnTimer -= gameTime->DeltaTimeF;
-	// 		}
-	// 	}
+		for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 5) {
+			float32* Spawner = &Spawners[SpawnerIndex];
+			Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
+			Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
+			float32* SpawnTimer = &Spawner[4];
+			if (*SpawnTimer <= 0.0f) {
+				*SpawnTimer += SpawnInterval;
+				PhysicsAddObject(&(PhysicsObject){
+					.Position = SpawnPos,
+					.Radius = 1.0f,
+					.Acceleration = SpawnAccel,
+					.Heat = 0.0f,
+					.Flags = PhysicsObjectFlags_None,
+					.Tint = 0xFFCC00CC,
+				});
+			} else {
+				*SpawnTimer -= gameTime->DeltaTimeF;
+			}
+		}
 
-	// 	if (PhysicsGetObjectCount() >= PhysicsGetConfig()->MaxPhysicsObjects) {
-	// 		GGame.SpawnersEnabled = false;
-	// 	}
-	// }
+		if (PhysicsGetObjectCount() >= PhysicsGetConfig()->MaxPhysicsObjects) {
+			GGame.SpawnersEnabled = false;
+		}
+	}
 
-	// PhysicsUpdate(gameTime->DeltaTimeF);
+	PhysicsUpdate(gameTime->DeltaTimeF);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -535,17 +532,17 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.LastFPS = GGame.FramesThisSecond;
 		GGame.FramesThisSecond = 0;
 	}
-	// DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
-	// DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
-	// DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
-	// static bool ShowComponentCounts = false;
-	// if (ShowComponentCounts) {
-	// 	int32 ComponentCounts[ComponentType_Count];
-	// 	WorldComponentCounts(GGame.World, ComponentCounts, ComponentType_Count);
-	// 	for (int32 Index = 0; Index < ComponentType_Count; Index++) {
-	// 		DebugPrintf(" %s: %d", ComponentTypeName(Index), ComponentCounts[Index]);
-	// 	}
-	// }
+	DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
+	DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
+	DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
+	static bool ShowComponentCounts = false;
+	if (ShowComponentCounts) {
+		int32 ComponentCounts[ComponentType_Count];
+		WorldComponentCounts(GGame.World, ComponentCounts, ComponentType_Count);
+		for (int32 Index = 0; Index < ComponentType_Count; Index++) {
+			DebugPrintf(" %s: %d", ComponentTypeName(Index), ComponentCounts[Index]);
+		}
+	}
 
 	GGame.Frame++;
 }
@@ -558,16 +555,16 @@ void GameRender(const GameTime* gameTime)
 	int RenderWidth, RenderHeight;
 	SDL_GetRenderLogicalPresentation(GGame.Renderer, &RenderWidth, &RenderHeight, NULL);
 
-	// RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
-	// if (BackgroundTint != NULL) {
-	// 	SDL_FRect ScreenRect = {0, 0, RenderWidth, RenderHeight};
-	// 	ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
-	// 	SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
-	// 	SDL_RenderFillRect(GGame.Renderer, &ScreenRect);
-	// }
+	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
+	if (BackgroundTint != NULL) {
+		SDL_FRect ScreenRect = {0, 0, RenderWidth, RenderHeight};
+		ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
+		SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
+		SDL_RenderFillRect(GGame.Renderer, &ScreenRect);
+	}
 
-	// SpriteSystemRender(GGame.World);
-	// ColliderSystemDebugRender(GGame.World);
+	SpriteSystemRender(GGame.World);
+	ColliderSystemDebugRender(GGame.World);
 
 	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 

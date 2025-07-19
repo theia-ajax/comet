@@ -127,9 +127,9 @@ static int SpriteDrawLayerCompareVoid(const void* A, const void* B)
 
 void DrawRender(void)
 {
-	// SDL_qsort(GDraw.SpriteQueue, GDraw.SpriteCount, sizeof(GDraw.SpriteQueue[0]), SpriteDrawLayerCompareVoid);
+	SDL_qsort(GDraw.SpriteQueue, GDraw.SpriteCount, sizeof(GDraw.SpriteQueue[0]), SpriteDrawLayerCompareVoid);
 
-	// SDL_SetRenderDrawColor(GDraw.Renderer, 255, 255, 255, 255);
+	SDL_SetRenderDrawColor(GDraw.Renderer, 255, 255, 255, 255);
 
 	for (int32 SpriteDrawIndex = 0; SpriteDrawIndex < GDraw.SpriteCount; SpriteDrawIndex++) {
 		const SpriteDraw* DrawCommand = &GDraw.SpriteQueue[SpriteDrawIndex];
@@ -172,50 +172,50 @@ void DrawRender(void)
 		}
 	}
 
-	// for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
-	// 	const PrimDrawCmd* DrawCmd = &GDraw.PrimitiveQueue[PrimIndex];
-	// 	uint32 Color = DrawCmd->Color;
-	// 	uint8 R = (Color >> 0) & 0xFF;
-	// 	uint8 G = (Color >> 8) & 0xFF;
-	// 	uint8 B = (Color >> 16) & 0xFF;
-	// 	uint8 A = (Color >> 24);
-	// 	SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+	for (int32 PrimIndex = 0; PrimIndex < GDraw.PrimitiveCount; PrimIndex++) {
+		const PrimDrawCmd* DrawCmd = &GDraw.PrimitiveQueue[PrimIndex];
+		uint32 Color = DrawCmd->Color;
+		uint8 R = (Color >> 0) & 0xFF;
+		uint8 G = (Color >> 8) & 0xFF;
+		uint8 B = (Color >> 16) & 0xFF;
+		uint8 A = (Color >> 24);
+		SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
 
-	// 	Vec4 ColorF0 = V4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
-	// 	float32 Grey = VecSort(ColorF0.RGB).G;
-	// 	Vec4 ColorF1 = V4V(Splat(Grey).RGB, A);
+		Vec4 ColorF0 = V4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+		float32 Grey = VecSort(ColorF0.RGB).G;
+		Vec4 ColorF1 = V4V(Splat(Grey).RGB, A);
 
-	// 	switch (DrawCmd->Shape) {
-	// 		case KShapeCircle:
-	// 			SDL_RenderDrawCircle(
-	// 				GDraw.Renderer,
-	// 				(SDL_FPoint*)&DrawCmd->PrimCircle.Center,
-	// 				DrawCmd->PrimCircle.Radius);
-	// 			break;
-	// 		case KShapePolygon:
-	// 			{
-	// 				SDL_FPoint Points[KPolygonMaxVerts + 1];
-	// 				memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
-	// 				Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
-	// 				const int32 Count = DrawCmd->PrimPolygon.VertexCount;
-	// 				for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
-	// 					float32 EdgeRatio = (float32)EdgeIndex / Count;
-	// 					Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
-	// 					ColorV4ToBytes(ColorF, &R, &G, &B, &A);
-	// 					SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
-	// 					SDL_RenderLine(
-	// 						GDraw.Renderer,
-	// 						Points[EdgeIndex].x,
-	// 						Points[EdgeIndex].y,
-	// 						Points[EdgeIndex + 1].x,
-	// 						Points[EdgeIndex + 1].y);
-	// 				}
-	// 				// SDL_RenderDrawLinesF(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
-	// 			}
-	// 			break;
-	// 		default: break;
-	// 	}
-	// }
+		switch (DrawCmd->Shape) {
+			case KShapeCircle:
+				SDL_RenderDrawCircle(
+					GDraw.Renderer,
+					(SDL_FPoint*)&DrawCmd->PrimCircle.Center,
+					DrawCmd->PrimCircle.Radius);
+				break;
+			case KShapePolygon:
+				{
+					SDL_FPoint Points[KPolygonMaxVerts + 1];
+					memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
+					Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
+					const int32 Count = DrawCmd->PrimPolygon.VertexCount;
+					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
+						float32 EdgeRatio = (float32)EdgeIndex / Count;
+						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
+						ColorV4ToBytes(ColorF, &R, &G, &B, &A);
+						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+						SDL_RenderLine(
+							GDraw.Renderer,
+							Points[EdgeIndex].x,
+							Points[EdgeIndex].y,
+							Points[EdgeIndex + 1].x,
+							Points[EdgeIndex + 1].y);
+					}
+					// SDL_RenderLines(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+				}
+				break;
+			default: break;
+		}
+	}
 
 	GDraw.SpriteCount = 0;
 	GDraw.PrimitiveCount = 0;

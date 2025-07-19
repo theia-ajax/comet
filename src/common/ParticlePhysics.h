@@ -14,6 +14,11 @@ typedef struct PhysicsConstraintHandle {
 	uint32 Value;
 } PhysicsConstraintHandle;
 
+typedef enum PhysicsObjectFlags {
+	PhysicsObjectFlags_None = 0,
+	PhysicsObjectFlags_OverrideTint = 1 << 0,
+} PhysicsObjectFlags;
+
 typedef struct PhysicsObject {
 	uint32 Flags;
 	Vec2 Position;
