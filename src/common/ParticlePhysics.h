@@ -68,6 +68,7 @@ typedef struct PhysicsConfig {
 } PhysicsConfig;
 
 void PhysicsInitialize(const PhysicsConfig* Config);
+void PhysicsReconfigure(const PhysicsConfig *Config);
 void PhysicsShutdown(void);
 void PhysicsUpdate(float DeltaTime);
 PhysicsConfig PhysicsDefaultConfig(void);

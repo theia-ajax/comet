@@ -28,6 +28,8 @@ struct {
 	PhysicsConfig Config;
 	PhysicsObject* Objects;
 	PhysConstraint* Constraints;
+	Vec4 Bounds;
+	float32 CellSize;
 	PhysCell* Grid;
 	int32 GridWidth;
 	int32 GridHeight;
@@ -62,25 +64,31 @@ void PhysicsObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration)
 
 void PhysicsInitialize(const PhysicsConfig* Config)
 {
+	arrsetcap(GPhysics.Objects, 1024);
+	arrsetcap(GPhysics.Constraints, 1024);
+	PhysicsReconfigure(Config);
+}
+
+void PhysicsReconfigure(const PhysicsConfig *Config)
+{
 	GPhysics.Config = (Config != NULL) ? *Config : KDefaultPhysicsConfig;
-
-	GPhysics.Config.Bounds.X -= GPhysics.Config.CellSize;
-	GPhysics.Config.Bounds.Y -= GPhysics.Config.CellSize;
-	GPhysics.Config.Bounds.Z += GPhysics.Config.CellSize;
-	GPhysics.Config.Bounds.W += GPhysics.Config.CellSize;
-
-	Vec2 WorldMin = GPhysics.Config.Bounds.XY;
-	Vec2 WorldMax = GPhysics.Config.Bounds.ZW;
-
+	
+	GPhysics.Bounds = GPhysics.Config.Bounds;
+	GPhysics.CellSize = GPhysics.Config.CellSize;
+	GPhysics.Bounds.X -= GPhysics.CellSize;
+	GPhysics.Bounds.Y -= GPhysics.CellSize;
+	GPhysics.Bounds.Z += GPhysics.CellSize;
+	GPhysics.Bounds.W += GPhysics.CellSize;
+	
+	Vec2 WorldMin = GPhysics.Bounds.XY;
+	Vec2 WorldMax = GPhysics.Bounds.ZW;
+	
 	float32 WorldWidth = WorldMax.X - WorldMin.X;
 	float32 WorldHeight = WorldMax.Y - WorldMin.Y;
 	GPhysics.GridWidth = (int32)ceil(WorldWidth / GPhysics.Config.CellSize);
 	GPhysics.GridHeight = (int32)ceil(WorldHeight / GPhysics.Config.CellSize);
 	arrsetlen(GPhysics.Grid, GPhysics.GridWidth * GPhysics.GridHeight);
 	SDL_memset(GPhysics.Grid, 0, GPhysics.GridWidth * GPhysics.GridHeight * sizeof(*GPhysics.Grid));
-
-	arrsetcap(GPhysics.Objects, 1024);
-	arrsetcap(GPhysics.Constraints, 1024);
 }
 
 void PhysicsShutdown(void)
@@ -239,8 +247,8 @@ void PhysicsDebugDraw(SDL_Renderer* Renderer)
 {
 	SDL_SetRenderDrawColor(Renderer, 0, 0xCC, 0, 255);
 
-	Vec2 BoundMin = GPhysics.Config.Bounds.XY;
-	Vec2 BoundMax = GPhysics.Config.Bounds.ZW;
+	Vec2 BoundMin = GPhysics.Bounds.XY;
+	Vec2 BoundMax = GPhysics.Bounds.ZW;
 
 	SDL_FRect Rect = {
 		.x = BoundMin.X,
@@ -298,7 +306,7 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
 
 	const float32 HeaterZoneSize = GPhysics.Config.CellSize * 3;
-	const float32 HeaterThreshold = GPhysics.Config.Bounds.W - HeaterZoneSize;
+	const float32 HeaterThreshold = GPhysics.Bounds.W - HeaterZoneSize;
 
 	if (Object->Position.Y > HeaterThreshold) {
 		Object->Heat += 1.0f * DeltaTime;
@@ -310,7 +318,7 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	Vec2 SideAccel = V2(0, 0);
 	const float32 SideForceZoneSize = GPhysics.Config.CellSize * 8;
 	const float32 SideForce = 200;
-	const float32 SideForceThreshold = GPhysics.Config.Bounds.Z - SideForceZoneSize;
+	const float32 SideForceThreshold = GPhysics.Bounds.Z - SideForceZoneSize;
 	if (Object->Position.X < SideForceZoneSize) {
 		SideAccel = V2(SideForce * (Object->Position.X / SideForceZoneSize), 0);
 	} else if (Object->Position.X > SideForceThreshold) {
@@ -356,9 +364,9 @@ static void _PhysicsApplyAllConstraints(float DeltaTime)
 	}
 
 	Vec2 CellDim = V2(GPhysics.Config.CellSize, GPhysics.Config.CellSize);
-	Vec4 Bounds = GPhysics.Config.Bounds;
-	Vec2 WorldMin = Add(GPhysics.Config.Bounds.XY, CellDim);
-	Vec2 WorldMax = Sub(GPhysics.Config.Bounds.ZW, CellDim);
+	Vec4 Bounds = GPhysics.Bounds;
+	Vec2 WorldMin = Add(GPhysics.Bounds.XY, CellDim);
+	Vec2 WorldMax = Sub(GPhysics.Bounds.ZW, CellDim);
 	for (ptrdiff_t ObjectIndex = 0; ObjectIndex < arrlen(GPhysics.Objects); ObjectIndex++) {
 		PhysicsObject* Object = &GPhysics.Objects[ObjectIndex];
 
@@ -549,8 +557,8 @@ static int32 _PhysicsGetWorldPositionGridIndex(Vec2 WorldPosition)
 {
 	int32 Result = NONE;
 
-	Vec2 WorldMin = GPhysics.Config.Bounds.XY;
-	Vec2 WorldMax = GPhysics.Config.Bounds.ZW;
+	Vec2 WorldMin = GPhysics.Bounds.XY;
+	Vec2 WorldMax = GPhysics.Bounds.ZW;
 	Vec2 PhysPosition = Sub(WorldPosition, WorldMin);
 	Vec2 GridPosition = DivV2F(PhysPosition, GPhysics.Config.CellSize);
 	Result = _PhysicsGridIndexXY(GridPosition.X, GridPosition.Y);

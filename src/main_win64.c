@@ -38,9 +38,9 @@ int main(int argc, char* argv[])
 
 	stm_setup();
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 1440, 320, 0);
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1440, 320, SDL_WINDOW_RESIZABLE);
 	GWindow = Window;
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
 	// Manually smudging the window position to make it more centered for now.
@@ -83,7 +83,12 @@ int main(int argc, char* argv[])
 			switch (Event.type) {
 				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
 				case SDL_EVENT_KEY_DOWN:
-					if (Event.key.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
+					if (Event.key.scancode == SDL_SCANCODE_ESCAPE) {
+						GameRequestShutdown();
+					}
+					if (Event.key.scancode == SDL_SCANCODE_RETURN && (Event.key.mod & SDL_KMOD_ALT) != 0) {
+						SDL_SetWindowFullscreen(Window, !((SDL_GetWindowFlags(Window) & SDL_WINDOW_FULLSCREEN) != 0));
+					}
 					InputState.KeyStates[Event.key.scancode] = true;
 					break;
 				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.scancode] = false; break;

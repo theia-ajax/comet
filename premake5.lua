@@ -26,7 +26,7 @@ filter "configurations:Release"
 	optimize "On"
 
 project "comet"
-	kind "ConsoleApp"
+	kind "WindowedApp"
 	language "C"
 	cdialect "gnu17"
 	toolset "gcc"

@@ -41,13 +41,19 @@ typedef struct SpriteAnimationData {
 
 typedef struct ParticlePhysicsConfigFile {
 	struct {
-		PhysicsConfig Physics;
-		struct {
-			const char* heat_colors_image;
-		} Rendering;
-	} Particles;
+		int32 Width;
+		int32 Height;
+		char HeatColorsImageFileName[256];
+	} Rendering;
+	struct {
+		Vec2 Offset;
+		float32 Spacing;
+		float32 Interval;
+	} Spawners;
+	PhysicsConfig Physics;
 	struct {
 		const char* FileName;
+		SDL_Time LastModified;
 	} Meta;
 } ParticlePhysicsConfigFile;
 
@@ -55,12 +61,24 @@ typedef struct ParticlePhysicsRenderConfig {
 	uint32* HeatRampColors;
 } ParticlePhysicsRenderConfig;
 
+typedef struct ParticleSpawner {
+	Vec2 Position;
+	Vec2 SpawnAcceleration;
+	float32 SpawnInterval;
+	float32 SpawnTimer;
+} ParticleSpawner;
+
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, float32 Rotation, float32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
 static EntityId CreateEnemy(GameWorld* World, Vec2 Position);
 
+// Allocates new buffer to read file into, returns true if succesfully read file and *OutFileData will point to the
+// allocated buffer. The caller is responsible for freeing this buffer!
+bool ReadFileToNewBuffer(const char* FileName, char** OutFileData);
 bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut);
 bool CheckConfigFileChanges();
+void LoadHeatRamp(const char* HeatRampFileName);
+void CreateSpawners();
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity);
 void MovementSystemUpdate(GameWorld* World, const GameTime* Time);
@@ -75,6 +93,8 @@ struct {
 	bool IsRunning;
 	SDL_Window* Window;
 	SDL_Renderer* Renderer;
+	int32 GameResWidth;
+	int32 GameResHeight;
 	GameInput Input;
 	GameInput LastInput;
 	int32 Frame;
@@ -91,6 +111,7 @@ struct {
 	int32 FramesThisSecond;
 	ParticlePhysicsConfigFile ParticlePhysicsConfigFile;
 	ParticlePhysicsRenderConfig ParticleRenderConfig;
+	ParticleSpawner* Spawners;
 	bool SpawnersEnabled;
 	bool DebugDrawEnabled;
 } GGame;
@@ -106,7 +127,7 @@ bool GameInitialize(const GameInitParams* params)
 	LogLevel LoggingLevel = LogLevel_Warning;
 #endif
 
-	// LoggingInitialize(LoggingLevel);
+	LoggingInitialize(LoggingLevel);
 	LogInfo(__FUNCTION__);
 
 	FrameAllocatorInitialize(KILOBYTES(640));
@@ -118,23 +139,29 @@ bool GameInitialize(const GameInitParams* params)
 
 	StringIdPoolsInitialize();
 
-	int32 GameResWidth = 1440 / 4;
-	int32 GameResHeight = 320 / 4;
+	GGame.ParticlePhysicsConfigFile.Physics = PhysicsDefaultConfig();
+	ReadConfigFile("particles.ini", &GGame.ParticlePhysicsConfigFile);
+
+	GGame.GameResWidth = GGame.ParticlePhysicsConfigFile.Rendering.Width;
+	GGame.GameResHeight = GGame.ParticlePhysicsConfigFile.Rendering.Height;
 
 	LogInfo("Creating Renderer");
 	GGame.IsRunning = true;
 #ifdef _DEBUG
 	GGame.DebugDrawEnabled = true;
 #endif
-	GGame.DebugDrawEnabled = true;
 	GGame.SpawnersEnabled = true;
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, NULL);
-	SDL_SetRenderLogicalPresentation(GGame.Renderer, GameResWidth, GameResHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_SetRenderLogicalPresentation(
+		GGame.Renderer,
+		GGame.GameResWidth,
+		GGame.GameResHeight,
+		SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
 	DebugInitialize(&(DebugConfig){
-		.CanvasWidth = GameResWidth,
-		.CanvasHeight = GameResHeight,
+		.CanvasWidth = GGame.GameResWidth,
+		.CanvasHeight = GGame.GameResHeight,
 		.Renderer = GGame.Renderer,
 	});
 
@@ -153,7 +180,6 @@ bool GameInitialize(const GameInitParams* params)
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
 	ImageAsset* BackgroundObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
-	ImageAsset* HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, "assets/heat_color_ramp.png");
 
 	SpriteSheetAsset* ShipObjectsSpriteSheetDataAsset =
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
@@ -168,27 +194,9 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	{
-		GGame.ParticlePhysicsConfigFile.Particles.Physics = PhysicsDefaultConfig();
-		ReadConfigFile("pfxconfig.ini", &GGame.ParticlePhysicsConfigFile);
-
-		PhysicsConfig Config = GGame.ParticlePhysicsConfigFile.Particles.Physics;
-		Config.Bounds.ZW = V2(GameResWidth, GameResHeight);
-		Config.CellSize = 8.0f;
-		Config.HeatForce = V2(0, -160);
-		// Config.MaxPhysicsObjects = 2048;
-		Config.HeatTransferRate = 0.00025f;
-		PhysicsInitialize(&Config);
-
-		for (uint8* Pixel = HeatRampImage->Data->Pixels;
-			 Pixel != HeatRampImage->Data->Pixels + (HeatRampImage->Data->Width * HeatRampImage->Data->BytesPerPixel);
-			 Pixel += HeatRampImage->Data->BytesPerPixel)
-		{
-			uint32 Color = *((uint32*)Pixel);
-			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
-			// SDL_Log("%08x", Color);
-		}
-	}
+	PhysicsInitialize(&GGame.ParticlePhysicsConfigFile.Physics);
+	LoadHeatRamp(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName);
+	CreateSpawners();
 
 	LogInfo("Game Systems Initialized");
 
@@ -436,20 +444,12 @@ AABB ColliderCalcAABB(const ColliderComponent* Collider, Tform2 Transform)
 	};
 }
 
-float32 Spawners[] = {
-	24, 8, 1000, 100000, 0, 16, 8, 1000, 100000, 0, 360 - 24, 8, -1000, 100000, 0, 360 - 16, 8, -1000, 100000, 0,
-	// 1440 - 24,
-	// 100,
-	// -1000000,
-	// 25000,
-};
-
-const float32 SpawnInterval = 1.0f / 15.0f;
-
 void GameUpdate(const GameTime* gameTime)
 {
-	// FrameAllocatorNextFrame();
+	FrameAllocatorNextFrame();
 	DebugNextFrame();
+
+	CheckConfigFileChanges();
 
 	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
 	MovementSystemUpdate(GGame.World, gameTime);
@@ -497,24 +497,21 @@ void GameUpdate(const GameTime* gameTime)
 	// }
 
 	if (GGame.SpawnersEnabled) {
+		for (int32 SpawnerIndex = 0; SpawnerIndex < arrlen(GGame.Spawners); SpawnerIndex += 5) {
+			ParticleSpawner* Spawner = &GGame.Spawners[SpawnerIndex];
 
-		for (int32 SpawnerIndex = 0; SpawnerIndex < ARRAY_COUNT(Spawners); SpawnerIndex += 5) {
-			float32* Spawner = &Spawners[SpawnerIndex];
-			Vec2 SpawnPos = V2(Spawner[0], Spawner[1]);
-			Vec2 SpawnAccel = V2(Spawner[2], Spawner[3]);
-			float32* SpawnTimer = &Spawner[4];
-			if (*SpawnTimer <= 0.0f) {
-				*SpawnTimer += SpawnInterval;
+			if (Spawner->SpawnTimer <= 0.0f) {
+				Spawner->SpawnTimer += Spawner->SpawnInterval;
 				PhysicsAddObject(&(PhysicsObject){
-					.Position = SpawnPos,
+					.Position = Spawner->Position,
 					.Radius = 1.0f,
-					.Acceleration = SpawnAccel,
+					.Acceleration = Spawner->SpawnAcceleration,
 					.Heat = 0.0f,
 					.Flags = PhysicsObjectFlags_None,
 					.Tint = 0xFFCC00CC,
 				});
 			} else {
-				*SpawnTimer -= gameTime->DeltaTimeF;
+				Spawner->SpawnTimer -= gameTime->DeltaTimeF;
 			}
 		}
 
@@ -523,7 +520,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	PhysicsUpdate(gameTime->DeltaTimeF);
+	PhysicsUpdate(Min(gameTime->DeltaTimeF, 1.0f / 240.0f));
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -533,7 +530,7 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.FramesThisSecond = 0;
 	}
 	DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
-	DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
+	// DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
 	DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
 	static bool ShowComponentCounts = false;
 	if (ShowComponentCounts) {
@@ -815,9 +812,12 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 	}
 }
 
-bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
+// Allocates new buffer to read file into, returns true if succesfully read file and *OutFileData will point to the
+// allocated buffer. The caller is responsible for freeing this buffer!
+bool ReadFileToNewBuffer(const char* FileName, char** OutFileData)
 {
 	FILE* File = fopen(FileName, "r");
+	*OutFileData = NULL;
 
 	if (!File) {
 		return false;
@@ -829,27 +829,204 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 	char* FileData = (char*)calloc(FileLength + 1, sizeof(char));
 
-	size_t BytesRead = fread(FileData, sizeof(char), FileLength, File);
-	fclose(File);
-	ini_t* IniFile = ini_load(FileData, NULL);
-	free(FileData);
-
-	if (!IniFile) {
+	if (!FileData) {
+		fclose(File);
 		return false;
 	}
 
-	int PhysicsSection = ini_find_section(IniFile, "Physics", 0);
+	size_t BytesRead = fread(FileData, sizeof(char), FileLength, File);
+	fclose(File);
 
-	if (PhysicsSection != INI_NOT_FOUND) {
-		int MaxObjectCountProperty = ini_find_property(IniFile, PhysicsSection, "MaxObjectCount", 0);
-		if (MaxObjectCountProperty != INI_NOT_FOUND) {
-			const char* PropertyValue = ini_property_value(IniFile, PhysicsSection, MaxObjectCountProperty);
-			long IntValue = strtol(PropertyValue, NULL, 10);
-			ConfigOut->Particles.Physics.MaxPhysicsObjects = IntValue;
+	*OutFileData = FileData;
+	return true;
+}
+
+const char* IniReadString(ini_t* Ini, int Section, const char* Property, const char* Default)
+{
+	const char* Result = Default;
+	int PropertyIndex = ini_find_property(Ini, Section, Property, 0);
+	if (PropertyIndex != INI_NOT_FOUND) {
+		Result = ini_property_value(Ini, Section, PropertyIndex);
+	}
+	return Result;
+}
+
+int IniReadInt(ini_t* Ini, int Section, const char* Property, int Default)
+{
+	int Result = Default;
+
+	const char* Value = IniReadString(Ini, Section, Property, NULL);
+	if (Value) {
+		Result = strtol(Value, NULL, 10);
+	}
+	return Result;
+}
+
+double IniReadFloat(ini_t* Ini, int Section, const char* Property, double Default)
+{
+	double Result = Default;
+
+	const char* Value = IniReadString(Ini, Section, Property, NULL);
+	if (Value) {
+		Result = strtod(Value, NULL);
+	}
+	return Result;
+}
+
+bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
+{
+	char* FileData;
+	if (ReadFileToNewBuffer(FileName, &FileData)) {
+		ini_t* Ini = ini_load(FileData, NULL);
+		free(FileData);
+
+		if (!Ini) {
+			return false;
 		}
+
+		ConfigOut->Meta.FileName = FileName;
+
+		if (ConfigOut->Meta.LastModified == 0) {
+			SDL_PathInfo PathInfo;
+			SDL_Time LastModifiedTime = 0;
+			if (SDL_GetPathInfo(FileName, &PathInfo)) {
+				LastModifiedTime = PathInfo.modify_time;
+			}
+			ConfigOut->Meta.LastModified = LastModifiedTime;
+		}
+
+		{
+			int Section = ini_find_section(Ini, "Rendering", 0);
+
+			ConfigOut->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
+			ConfigOut->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
+			const char* HeatImageFileName = IniReadString(Ini, Section, "HeatColorsImage", NULL);
+			SDL_zeroa(ConfigOut->Rendering.HeatColorsImageFileName);
+			SDL_strlcpy(
+				ConfigOut->Rendering.HeatColorsImageFileName,
+				HeatImageFileName,
+				sizeof(ConfigOut->Rendering.HeatColorsImageFileName));
+		}
+
+		{
+			int Section = ini_find_section(Ini, "Spawners", 0);
+
+			ConfigOut->Spawners.Offset.X = IniReadFloat(Ini, Section, "OffsetX", 0.0);
+			ConfigOut->Spawners.Offset.Y = IniReadFloat(Ini, Section, "OffsetY", 0.0);
+			ConfigOut->Spawners.Interval = IniReadFloat(Ini, Section, "Interval", 0.0);
+			ConfigOut->Spawners.Spacing = IniReadFloat(Ini, Section, "Spacing", 32.0);
+		}
+
+		{
+			int Section = ini_find_section(Ini, "Physics", 0);
+			ConfigOut->Physics.MaxPhysicsObjects = IniReadInt(Ini, Section, "MaxObjectCount", 128);
+
+			ConfigOut->Physics.Bounds.X = IniReadFloat(Ini, Section, "BoundsOffsetX", 0.0);
+			ConfigOut->Physics.Bounds.Y = IniReadFloat(Ini, Section, "BoundsOffsetY", 0.0);
+
+			float32 BoundsWidth = IniReadFloat(Ini, Section, "BoundsWidth", GGame.GameResWidth);
+			float32 BoundsHeight = IniReadFloat(Ini, Section, "BoundsHeight", GGame.GameResHeight);
+			if (BoundsWidth < KEpsilonFloat32) {
+				BoundsWidth = GGame.GameResWidth;
+			};
+			if (BoundsWidth < KEpsilonFloat32) {
+				BoundsHeight = GGame.GameResHeight;
+			};
+
+			ConfigOut->Physics.Bounds.Z = ConfigOut->Physics.Bounds.X + BoundsWidth;
+			ConfigOut->Physics.Bounds.W = ConfigOut->Physics.Bounds.Y + BoundsHeight;
+
+			ConfigOut->Physics.CellSize = IniReadFloat(Ini, Section, "CellSize", 8.0);
+
+			ConfigOut->Physics.Gravity.X = IniReadFloat(Ini, Section, "GravityX", 0.0);
+			ConfigOut->Physics.Gravity.Y = IniReadFloat(Ini, Section, "GravityY", 100.0);
+
+			ConfigOut->Physics.HeatForce.X = IniReadFloat(Ini, Section, "HeatForceX", 0.0);
+			ConfigOut->Physics.HeatForce.Y = IniReadFloat(Ini, Section, "HeatForceY", -160.0);
+
+			ConfigOut->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
+		}
+
+		ini_destroy(Ini);
 	}
 
-	ini_destroy(IniFile);
-
 	return true;
+}
+
+void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const ParticlePhysicsConfigFile* New)
+{
+	if (SDL_memcmp(&Old->Physics, &New->Physics, sizeof(Old->Physics)) != 0) {
+		if (Old->Physics.MaxPhysicsObjects != New->Physics.MaxPhysicsObjects) {
+			if (New->Physics.MaxPhysicsObjects < Old->Physics.MaxPhysicsObjects) {
+				PhysicsClearAllObjects();
+			}
+			GGame.SpawnersEnabled = true;
+		}
+
+		
+		PhysicsReconfigure(&New->Physics);
+	}
+	
+	if (SDL_strcmp(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName)) {
+		LoadHeatRamp(New->Rendering.HeatColorsImageFileName);
+	}
+
+	if (SDL_memcmp(&Old->Physics.Bounds, &New->Physics.Bounds, sizeof(Old->Physics.Bounds)) != 0 ||
+		SDL_memcmp(&Old->Spawners, &New->Spawners, sizeof(Old->Spawners)) != 0)
+	{
+		CreateSpawners();
+	}
+}
+
+bool CheckConfigFileChanges()
+{
+	SDL_PathInfo PathInfo;
+	SDL_Time LastModifiedTime = 0;
+	if (SDL_GetPathInfo(GGame.ParticlePhysicsConfigFile.Meta.FileName, &PathInfo)) {
+		LastModifiedTime = PathInfo.modify_time;
+	}
+
+	if (LastModifiedTime > GGame.ParticlePhysicsConfigFile.Meta.LastModified) {
+		ParticlePhysicsConfigFile OldConfig = GGame.ParticlePhysicsConfigFile;
+
+		ReadConfigFile(GGame.ParticlePhysicsConfigFile.Meta.FileName, &GGame.ParticlePhysicsConfigFile);
+		GGame.ParticlePhysicsConfigFile.Meta.LastModified = LastModifiedTime;
+
+		ApplyConfigFileChanges(&OldConfig, &GGame.ParticlePhysicsConfigFile);
+	}
+}
+
+void LoadHeatRamp(const char* HeatRampFileName)
+{
+	ImageAsset* HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, HeatRampFileName);
+	if (HeatRampImage) {
+		arrsetlen(GGame.ParticleRenderConfig.HeatRampColors, 0);
+
+		for (uint8* Pixel = HeatRampImage->Data->Pixels;
+			 Pixel != HeatRampImage->Data->Pixels + (HeatRampImage->Data->Width * HeatRampImage->Data->BytesPerPixel);
+			 Pixel += HeatRampImage->Data->BytesPerPixel)
+		{
+			uint32 Color = *((uint32*)Pixel);
+			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
+		}
+	}
+}
+
+void CreateSpawners()
+{
+	arrsetlen(GGame.Spawners, 0);
+
+	for (float32 SpawnerX =
+			 GGame.ParticlePhysicsConfigFile.Spawners.Offset.X + GGame.ParticlePhysicsConfigFile.Physics.Bounds.X;
+		 SpawnerX < GGame.ParticlePhysicsConfigFile.Physics.Bounds.Z;
+		 SpawnerX += Max(GGame.ParticlePhysicsConfigFile.Spawners.Spacing, 1.0f))
+	{
+		arrput(
+			GGame.Spawners,
+			((ParticleSpawner){
+				.Position = V2(SpawnerX, GGame.ParticlePhysicsConfigFile.Spawners.Offset.Y),
+				.SpawnAcceleration = V2(0, 10000.0f),
+				.SpawnInterval = GGame.ParticlePhysicsConfigFile.Spawners.Interval,
+			}));
+	}
 }

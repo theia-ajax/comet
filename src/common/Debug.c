@@ -36,7 +36,7 @@ void DebugInitialize(const DebugConfig* config)
 												.CanvasHeight = 180,
 											};
 
-	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_RGBA8888);
+	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_ARGB8888);
 	ASSERT(GDebug.Canvas);
 }
 
@@ -83,7 +83,7 @@ void DebugDraw(SDL_Renderer* renderer)
 	}
 
 	SDL_Surface* CanvasTextureSurface;
-	if (SDL_LockTextureToSurface(GDebug.CanvasTexture, NULL, &CanvasTextureSurface) == 0) {
+	if (SDL_LockTextureToSurface(GDebug.CanvasTexture, NULL, &CanvasTextureSurface)) {
 		SDL_FillSurfaceRect(CanvasTextureSurface, NULL, 0x00000000);
 		SDL_BlitSurface(GDebug.Canvas, NULL, CanvasTextureSurface, NULL);
 		SDL_UnlockTexture(GDebug.CanvasTexture);
