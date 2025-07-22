@@ -30,7 +30,11 @@ void SpriteDatabaseShutdown(void)
 {
 }
 
-SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight)
+SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(
+	StringId Name,
+	ImageAsset* Image,
+	int32 SpriteWidth,
+	int32 SpriteHeight)
 {
 	ASSERT(Image != NULL);
 	ASSERT(SpriteWidth > 0);
@@ -40,35 +44,40 @@ SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(ImageAsset* Image, int32 Sprit
 	int32 SheetIndex = GSpriteDatabase.SpriteSheets.Count;
 	SpriteSheet* NewSheet = FixedListPush(GSpriteDatabase.SpriteSheets);
 
-	*NewSheet = (SpriteSheet)
-	{
-		.SheetType = SpriteSheetType_Grid, .Image = Image, .SpriteWidth = SpriteWidth, .SpriteHeight = SpriteHeight,
+	*NewSheet = (SpriteSheet){
+		.Name = Name,
+		.SheetType = SpriteSheetType_Grid,
+		.Image = Image,
+		.SpriteWidth = SpriteWidth,
+		.SpriteHeight = SpriteHeight,
 		.Texture = SDL_CreateTextureFromSurface(GSpriteDatabase.Renderer, Image->Data->Surface),
 	};
 
 	SDL_SetTextureScaleMode(NewSheet->Texture, SDL_SCALEMODE_NEAREST);
-	
+
 	NewSheet->SpritesPerRow = NewSheet->Image->Data->Surface->w / SpriteWidth;
 	NewSheet->SpritesPerCol = NewSheet->Image->Data->Surface->h / SpriteHeight;
-	
+
 	return (SpriteSheetId){SheetIndex};
 }
 
-SpriteSheetId SpriteDatabaseCreateFrameDataSpriteSheet(ImageAsset* Image, SpriteSheetAsset* Sheet)
+SpriteSheetId SpriteDatabaseCreateFrameDataSpriteSheet(StringId Name, ImageAsset* Image, SpriteSheetAsset* Sheet)
 {
 	ASSERT(Image != NULL);
 	ASSERT(Sheet != NULL);
 	ASSERT(!FixedListIsFull(GSpriteDatabase.SpriteSheets));
-	
+
 	int32 SheetIndex = GSpriteDatabase.SpriteSheets.Count;
 	SpriteSheet* NewSheet = FixedListPush(GSpriteDatabase.SpriteSheets);
-	
-	*NewSheet = (SpriteSheet)
-	{
-		.SheetType = SpriteSheetType_Frames, .Image = Image, .SheetData = Sheet,
+
+	*NewSheet = (SpriteSheet){
+		.Name = Name,
+		.SheetType = SpriteSheetType_Frames,
+		.Image = Image,
+		.SheetData = Sheet,
 		.Texture = SDL_CreateTextureFromSurface(GSpriteDatabase.Renderer, Image->Data->Surface),
 	};
-	
+
 	SDL_SetTextureScaleMode(NewSheet->Texture, SDL_SCALEMODE_NEAREST);
 
 	return (SpriteSheetId){SheetIndex};
@@ -134,8 +143,7 @@ SpriteId SpriteSheetFindSpriteByNameId(SpriteSheetId SpriteSheetHandle, StringId
 {
 	SpriteId Found = (SpriteId){NONE};
 
-	if (VALID_HANDLE(SpriteSheetHandle) && VALID_INDEX(SpriteSheetHandle.Value, GSpriteDatabase.SpriteSheets.Count))
-	{
+	if (VALID_HANDLE(SpriteSheetHandle) && VALID_INDEX(SpriteSheetHandle.Value, GSpriteDatabase.SpriteSheets.Count)) {
 		const SpriteSheet* Sheet = FixedListAt(GSpriteDatabase.SpriteSheets, SpriteSheetHandle.Value);
 
 		if (Sheet->SheetType == SpriteSheetType_Frames && Sheet->SheetData != NULL) {
@@ -157,6 +165,17 @@ SpriteId SpriteSheetFindSpriteByIndex(SpriteSheetId SpriteSheetHandle, int32 Spr
 		Result = BuildSpriteId(SpriteSheetHandle.Value, SpriteIndex);
 	}
 	return Result;
+}
+
+SpriteSheetId SpriteSheetFindByName(StringId Name)
+{
+	SpriteSheetId Found = (SpriteSheetId){NONE};
+	for (int32 Index = 0; Index < GSpriteDatabase.SpriteSheets.Count; Index++) {
+		if (StringIdEq(GSpriteDatabase.SpriteSheets.Data[Index].Name, Name)) {
+			Found = (SpriteSheetId){Index};
+		}
+	}
+	return Found;
 }
 
 SDL_Texture* GetSpriteTexture(SpriteId SpriteHandle)

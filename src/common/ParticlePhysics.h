@@ -65,6 +65,11 @@ typedef struct PhysicsConfig {
 	Vec4 Bounds;
 	float32 CellSize;
 	int32 MaxPhysicsObjects;
+	float32 HeatDecay;
+	float32 HeaterHeatDelta;
+	float32 CoolerHeatDelta;
+	float32 HeaterZoneSize;
+	float32 CoolerZoneSize;
 } PhysicsConfig;
 
 void PhysicsInitialize(const PhysicsConfig* Config);

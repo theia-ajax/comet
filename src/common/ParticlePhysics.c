@@ -303,15 +303,16 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 
 	ZERO_STRUCT(&Object->Acceleration);
 
-	Object->Heat -= (Object->Heat * 0.4f) * DeltaTime;
+	Object->Heat -= (Object->Heat * GPhysics.Config.HeatDecay) * DeltaTime;
 
-	const float32 HeaterZoneSize = GPhysics.Config.CellSize * 3;
+	const float32 BoundsHeight = Abs(GPhysics.Bounds.W - GPhysics.Bounds.Y);
+	const float32 HeaterZoneSize = BoundsHeight * GPhysics.Config.HeaterZoneSize;
 	const float32 HeaterThreshold = GPhysics.Bounds.W - HeaterZoneSize;
 
 	if (Object->Position.Y > HeaterThreshold) {
-		Object->Heat += 1.0f * DeltaTime;
-	} else if (Object->Position.Y < GPhysics.Config.CellSize * 4) {
-		Object->Heat -= 0.5f * DeltaTime;
+		Object->Heat += GPhysics.Config.HeaterHeatDelta * DeltaTime;
+	} else if (Object->Position.Y < GPhysics.Config.CoolerZoneSize * BoundsHeight + GPhysics.Bounds.Y) {
+		Object->Heat += GPhysics.Config.CoolerHeatDelta * DeltaTime;
 	}
 	Object->Heat = Clamp(Object->Heat, 0, 1);
 

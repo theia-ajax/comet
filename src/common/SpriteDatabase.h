@@ -17,6 +17,7 @@ typedef struct SpriteSheet {
 	ImageAsset* Image;
 	SpriteSheetAsset* SheetData;
 	SDL_Texture* Texture;
+	StringId Name;
 	int32 SpriteWidth;
 	int32 SpriteHeight;
 	int32 SpritesPerRow;
@@ -32,8 +33,8 @@ DEFINE_HANDLE(SpriteId);
 void SpriteDatabaseInitialize(SDL_Renderer* Renderer);
 void SpriteDatabaseShutdown(void);
 
-SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight);
-SpriteSheetId SpriteDatabaseCreateFrameDataSpriteSheet(ImageAsset* Image, SpriteSheetAsset* Sheet);
+SpriteSheetId SpriteDatabaseCreateGridSpriteSheet(StringId Name, ImageAsset* Image, int32 SpriteWidth, int32 SpriteHeight);
+SpriteSheetId SpriteDatabaseCreateFrameDataSpriteSheet(StringId Name, ImageAsset* Image, SpriteSheetAsset* Sheet);
 
 const SpriteSheet* SpriteDatabaseTryGetSpriteSheet(SpriteSheetId SpriteSheetHandle);
 const SpriteSheet* SpriteDatabaseGetSpriteSheet(SpriteSheetId SpriteSheetHandle);
@@ -45,6 +46,8 @@ SpriteId SpriteFindByNameId(StringId SpriteName);
 SpriteId SpriteSheetFindSpriteByName(SpriteSheetId SpriteSheetHandle, const char* SpriteName);
 SpriteId SpriteSheetFindSpriteByNameId(SpriteSheetId SpriteSheetHandle, StringId SpriteName);
 SpriteId SpriteSheetFindSpriteByIndex(SpriteSheetId SpriteSheetHandle, int32 SpriteIndex);
+
+SpriteSheetId SpriteSheetFindByName(StringId Name);
 
 SDL_Texture* GetSpriteTexture(SpriteId SpriteHandle);
 SpriteRect GetSpriteRect(SpriteId SpriteHandle);

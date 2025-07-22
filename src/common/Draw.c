@@ -115,9 +115,11 @@ void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 
 	}
 }
 
+
 static int SpriteDrawLayerCompare(const SpriteDraw* A, const SpriteDraw* B)
 {
-	return A->Layer - B->Layer;
+	return (int)Sign(A->Layer - B->Layer);
+	// return A->Layer - B->Layer;
 }
 
 static int SpriteDrawLayerCompareVoid(const void* A, const void* B)

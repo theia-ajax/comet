@@ -14,7 +14,7 @@ struct {
 
 StringId GetStringId(const char* string)
 {
-	return GetStringIdN(string, strlen(string));
+	return GetStringIdN(string, (string) ? strlen(string) : 0);
 }
 
 StringId GetStringIdN(const char* string, size_t length)
@@ -41,6 +41,12 @@ bool StringIdIsValid(StringId S)
 bool StringIdEq(StringId A, StringId B)
 {
 	return A.Id == B.Id;
+}
+
+void StringIdInvalidate(StringId* Id)
+{
+	ASSERT(Id != NULL);
+	Id->Id = KRawInvalidStringId;
 }
 
 void StringIdPoolsInitialize(void)

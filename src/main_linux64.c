@@ -52,45 +52,49 @@ int main(int argc, char* argv[])
 	uint64 NowTicks = 0;
 	uint64 DeltaTicks = 0;
 	uint64 SimTimeTicks = 0;
+	uint64 RenderTimeTicks = 0;
 	double ElapsedSeconds = 0.0;
 
 	GameInput InputState = {0};
 
 	while (GameIsRunning()) {
-		uint64 FrameStartTicks = stm_now();
 		// DebugNextFrame();
-
+		
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {
 			switch (Event.type) {
 				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
 				case SDL_EVENT_KEY_DOWN:
-					if (Event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
-					InputState.KeyStates[Event.key.keysym.scancode] = true;
-					break;
+				if (Event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
+				InputState.KeyStates[Event.key.keysym.scancode] = true;
+				break;
 				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.keysym.scancode] = false; break;
 				default: break;
 			}
 			GameProcessEvent(&Event);
 		}
-
+		
 		GameSendInput(&InputState);
-
+		
 		DeltaTicks = stm_laptime(&NowTicks);
 		double DeltaTimeSeconds = stm_sec(DeltaTicks);
 		ElapsedSeconds += DeltaTimeSeconds;
-
+		
 		GameTime Time = {
 			.DeltaTime = DeltaTimeSeconds,
 			.DeltaTimeF = (float)DeltaTimeSeconds,
 			.ElapsedSeconds = ElapsedSeconds,
 			.SimTimeMS = stm_ms(SimTimeTicks),
+			.RenderTimeMS = stm_ms(RenderTimeTicks),
 		};
-
+		
+		uint64 FrameStartTicks = stm_now();
 		GameUpdate(&Time);
 		SimTimeTicks = stm_since(FrameStartTicks);
 
+		uint64 RenderStartTicks = stm_now();
 		GameRender(&Time);
+		RenderTimeTicks = stm_since(RenderStartTicks);
 
 		while (KTargetFramesPerSecond != 0 && stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds) {
 			// Do nothing...

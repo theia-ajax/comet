@@ -20,7 +20,7 @@ typedef struct SpriteDraw {
 	Point SpriteTiles;
 	ColorU8 TintColor;
 	bool UseTint;
-	int32 Layer;
+	float32 Layer;
 } SpriteDraw;
 
 void DrawInitialize(const DrawConfig* config);

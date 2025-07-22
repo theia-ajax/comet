@@ -19,6 +19,7 @@ typedef struct GameTime {
 	float64 ElapsedSeconds;
 	float64 DeltaTime;
 	float64 SimTimeMS;
+	float64 RenderTimeMS;
 	float32 DeltaTimeF;
 } GameTime;
 

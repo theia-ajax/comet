@@ -608,6 +608,13 @@ extern "C"
         return (A >= 0) ? A : -A;
     }
 
+    COVERAGE(Sign, 1)
+    static inline Float Sign(Float A)
+    {
+        ASSERT_COVERED(Sign);
+        return (A == 0.0f) ? 0.0f : ((A < 0) ? -1.0f : 1.0f);
+    }
+
     COVERAGE(Lerp, 1)
     static inline Float Lerp(Float A, Float B, Float Time)
     {

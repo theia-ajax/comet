@@ -43,11 +43,15 @@ typedef struct ParticlePhysicsConfigFile {
 	struct {
 		int32 Width;
 		int32 Height;
-		char HeatColorsImageFileName[256];
+		StringId HeatColorsImageFileName;
 		float32 SpriteScale;
 		float32 ExtraRadius;
 		float32 HeatScale;
-		char ParticleSpriteName[64];
+		StringId ParticleSpriteName;
+		StringId ParticleSpriteSheetName;
+		int32 ParticleSpriteIndex;
+		bool UseSpriteIndex;
+		bool InvertLayer;
 	} Rendering;
 	struct {
 		Vec2 Offset;
@@ -64,6 +68,7 @@ typedef struct ParticlePhysicsConfigFile {
 
 typedef struct ParticlePhysicsRenderConfig {
 	uint32* HeatRampColors;
+	SpriteSheetId ParticleSpriteSheetId;
 	SpriteId ParticleSpriteId;
 } ParticlePhysicsRenderConfig;
 
@@ -85,6 +90,7 @@ bool ReadFileToNewBuffer(const char* FileName, char** OutFileData);
 bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut);
 bool CheckConfigFileChanges();
 void LoadHeatRamp(const char* HeatRampFileName);
+void UpdateParticleSpriteId();
 void CreateSpawners();
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity);
@@ -108,6 +114,7 @@ struct {
 	rnd_pcg_t RandomGen;
 	SpriteSheetId ShipObjectsSpriteSheetHandle;
 	SpriteSheetId BackgroundObjectsSpriteSheetHandle;
+	SpriteSheetId FlaresSpriteSheetHandle;
 	// PhysWorld* Physics;
 	GameWorld* World;
 	EntityId PlayerEntity;
@@ -187,23 +194,35 @@ bool GameInitialize(const GameInitParams* params)
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/spritesheets/ship_objects/ship_objects.png");
 	ImageAsset* BackgroundObjectsSpriteSheetImageAsset =
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
+	ImageAsset* FlaresSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/flares.png");
+	ImageAsset* BigFlaresSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/bigflare.png");
 
 	SpriteSheetAsset* ShipObjectsSpriteSheetDataAsset =
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
 
 	SpriteDatabaseInitialize(GGame.Renderer);
-	GGame.ShipObjectsSpriteSheetHandle =
-		SpriteDatabaseCreateFrameDataSpriteSheet(ShipObjectsSpriteSheetImageAsset, ShipObjectsSpriteSheetDataAsset);
-	GGame.BackgroundObjectsSpriteSheetHandle =
-		SpriteDatabaseCreateGridSpriteSheet(BackgroundObjectsSpriteSheetImageAsset, 32, 32);
+	GGame.ShipObjectsSpriteSheetHandle = SpriteDatabaseCreateFrameDataSpriteSheet(
+		GetStringId("ShipObjects"),
+		ShipObjectsSpriteSheetImageAsset,
+		ShipObjectsSpriteSheetDataAsset);
+	GGame.BackgroundObjectsSpriteSheetHandle = SpriteDatabaseCreateGridSpriteSheet(
+		GetStringId("BackgroundObjects"),
+		BackgroundObjectsSpriteSheetImageAsset,
+		32,
+		32);
+
+	GGame.FlaresSpriteSheetHandle =
+		SpriteDatabaseCreateGridSpriteSheet(GetStringId("Flares"), FlaresSpriteSheetImageAsset, 64, 64);
+		SpriteDatabaseCreateGridSpriteSheet(GetStringId("BigFlare"), BigFlaresSpriteSheetImageAsset, 512, 512);
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
 	});
 
 	PhysicsInitialize(&GGame.ParticlePhysicsConfigFile.Physics);
-	LoadHeatRamp(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName);
-	GGame.ParticleRenderConfig.ParticleSpriteId = SpriteFindByName(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
+	LoadHeatRamp(StringIdCStr(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName));
+	UpdateParticleSpriteId();
+
 	CreateSpawners();
 
 	LogInfo("Game Systems Initialized");
@@ -504,16 +523,19 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// }
 
+	// Update Spawners
 	if (GGame.SpawnersEnabled) {
 		for (int32 SpawnerIndex = 0; SpawnerIndex < arrlen(GGame.Spawners); SpawnerIndex += 5) {
 			ParticleSpawner* Spawner = &GGame.Spawners[SpawnerIndex];
 
 			if (Spawner->SpawnTimer <= 0.0f) {
 				Spawner->SpawnTimer += Spawner->SpawnInterval;
+				Vec2 Accel = Spawner->SpawnAcceleration;
+				Accel.X += rnd_pcg_nextf(&GGame.RandomGen) * 10000.0f - 5000.0f;
 				PhysicsAddObject(&(PhysicsObject){
 					.Position = Spawner->Position,
 					.Radius = Spawner->ObjectRadius,
-					.Acceleration = Spawner->SpawnAcceleration,
+					.Acceleration = Accel,
 					.Heat = 0.0f,
 					.Flags = PhysicsObjectFlags_None,
 					.Tint = 0xFFCC00CC,
@@ -537,7 +559,7 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.LastFPS = GGame.FramesThisSecond;
 		GGame.FramesThisSecond = 0;
 	}
-	DebugPrintf("FPS: %d, SIM: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS);
+	DebugPrintf("FPS: %d, SIM: %0.3fms, DRAW: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS, gameTime->RenderTimeMS);
 	// DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
 	DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
 	static bool ShowComponentCounts = false;
@@ -801,14 +823,20 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 		if ((Object->Flags & 1) != 0) {
 			TintColor = Object->Tint;
 		} else {
-			int32 Index = (int32)(MIN(Object->Heat, 1.0f - KEpsilonFloat32) * arrlen(Config->HeatRampColors));
-			TintColor = Config->HeatRampColors[Index];
+			ptrdiff_t len = arrlen(Config->HeatRampColors);
+			if (len > 0) {
+				int32 Index = (int32)(MIN(Object->Heat, 1.0f - KEpsilonFloat32) * len);
+				TintColor = Config->HeatRampColors[Index];
+			} else {
+				TintColor = Object->Tint;
+			}
 		}
 
 		float32 SpriteScale = GGame.ParticlePhysicsConfigFile.Rendering.SpriteScale;
 		float32 HeatScale = GGame.ParticlePhysicsConfigFile.Rendering.HeatScale;
 		float32 ExtraRadius = GGame.ParticlePhysicsConfigFile.Rendering.ExtraRadius;
 		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
+		float32 Layer = (GGame.ParticlePhysicsConfigFile.Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat;
 
 		// DrawCircle(Pos, Scale, TintColor);
 		DrawSprite(&(SpriteDraw){
@@ -817,6 +845,7 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 			.Scale = V2(Scale, Scale),
 			.UseTint = true,
 			.TintColor = ColorU8FromColorU32(TintColor),
+			.Layer = Layer,
 		});
 		// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
 		// SDL_RenderFillRect(GGame.Renderer, &PosRect);
@@ -884,6 +913,17 @@ double IniReadFloat(ini_t* Ini, int Section, const char* Property, double Defaul
 	return Result;
 }
 
+bool IniReadBool(ini_t* Ini, int Section, const char* Property, bool Default)
+{
+	bool Result = Default;
+
+	const char* Value = IniReadString(Ini, Section, Property, NULL);
+	if (Value) {
+		Result = Value[0] == 't' || Value[0] == 'T';
+	}
+	return Result;
+}
+
 bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 {
 	char* FileData;
@@ -911,18 +951,23 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			ConfigOut->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
 			ConfigOut->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
+
 			const char* HeatImageFileName = IniReadString(Ini, Section, "HeatColorsImage", NULL);
-			SDL_zeroa(ConfigOut->Rendering.HeatColorsImageFileName);
-			SDL_strlcpy(
-				ConfigOut->Rendering.HeatColorsImageFileName,
-				HeatImageFileName,
-				sizeof(ConfigOut->Rendering.HeatColorsImageFileName));
+			ConfigOut->Rendering.HeatColorsImageFileName = GetStringId(HeatImageFileName);
+
 			ConfigOut->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
 			ConfigOut->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
 			ConfigOut->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
+
 			const char* ParticleSpriteName = IniReadString(Ini, Section, "ParticleSprite", "explosion-01");
-			SDL_zeroa(ConfigOut->Rendering.ParticleSpriteName);
-			SDL_strlcpy(ConfigOut->Rendering.ParticleSpriteName, ParticleSpriteName, sizeof(ConfigOut->Rendering.ParticleSpriteName));
+			ConfigOut->Rendering.ParticleSpriteName = GetStringId(ParticleSpriteName);
+
+			const char* ParticleSpriteSheetName = IniReadString(Ini, Section, "ParticleSpriteSheet", NULL);
+			ConfigOut->Rendering.ParticleSpriteSheetName = GetStringId(ParticleSpriteSheetName);
+
+			ConfigOut->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
+			ConfigOut->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
+			ConfigOut->Rendering.InvertLayer = IniReadBool(Ini, Section, "InvertLayer", false);
 		}
 
 		{
@@ -963,6 +1008,12 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 			ConfigOut->Physics.HeatForce.Y = IniReadFloat(Ini, Section, "HeatForceY", -160.0);
 
 			ConfigOut->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
+
+			ConfigOut->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
+			ConfigOut->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
+			ConfigOut->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
+			ConfigOut->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
+			ConfigOut->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
 		}
 
 		ini_destroy(Ini);
@@ -984,12 +1035,15 @@ void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const Particle
 		PhysicsReconfigure(&New->Physics);
 	}
 
-	if (SDL_strcmp(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName) != 0) {
-		LoadHeatRamp(New->Rendering.HeatColorsImageFileName);
+	if (!StringIdEq(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName)) {
+		LoadHeatRamp(StringIdCStr(New->Rendering.HeatColorsImageFileName));
 	}
 
-	if (SDL_strcmp(Old->Rendering.ParticleSpriteName, New->Rendering.ParticleSpriteName) != 0) {
-		GGame.ParticleRenderConfig.ParticleSpriteId = SpriteFindByName(New->Rendering.ParticleSpriteName);
+	if (!StringIdEq(Old->Rendering.ParticleSpriteName, New->Rendering.ParticleSpriteName) ||
+		!StringIdEq(Old->Rendering.ParticleSpriteSheetName, New->Rendering.ParticleSpriteSheetName) ||
+		Old->Rendering.ParticleSpriteIndex != New->Rendering.ParticleSpriteIndex)
+	{
+		UpdateParticleSpriteId();
 	}
 
 	if (SDL_memcmp(&Old->Physics.Bounds, &New->Physics.Bounds, sizeof(Old->Physics.Bounds)) != 0 ||
@@ -1030,6 +1084,27 @@ void LoadHeatRamp(const char* HeatRampFileName)
 			uint32 Color = *((uint32*)Pixel);
 			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
 		}
+	}
+}
+
+void UpdateParticleSpriteId()
+{
+	if (StringIdIsValid(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteSheetName)) {
+		GGame.ParticleRenderConfig.ParticleSpriteSheetId =
+			SpriteSheetFindByName(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteSheetName);
+
+		if (GGame.ParticlePhysicsConfigFile.Rendering.UseSpriteIndex) {
+			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByIndex(
+				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
+				GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteIndex);
+		} else {
+			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByNameId(
+				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
+				GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
+		}
+	} else {
+		GGame.ParticleRenderConfig.ParticleSpriteId =
+			SpriteFindByNameId(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
 	}
 }
 
