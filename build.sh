@@ -1,4 +1,31 @@
 #!/usr/bin/sh
 
-premake5 gmake2
-make -C bin/ config=$1_linux64
+target='comet'
+run=false
+platform='linux64'
+config='debug'
+
+display_help()
+{
+	echo 'build.sh [-h|r|c <config>|p <platform>]'
+	exit
+}
+
+while getopts 'c:p:hr' flag; do
+	case "${flag}" in
+		h) display_help ;;
+		r) run=true ;;
+		c) config="${OPTARG}" ;;
+		p) platform="${OPTARG}" ;;
+		\?) exit ;;
+	esac
+done
+
+makeconfig="${config}_${platform}"
+
+premake5 gmake
+make -C bin/ config=$makeconfig
+
+if $run; then
+	./bin/$target/bin/$platform/$config/$target
+fi

@@ -51,6 +51,7 @@ typedef struct ParticlePhysicsConfigFile {
 		StringId ParticleSpriteSheetName;
 		int32 ParticleSpriteIndex;
 		bool UseSpriteIndex;
+		bool UseHeatAsLayer;
 		bool InvertLayer;
 	} Rendering;
 	struct {
@@ -141,6 +142,7 @@ bool GameInitialize(const GameInitParams* params)
 	LogLevel LoggingLevel = LogLevel_Warning;
 #endif
 
+	LoggingLevel = LogLevel_Info;
 	LoggingInitialize(LoggingLevel);
 	LogInfo(__FUNCTION__);
 
@@ -166,7 +168,11 @@ bool GameInitialize(const GameInitParams* params)
 #endif
 	GGame.SpawnersEnabled = true;
 	GGame.Window = params->Window;
-	GGame.Renderer = SDL_CreateRenderer(GGame.Window, NULL);
+	LogInfo("Render Drivers:");
+	for (int i = 0; i < SDL_GetNumRenderDrivers(); i++) {
+		LogInfo("\t%02d) %s", i, SDL_GetRenderDriver(i));
+	}
+	GGame.Renderer = SDL_CreateRenderer(GGame.Window, "vulkan");
 	SDL_SetRenderLogicalPresentation(
 		GGame.Renderer,
 		GGame.GameResWidth,
@@ -213,7 +219,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	GGame.FlaresSpriteSheetHandle =
 		SpriteDatabaseCreateGridSpriteSheet(GetStringId("Flares"), FlaresSpriteSheetImageAsset, 64, 64);
-		SpriteDatabaseCreateGridSpriteSheet(GetStringId("BigFlare"), BigFlaresSpriteSheetImageAsset, 512, 512);
+	SpriteDatabaseCreateGridSpriteSheet(GetStringId("BigFlare"), BigFlaresSpriteSheetImageAsset, 512, 512);
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
@@ -836,7 +842,10 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 		float32 HeatScale = GGame.ParticlePhysicsConfigFile.Rendering.HeatScale;
 		float32 ExtraRadius = GGame.ParticlePhysicsConfigFile.Rendering.ExtraRadius;
 		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
-		float32 Layer = (GGame.ParticlePhysicsConfigFile.Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat;
+		float32 Layer =
+			GGame.ParticlePhysicsConfigFile.Rendering.UseHeatAsLayer
+				? ((GGame.ParticlePhysicsConfigFile.Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
+				: 0;
 
 		// DrawCircle(Pos, Scale, TintColor);
 		DrawSprite(&(SpriteDraw){
@@ -967,6 +976,7 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			ConfigOut->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
 			ConfigOut->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
+			ConfigOut->Rendering.UseHeatAsLayer = IniReadBool(Ini, Section, "UseHeatAsLayer", true);
 			ConfigOut->Rendering.InvertLayer = IniReadBool(Ini, Section, "InvertLayer", false);
 		}
 

@@ -6,10 +6,11 @@
 #include <string.h>
 
 #include "common/Game.h"
+#include "common/Log.h"
 
 static SDL_Window* GWindow = NULL;
 
-void HandleExit(int Status, void* Arg)
+void HandleExit(void)
 {
 	GameShutdown();
 	SDL_Quit();
@@ -17,12 +18,29 @@ void HandleExit(int Status, void* Arg)
 
 int main(int argc, char* argv[])
 {
-	stm_setup();
-	SDL_Init(SDL_INIT_EVERYTHING);
+	LoggingInitialize(LogLevel_Info);
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Critical Error", SDL_GetError(), NULL);
+		exit(1);
+	}
+
+	int SdlVersion = SDL_GetVersion();
+
+	LogInfo(
+		"System: Initialized SDL v%d.%d.%d compiled with v%d.%d.%d",
+		SDL_VERSIONNUM_MAJOR(SdlVersion),
+		SDL_VERSIONNUM_MINOR(SdlVersion),
+		SDL_VERSIONNUM_MICRO(SdlVersion),
+		SDL_VERSIONNUM_MAJOR(SDL_VERSION),
+		SDL_VERSIONNUM_MINOR(SDL_VERSION),
+		SDL_VERSIONNUM_MICRO(SDL_VERSION));
+
+	stm_setup();
+
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1440, 320, SDL_WINDOW_RESIZABLE);
 	GWindow = Window;
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
 	// Manually smudging the window position to make it more centered for now.
@@ -42,8 +60,8 @@ int main(int argc, char* argv[])
 		.MemorySizeInBytes = MemoryBytes,
 		.Window = Window,
 	});
-	
-	on_exit(HandleExit, NULL);
+
+	atexit(HandleExit);
 
 	ASSERT(Success);
 
@@ -58,28 +76,34 @@ int main(int argc, char* argv[])
 	GameInput InputState = {0};
 
 	while (GameIsRunning()) {
+		uint64 FrameStartTicks = stm_now();
 		// DebugNextFrame();
-		
+
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {
 			switch (Event.type) {
 				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
 				case SDL_EVENT_KEY_DOWN:
-				if (Event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) GameRequestShutdown();
-				InputState.KeyStates[Event.key.keysym.scancode] = true;
-				break;
-				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.keysym.scancode] = false; break;
+					if (Event.key.scancode == SDL_SCANCODE_ESCAPE) {
+						GameRequestShutdown();
+					}
+					if (Event.key.scancode == SDL_SCANCODE_RETURN && (Event.key.mod & SDL_KMOD_ALT) != 0) {
+						SDL_SetWindowFullscreen(Window, !((SDL_GetWindowFlags(Window) & SDL_WINDOW_FULLSCREEN) != 0));
+					}
+					InputState.KeyStates[Event.key.scancode] = true;
+					break;
+				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.scancode] = false; break;
 				default: break;
 			}
 			GameProcessEvent(&Event);
 		}
-		
+
 		GameSendInput(&InputState);
-		
+
 		DeltaTicks = stm_laptime(&NowTicks);
 		double DeltaTimeSeconds = stm_sec(DeltaTicks);
 		ElapsedSeconds += DeltaTimeSeconds;
-		
+
 		GameTime Time = {
 			.DeltaTime = DeltaTimeSeconds,
 			.DeltaTimeF = (float)DeltaTimeSeconds,
@@ -87,10 +111,10 @@ int main(int argc, char* argv[])
 			.SimTimeMS = stm_ms(SimTimeTicks),
 			.RenderTimeMS = stm_ms(RenderTimeTicks),
 		};
-		
-		uint64 FrameStartTicks = stm_now();
+
+		uint64 SimStartTicks = stm_now();
 		GameUpdate(&Time);
-		SimTimeTicks = stm_since(FrameStartTicks);
+		SimTimeTicks = stm_since(SimStartTicks);
 
 		uint64 RenderStartTicks = stm_now();
 		GameRender(&Time);
@@ -109,7 +133,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-[[_Noreturn]] void PanicAndAbort(const char* Title, const char* Message)
+NORETURN void PanicAndAbort(const char* Title, const char* Message)
 {
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, Title, Message, GWindow);
 	exit(1);

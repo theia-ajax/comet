@@ -1,5 +1,7 @@
 #include "Components.h"
 
+#include <SDL3/SDL_stdinc.h>
+
 #define COMPONENT_NAME_ENTRY(Type) #Type,
 static const char* ComponentTypeNames[] = {FOR_EACH(COMPONENT_NAME_ENTRY, COMPONENT_TYPE_LIST)};
 _Static_assert(ARRAY_COUNT(ComponentTypeNames) == ComponentType_Count, "");

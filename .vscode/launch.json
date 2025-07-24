@@ -5,7 +5,7 @@
             "name": "(Windows MSVC) Build & Run Debug",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}.exe",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/win64/debug/${config:game_target}.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -17,7 +17,7 @@
             "name": "(Windows MSVC) Build & Run Release",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}.exe",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/win64/release/${config:game_target}.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -28,7 +28,7 @@
             "name": "(Windows MSVC) Run Debug",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}.exe",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/win64/debug/${config:game_target}.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -39,7 +39,7 @@
             "name": "(Windows MSVC) Run Release",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}.exe",
+            "program": "${workspaceFolder}/bin/${config:game_target}/bin/win64/release/${config:game_target}.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -55,12 +55,12 @@
             "visualizerFile": "${workspaceRoot}/CustomTypes.natvis",
             "showDisplayString": true,
             "linux": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/linux64/debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
             },
             "windows": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/win64/debug/${config:game_target}",
                 "MIMode":"gdb",
                 "miDebuggerPath": "gdb.exe",
             }
@@ -70,10 +70,10 @@
             "type": "cppdbg",
             "request": "launch",
             "linux": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/linux64/release/${config:game_target}",
             },
             "windows": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/win64/release/${config:game_target}",
             },
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
@@ -88,13 +88,13 @@
             "visualizerFile": "${workspaceFolder}/CustomTypes.natvis",
             "showDisplayString": true,
             "linux": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Debug/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/linux64/debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
             },
             "windows": {
                 "preLaunchTask": "Copy Debug DLLs",
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Debug/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/win64/debug/${config:game_target}",
                 "MIMode": "gdb",
                 "miDebuggerPath": "gdb.exe"
             }
@@ -104,11 +104,11 @@
             "type": "cppdbg",
             "request": "launch",
             "linux": {
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Linux64/Release/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/linux64/release/${config:game_target}",
             },
             "windows": {
                 "preLaunchTask": "Copy Release DLLs",
-                "program": "${workspaceRoot}/bin/${config:game_target}/bin/Win64/Release/${config:game_target}",
+                "program": "${workspaceRoot}/bin/${config:game_target}/bin/win64/release/${config:game_target}",
             },
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,

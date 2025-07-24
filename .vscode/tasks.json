@@ -76,7 +76,7 @@
         {
             "type": "shell",
             "label": "(GCC) Build Debug",
-            "command": "./build.sh debug",
+            "command": "./build.sh -c debug",
             "windows": {
                 "command": ".\\build_mingw64.bat debug"
             },
@@ -92,7 +92,7 @@
         {
             "type": "shell",
             "label": "(GCC) Build Release",
-            "command": "./build.sh release",
+            "command": "./build.sh -c release",
             "windows": {
                 "command": ".\\build_mingw64.bat release",
             },
@@ -108,6 +108,7 @@
         {
             "type": "shell" ,
             "label": "Copy Debug DLLs",
+            "command": "echo Invalid Platform",
             "windows": {
                 "command": "${workspaceRoot}/copy_dlls.bat debug",
             }
@@ -115,6 +116,7 @@
         {
             "type": "shell" ,
             "label": "Copy Release DLLs",
+            "command": "echo Invalid Platform",
             "windows": {
                 "command": "${workspaceRoot}/copy_dlls.bat release",
             }

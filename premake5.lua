@@ -1,28 +1,28 @@
 workspace "comet"
-	configurations { "Debug", "Release" }
-	platforms { "Win64", "Linux64" }
+	configurations { "debug", "release" }
+	platforms { "win64", "linux64" }
 	location "bin"
 	files { "*.natvis" }
 	includedirs { "include" }
 
-filter "platforms:Linux64"
+filter "platforms:linux64"
 	system "Linux"
 	architecture "x86_64"
 	toolset "gcc"
 	buildoptions {"-Werror", "-ftrack-macro-expansion=0"}
 
-filter "platforms:Win64"
+filter "platforms:win64"
 	system "Windows"
 	architecture "x86_64"
 	defines { "_CRT_SECURE_NO_WARNINGS" }
 	disablewarnings { "4005" }
 
-filter "configurations:Debug"
+filter "configurations:debug"
 	optimize "Off"
 	symbols "On"
 	defines { "_DEBUG" }
 	
-filter "configurations:Release"
+filter "configurations:release"
 	optimize "On"
 
 project "comet"
@@ -40,19 +40,20 @@ project "comet"
 	includedirs { "include" }
 	debugdir "."
 
-	filter "platforms:Linux64"
+	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
-		libdirs { "lib/Linux64" }
+		defines { "__LINUX__" }
+		libdirs { "vcpkg_installed/x64-linux/lib" }
 
-	filter "platforms:Win64"
+	filter "platforms:win64"
 		links { "SDL3" }
 		defines { "__WINDOWS__" }
 		includedirs { "vcpkg_installed/x64-windows/include" }
 		
-	filter {"platforms:Win64", "configurations:Release"}
+	filter {"platforms:win64", "configurations:release"}
 		libdirs { "vcpkg_installed/x64-windows/lib" }
 
-	filter {"platforms:Win64", "configurations:Debug"}
+	filter {"platforms:win64", "configurations:debug"}
 		kind "ConsoleApp"
 		libdirs { "vcpkg_installed/x64-windows/debug/lib" }
 
