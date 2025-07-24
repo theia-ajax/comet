@@ -93,7 +93,7 @@ Asset* LoadAsset(AssetType Type, const char* FileName)
 
 void UnloadAsset(Asset* AssetToUnload)
 {
-	if (!AssetToUnload) {
+	if (!AssetToUnload || AssetToUnload->Meta.Type == AssetType_None) {
 		return;
 	}
 
