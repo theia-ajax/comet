@@ -890,6 +890,16 @@ bool ReadFileToNewBuffer(const char* FileName, char** OutFileData)
 	return true;
 }
 
+bool IniHasSection(ini_t* Ini, const char* Section)
+{
+	return ini_find_section(Ini, Section, 0) != INI_NOT_FOUND;
+}
+
+bool IniHasProperty(ini_t* Ini, int Section, const char* Property)
+{
+	return ini_find_property(Ini, Section, Property, 0) != INI_NOT_FOUND;
+}
+
 const char* IniReadString(ini_t* Ini, int Section, const char* Property, const char* Default)
 {
 	const char* Result = Default;
@@ -1024,6 +1034,10 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 			ConfigOut->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
 			ConfigOut->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
 			ConfigOut->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
+
+			ConfigOut->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
+			ConfigOut->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
+			ConfigOut->Physics.SquishZoneForceMax = IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
 		}
 
 		ini_destroy(Ini);

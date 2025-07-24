@@ -5,6 +5,10 @@
 
 #define USE_GRID_SOLVER
 
+#ifndef PARTICLE_PHYSICS_SOLVER_WORKER_COUNT
+#define PARTICLE_PHYSICS_SOLVER_WORKER_COUNT 8
+#endif
+
 // Constants
 static const uint32 KInvalidHandle = (uint32)-1;
 
@@ -305,6 +309,7 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 
 	Object->Heat -= (Object->Heat * GPhysics.Config.HeatDecay) * DeltaTime;
 
+	const float32 BoundsWidth = Abs(GPhysics.Bounds.Z - GPhysics.Bounds.X);
 	const float32 BoundsHeight = Abs(GPhysics.Bounds.W - GPhysics.Bounds.Y);
 	const float32 HeaterZoneSize = BoundsHeight * GPhysics.Config.HeaterZoneSize;
 	const float32 HeaterThreshold = GPhysics.Bounds.W - HeaterZoneSize;
@@ -316,16 +321,21 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 	}
 	Object->Heat = Clamp(Object->Heat, 0, 1);
 
-	Vec2 SideAccel = V2(0, 0);
-	const float32 SideForceZoneSize = GPhysics.Config.CellSize * 8;
-	const float32 SideForce = 200;
-	const float32 SideForceThreshold = GPhysics.Bounds.Z - SideForceZoneSize;
-	if (Object->Position.X < SideForceZoneSize) {
-		SideAccel = V2(SideForce * (Object->Position.X / SideForceZoneSize), 0);
-	} else if (Object->Position.X > SideForceThreshold) {
-		SideAccel = V2(-SideForce * ((Object->Position.X - SideForceThreshold) / SideForceZoneSize), 0);
+	Vec2 SquishAccel = V2(0, 0);
+	const float32 SquishZoneSize = BoundsWidth * GPhysics.Config.SquishZoneSize * 0.5f;
+	const float32 SquishZoneThresholdLeft = GPhysics.Bounds.X + SquishZoneSize;
+	const float32 SquishZoneThresholdRight = GPhysics.Bounds.Z - SquishZoneSize;
+	float32 SquishDepth = 0.0f;
+	float32 SquishSign = 0.0f;
+	if (Object->Position.X < SquishZoneThresholdLeft) {
+		SquishDepth = Clamp((SquishZoneThresholdLeft - Object->Position.X) / SquishZoneSize, 0, 1);
+		SquishSign = 1.0f;
+	} else if (Object->Position.X > SquishZoneThresholdRight) {
+		SquishDepth = Clamp((Object->Position.X - SquishZoneThresholdRight) / SquishZoneSize, 0, 1);
+		SquishSign = -1.0f;
 	}
-	PhysicsObjectAccelerate(Object, SideAccel);
+	SquishAccel.X = SquishSign * Lerp(GPhysics.Config.SquishZoneForceMin, GPhysics.Config.SquishZoneForceMax, SquishDepth);
+	PhysicsObjectAccelerate(Object, SquishAccel);
 
 	// Object->GridCell = _PhysicsGetWorldPositionGridIndex(Object->Position);
 }
@@ -443,7 +453,7 @@ int _PhysicsSolveChunkWorker(void* Data)
 static void _PhysicsSolveAllCollisions(void)
 {
 #ifdef USE_GRID_SOLVER
-	enum { KChunks = 8 };
+	enum { KChunks = PARTICLE_PHYSICS_SOLVER_WORKER_COUNT };
 	_Static_assert(KChunks > 0, "");
 
 	if (KChunks == 1) {

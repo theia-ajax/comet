@@ -30,6 +30,7 @@ typedef struct PhysicsObject {
 	float32 Heat;
 	uint32 Tint;
 	float32 SecondsAlive;
+	float32 Temp[4];
 } PhysicsObject;
 
 typedef enum PhysConstraintType {
@@ -70,6 +71,9 @@ typedef struct PhysicsConfig {
 	float32 CoolerHeatDelta;
 	float32 HeaterZoneSize;
 	float32 CoolerZoneSize;
+	float32 SquishZoneSize;
+	float32 SquishZoneForceMin;
+	float32 SquishZoneForceMax;
 } PhysicsConfig;
 
 void PhysicsInitialize(const PhysicsConfig* Config);
