@@ -194,8 +194,8 @@ bool GameInitialize(const GameInitParams* params)
 	SDL_SetTextureScaleMode(GGame.ParticleRenderTexture, SDL_SCALEMODE_LINEAR);
 
 	DebugInitialize(&(DebugConfig){
-		.CanvasWidth = GGame.GameResWidth,
-		.CanvasHeight = GGame.GameResHeight,
+		.CanvasWidth = WindowWidth,
+		.CanvasHeight = WindowHeight,
 		.Renderer = GGame.Renderer,
 	});
 
