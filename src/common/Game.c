@@ -107,6 +107,7 @@ struct {
 	bool IsRunning;
 	SDL_Window* Window;
 	SDL_Renderer* Renderer;
+	SDL_Texture* ParticleRenderTexture;
 	int32 GameResWidth;
 	int32 GameResHeight;
 	GameInput Input;
@@ -172,12 +173,25 @@ bool GameInitialize(const GameInitParams* params)
 	for (int i = 0; i < SDL_GetNumRenderDrivers(); i++) {
 		LogInfo("\t%02d) %s", i, SDL_GetRenderDriver(i));
 	}
-	GGame.Renderer = SDL_CreateRenderer(GGame.Window, "vulkan");
-	SDL_SetRenderLogicalPresentation(
-		GGame.Renderer,
-		GGame.GameResWidth,
-		GGame.GameResHeight,
-		SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	GGame.Renderer = SDL_CreateRenderer(GGame.Window, "gpu");
+	int WindowWidth, WindowHeight;
+	SDL_GetWindowSizeInPixels(GGame.Window, &WindowWidth, &WindowHeight);
+	SDL_SetRenderLogicalPresentation(GGame.Renderer, WindowWidth, WindowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
+	SDL_PropertiesID RendererProperties = SDL_GetRendererProperties(GGame.Renderer);
+	SDL_PixelFormat* RendererPixelFormats = SDL_GetPointerProperty(
+		SDL_GetRendererProperties(GGame.Renderer),
+		SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER,
+		NULL);
+
+	SDL_PixelFormat Format = SDL_PIXELFORMAT_UNKNOWN;
+	if (RendererPixelFormats) {
+		Format = RendererPixelFormats[0];
+	}
+
+	GGame.ParticleRenderTexture =
+		SDL_CreateTexture(GGame.Renderer, Format, SDL_TEXTUREACCESS_TARGET, GGame.GameResWidth, GGame.GameResHeight);
+	SDL_SetTextureScaleMode(GGame.ParticleRenderTexture, SDL_SCALEMODE_LINEAR);
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = GGame.GameResWidth,
@@ -585,23 +599,28 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderClear(GGame.Renderer);
 
-	int RenderWidth, RenderHeight;
-	SDL_GetRenderLogicalPresentation(GGame.Renderer, &RenderWidth, &RenderHeight, NULL);
-
 	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
 	if (BackgroundTint != NULL) {
-		SDL_FRect ScreenRect = {0, 0, RenderWidth, RenderHeight};
 		ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
 		SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
-		SDL_RenderFillRect(GGame.Renderer, &ScreenRect);
+		SDL_RenderFillRect(GGame.Renderer, NULL);
 	}
 
 	SpriteSystemRender(GGame.World);
 	ColliderSystemDebugRender(GGame.World);
 
+	SDL_SetRenderTarget(GGame.Renderer, GGame.ParticleRenderTexture);
+
+	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 0);
+	SDL_RenderClear(GGame.Renderer);
+
 	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 
 	DrawRender();
+
+	SDL_SetRenderTarget(GGame.Renderer, NULL);
+
+	SDL_RenderTexture(GGame.Renderer, GGame.ParticleRenderTexture, NULL, NULL);
 
 	// PhysicsDebugDraw(GGame.Renderer);
 
@@ -1037,7 +1056,8 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			ConfigOut->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
 			ConfigOut->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
-			ConfigOut->Physics.SquishZoneForceMax = IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
+			ConfigOut->Physics.SquishZoneForceMax =
+				IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
 		}
 
 		ini_destroy(Ini);
