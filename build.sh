@@ -7,7 +7,7 @@ config='debug'
 
 display_help()
 {
-	echo 'build.sh [-h|r|c <config>|p <platform>]'
+	echo 'build.sh [-c|p|r|h]'
 	exit
 }
 
