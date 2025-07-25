@@ -584,7 +584,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	PhysicsUpdate(Min(gameTime->DeltaTimeF, 1.0f / 60.0f));
+	PhysicsUpdate(1/60.0f);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -1185,7 +1185,7 @@ void CreateSpawners()
 			GGame.Spawners,
 			((ParticleSpawner){
 				.Position = V2(SpawnerX, GGame.ParticlePhysicsConfigFile.Spawners.Offset.Y),
-				.SpawnAcceleration = V2(0, 10000.0f),
+				.SpawnAcceleration = V2(0, 0.0f),
 				.SpawnInterval = GGame.ParticlePhysicsConfigFile.Spawners.Interval,
 				.ObjectRadius = Max(GGame.ParticlePhysicsConfigFile.Spawners.ObjectRadius, 0.1f),
 			}));
