@@ -11,7 +11,7 @@ typedef struct StringId {
 
 enum { KRawInvalidStringId = 0 };
 
-#define KStringIdInvalid ((StringId){KRawInvalidStringId})
+#define KInvalidStringId ((StringId){KRawInvalidStringId})
 
 #define STR_ID_LITERAL(str) GetStringIdN(str, sizeof(len))
 

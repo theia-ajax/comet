@@ -60,6 +60,9 @@ void DebugNextFrame(void)
 
 void DebugDraw(SDL_Renderer* renderer)
 {
+	SDL_SetRenderDrawColorFloat(renderer, 0.5f, 0.0f, 0.1f, 0.1f);
+	SDL_RenderFillRect(renderer, &(SDL_FRect){0.0f, 0.0f, (float32)GDebug.Canvas->w, (float32)GDebug.Canvas->h});
+
 	for (int32 RawIndex = 0; RawIndex < ARRAY_COUNT(GDebug.LinesRingBuffer); RawIndex++) {
 		int32 Index =
 			(GDebug.LinesRingIndex + ARRAY_COUNT(GDebug.LinesRingBuffer)) % ARRAY_COUNT(GDebug.LinesRingBuffer);

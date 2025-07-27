@@ -43,6 +43,7 @@ typedef struct ParticlePhysicsConfigFile {
 	struct {
 		int32 Width;
 		int32 Height;
+		StringId RenderDriver;
 		StringId HeatColorsImageFileName;
 		float32 SpriteScale;
 		float32 ExtraRadius;
@@ -162,18 +163,31 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.GameResWidth = GGame.ParticlePhysicsConfigFile.Rendering.Width;
 	GGame.GameResHeight = GGame.ParticlePhysicsConfigFile.Rendering.Height;
 
-	LogInfo("Creating Renderer");
+	const char* RenderDriverName = StringIdCStr(GGame.ParticlePhysicsConfigFile.Rendering.RenderDriver);
+	const char* SelectedRenderDriver = NULL;
+	const char* DefaultRenderDriver = NULL;
+
+	for (int DriverIndex = 0; DriverIndex < SDL_GetNumRenderDrivers(); DriverIndex++) {
+		const char* Driver = SDL_GetRenderDriver(DriverIndex);
+		if (DriverIndex == 0) {
+			DefaultRenderDriver = Driver;
+		}
+		if (SDL_strcasecmp(RenderDriverName, Driver) == 0) {
+			SelectedRenderDriver = Driver;
+			break;
+		}
+	}
+
+	SelectedRenderDriver = SelectedRenderDriver ? SelectedRenderDriver : DefaultRenderDriver;
+
+	LogInfo("Creating renderer with '%s' driver.", SelectedRenderDriver);
 	GGame.IsRunning = true;
 #ifdef _DEBUG
 	GGame.DebugDrawEnabled = true;
 #endif
 	GGame.SpawnersEnabled = true;
 	GGame.Window = params->Window;
-	LogInfo("Render Drivers:");
-	for (int i = 0; i < SDL_GetNumRenderDrivers(); i++) {
-		LogInfo("\t%02d) %s", i, SDL_GetRenderDriver(i));
-	}
-	GGame.Renderer = SDL_CreateRenderer(GGame.Window, "gpu");
+	GGame.Renderer = SDL_CreateRenderer(GGame.Window, SelectedRenderDriver);
 	int WindowWidth, WindowHeight;
 	SDL_GetWindowSizeInPixels(GGame.Window, &WindowWidth, &WindowHeight);
 	SDL_SetRenderLogicalPresentation(GGame.Renderer, WindowWidth, WindowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
@@ -194,8 +208,8 @@ bool GameInitialize(const GameInitParams* params)
 	SDL_SetTextureScaleMode(GGame.ParticleRenderTexture, SDL_SCALEMODE_LINEAR);
 
 	DebugInitialize(&(DebugConfig){
-		.CanvasWidth = WindowWidth,
-		.CanvasHeight = WindowHeight,
+		.CanvasWidth = WindowWidth / 4,
+		.CanvasHeight = 16,
 		.Renderer = GGame.Renderer,
 	});
 
@@ -570,7 +584,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	PhysicsUpdate(Min(gameTime->DeltaTimeF, 1.0f / 240.0f));
+	PhysicsUpdate(Min(gameTime->DeltaTimeF, 1.0f / 60.0f));
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -929,6 +943,16 @@ const char* IniReadString(ini_t* Ini, int Section, const char* Property, const c
 	return Result;
 }
 
+StringId IniReadStringId(ini_t* Ini, int Section, const char* Property, StringId Default)
+{
+	StringId Result = KInvalidStringId;
+	const char* StringValue = IniReadString(Ini, Section, Property, NULL);
+	if (StringValue) {
+		Result = GetStringId(StringValue);
+	}
+	return Result;
+}
+
 int IniReadInt(ini_t* Ini, int Section, const char* Property, int Default)
 {
 	int Result = Default;
@@ -989,20 +1013,16 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			ConfigOut->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
 			ConfigOut->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
-
-			const char* HeatImageFileName = IniReadString(Ini, Section, "HeatColorsImage", NULL);
-			ConfigOut->Rendering.HeatColorsImageFileName = GetStringId(HeatImageFileName);
-
+			ConfigOut->Rendering.RenderDriver = IniReadStringId(Ini, Section, "RenderDriver", KInvalidStringId);
+			ConfigOut->Rendering.HeatColorsImageFileName =
+				IniReadStringId(Ini, Section, "HeatColorsImage", KInvalidStringId);
 			ConfigOut->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
 			ConfigOut->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
 			ConfigOut->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
-
-			const char* ParticleSpriteName = IniReadString(Ini, Section, "ParticleSprite", "explosion-01");
-			ConfigOut->Rendering.ParticleSpriteName = GetStringId(ParticleSpriteName);
-
-			const char* ParticleSpriteSheetName = IniReadString(Ini, Section, "ParticleSpriteSheet", NULL);
-			ConfigOut->Rendering.ParticleSpriteSheetName = GetStringId(ParticleSpriteSheetName);
-
+			ConfigOut->Rendering.ParticleSpriteName =
+				IniReadStringId(Ini, Section, "ParticleSprite", GetStringId("explosion-01"));
+			ConfigOut->Rendering.ParticleSpriteSheetName =
+				IniReadStringId(Ini, Section, "ParticleSpriteSheet", KInvalidStringId);
 			ConfigOut->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
 			ConfigOut->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
 			ConfigOut->Rendering.UseHeatAsLayer = IniReadBool(Ini, Section, "UseHeatAsLayer", true);

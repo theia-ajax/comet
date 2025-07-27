@@ -105,8 +105,8 @@ static bool ParseSpriteSheetMetaData(struct json_value_s* MetaObjectValue, Sprit
 		return false;
 	}
 
-	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KStringIdInvalid);
-	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KStringIdInvalid);
+	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KInvalidStringId);
+	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KInvalidStringId);
 	DataOut->Scale = JsonGetNumber(MetaObject, "scale", 1.0);
 	bool ParsedSize = JsonParseDimensions(JsonFindKeyValue(MetaObject, "size"), &DataOut->Size);
 
@@ -149,7 +149,7 @@ static bool ParseSpriteFrameData(struct json_value_s* FrameValue, SpriteSheetFra
 
 	bool Success = true;
 
-	DataOut->Name[Id] = JsonGetStringId(FrameObject, "filename", KStringIdInvalid);
+	DataOut->Name[Id] = JsonGetStringId(FrameObject, "filename", KInvalidStringId);
 
 	Success &= JsonParseRect16(JsonFindKeyValue(FrameObject, "frame"), &DataOut->Frame[Id]);
 	Success &= JsonParseDimensions16(JsonFindKeyValue(FrameObject, "sourceSize"), &DataOut->SourceSize[Id]);
