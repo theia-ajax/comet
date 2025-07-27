@@ -172,10 +172,16 @@ bool GameInitialize(const GameInitParams* params)
 		if (DriverIndex == 0) {
 			DefaultRenderDriver = Driver;
 		}
-		if (SDL_strcasecmp(RenderDriverName, Driver) == 0) {
+		if (RenderDriverName && SDL_strcasecmp(RenderDriverName, Driver) == 0) {
 			SelectedRenderDriver = Driver;
 			break;
 		}
+	}
+
+	if (!RenderDriverName) {
+		LogInfo("No render driver name provided by config, using default '%s'", DefaultRenderDriver);
+	} else if (!SelectedRenderDriver) {
+		LogWarning("No render driver with name '%s' provided by config could be found, using default '%s'", RenderDriverName, DefaultRenderDriver);
 	}
 
 	SelectedRenderDriver = SelectedRenderDriver ? SelectedRenderDriver : DefaultRenderDriver;
@@ -258,8 +264,6 @@ bool GameInitialize(const GameInitParams* params)
 	UpdateParticleSpriteId();
 
 	CreateSpawners();
-
-	LogInfo("Game Systems Initialized");
 
 	GGame.World = CreateGameWorld();
 
@@ -417,10 +421,12 @@ void GameShutdown(void)
 {
 	SpriteDatabaseShutdown();
 	DrawShutdown();
-	LogInfo("Destrying Renderer");
-	SDL_DestroyRenderer(GGame.Renderer);
 	AssetsShutdown();
 	DebugShutdown();
+	
+	LogInfo("Destroying Renderer");
+	SDL_DestroyRenderer(GGame.Renderer);
+	
 	DestroyGameWorld(GGame.World);
 	StringIdPoolsShutdown();
 	FrameAllocatorShutdown();
