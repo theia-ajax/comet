@@ -12,15 +12,6 @@
 // Constants
 static const uint32 KInvalidHandle = (uint32)-1;
 
-const PhysicsConfig KDefaultPhysicsConfig = (PhysicsConfig){
-	.Bounds = (Vec4){0, 0, 1920, 1080},
-	.CellSize = 24.0f,
-	.Gravity = (Vec2){0.0f, 100.0f},
-	.HeatForce = (Vec2){0.0f, -200.0f},
-	.HeatTransferRate = 0.005f,
-	.MaxPhysicsObjects = 1000,
-};
-
 enum { KMaxObjectsPerCell = 64 };
 
 // Private Definitions
@@ -73,20 +64,20 @@ void PhysicsInitialize(const PhysicsConfig* Config)
 	PhysicsReconfigure(Config);
 }
 
-void PhysicsReconfigure(const PhysicsConfig *Config)
+void PhysicsReconfigure(const PhysicsConfig* Config)
 {
-	GPhysics.Config = (Config != NULL) ? *Config : KDefaultPhysicsConfig;
-	
+	GPhysics.Config = (Config != NULL) ? *Config : PhysicsDefaultConfig();
+
 	GPhysics.Bounds = GPhysics.Config.Bounds;
 	GPhysics.CellSize = GPhysics.Config.CellSize;
 	GPhysics.Bounds.X -= GPhysics.CellSize;
 	GPhysics.Bounds.Y -= GPhysics.CellSize;
 	GPhysics.Bounds.Z += GPhysics.CellSize;
 	GPhysics.Bounds.W += GPhysics.CellSize;
-	
+
 	Vec2 WorldMin = GPhysics.Bounds.XY;
 	Vec2 WorldMax = GPhysics.Bounds.ZW;
-	
+
 	float32 WorldWidth = WorldMax.X - WorldMin.X;
 	float32 WorldHeight = WorldMax.Y - WorldMin.Y;
 	GPhysics.GridWidth = (int32)ceil(WorldWidth / GPhysics.Config.CellSize);
@@ -118,7 +109,14 @@ void PhysicsUpdate(float DeltaTime)
 
 PhysicsConfig PhysicsDefaultConfig(void)
 {
-	return KDefaultPhysicsConfig;
+	return (PhysicsConfig){
+		.Bounds = (Vec4){0, 0, 1920, 1080},
+		.CellSize = 24.0f,
+		.Gravity = (Vec2){0.0f, 100.0f},
+		.HeatForce = (Vec2){0.0f, -200.0f},
+		.HeatTransferRate = 0.005f,
+		.MaxPhysicsObjects = 1000,
+	};
 }
 
 const PhysicsConfig* PhysicsGetConfig(void)
@@ -334,7 +332,8 @@ static void _PhysicsObjectUpdate(PhysicsObject* Object, float DeltaTime)
 		SquishDepth = Clamp((Object->Position.X - SquishZoneThresholdRight) / SquishZoneSize, 0, 1);
 		SquishSign = -1.0f;
 	}
-	SquishAccel.X = SquishSign * Lerp(GPhysics.Config.SquishZoneForceMin, GPhysics.Config.SquishZoneForceMax, SquishDepth);
+	SquishAccel.X =
+		SquishSign * Lerp(GPhysics.Config.SquishZoneForceMin, GPhysics.Config.SquishZoneForceMax, SquishDepth);
 	PhysicsObjectAccelerate(Object, SquishAccel);
 
 	// Object->GridCell = _PhysicsGetWorldPositionGridIndex(Object->Position);

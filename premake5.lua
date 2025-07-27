@@ -1,13 +1,21 @@
 workspace "comet"
 	configurations { "debug", "release" }
-	platforms { "win64", "linux64" }
+	platforms { "win64", "linux64", "rpi" }
 	location "bin"
 	files { "*.natvis" }
 	includedirs { "include" }
 
 filter "platforms:linux64"
 	system "Linux"
+	defines { "__LINUX__" }
 	architecture "x86_64"
+	toolset "gcc"
+	buildoptions {"-Werror", "-ftrack-macro-expansion=0"}
+
+filter "platforms:rpi"
+	system "Linux"
+	defines { "__LINUX__" }
+	architecture "ARM"
 	toolset "gcc"
 	buildoptions {"-Werror", "-ftrack-macro-expansion=0"}
 
@@ -39,12 +47,16 @@ project "comet"
 	}
 	includedirs { "include" }
 	debugdir "."
-	defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
-
+	defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=1" }
+	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
-		defines { "__LINUX__" }
 		libdirs { "vcpkg_installed/x64-linux/lib" }
+	
+	filter "platforms:rpi"
+		links { "SDL3", "m", "stdc++" }
+		libdirs { "vcpkg_installed/arm64-linux/lib" }
+		includedirs { "vcpkg_installed/arm64-linux/include" }
 
 	filter "platforms:win64"
 		links { "SDL3" }

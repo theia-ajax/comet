@@ -419,6 +419,8 @@ static EntityId CreateEnemy(GameWorld* World, Vec2 Position)
 
 void GameShutdown(void)
 {
+	LogInfo(__FUNCTION__);
+
 	SpriteDatabaseShutdown();
 	DrawShutdown();
 	AssetsShutdown();
@@ -431,7 +433,6 @@ void GameShutdown(void)
 	StringIdPoolsShutdown();
 	FrameAllocatorShutdown();
 
-	LogInfo(__FUNCTION__);
 	LoggingShutdown();
 }
 

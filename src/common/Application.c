@@ -134,3 +134,8 @@ void ApplicationRun(Application* App)
 		};
 	}
 }
+
+SDL_Window *GetApplicationWindow(Application *App)
+{
+	return ((_Application*)App)->Window;
+}

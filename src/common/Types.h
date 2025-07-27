@@ -22,12 +22,6 @@ typedef int64_t int64;
 typedef float float32;
 typedef double float64;
 
-#if defined(__GNUC__)
-#define NORETURN [[_Noreturn]]
-#elif defined(_MSC_VER)
-#define NORETURN _Noreturn
-#endif
-
 #ifndef unreachable
 #if defined(__GNUC__)
 #define unreachable() (__builtin_unreachable())
@@ -118,4 +112,4 @@ typedef double float64;
 
 // -------------------------------------------------------
 
-NORETURN void PanicAndAbort(const char* Title, const char* Message);
+SDL_NORETURN void PanicAndAbort(const char* Title, const char* Message);
