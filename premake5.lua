@@ -47,11 +47,11 @@ project "comet"
 	}
 	includedirs { "include" }
 	debugdir "."
-	defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
 		libdirs { "vcpkg_installed/x64-linux/lib" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 	
 	filter "platforms:rpi"
 		links { "SDL3", "m", "stdc++" }
@@ -63,6 +63,7 @@ project "comet"
 		links { "SDL3" }
 		defines { "__WINDOWS__" }
 		includedirs { "vcpkg_installed/x64-windows/include" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 		
 	filter {"platforms:win64", "configurations:release"}
 		libdirs { "vcpkg_installed/x64-windows/lib" }
