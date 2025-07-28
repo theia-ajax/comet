@@ -64,7 +64,8 @@
         "string_view": "c",
         "xtr1common": "c",
         "assettypes.h": "c",
-        "spritedatabase.h": "c"
+        "spritedatabase.h": "c",
+        "stb_image_write.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

@@ -25,6 +25,7 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		PanicAndAbort("SDL Error", SDL_GetError());
 	}
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 
 	int SdlVersion = SDL_GetVersion();
 
@@ -135,7 +136,7 @@ void ApplicationRun(Application* App)
 	}
 }
 
-SDL_Window *GetApplicationWindow(Application *App)
+SDL_Window* GetApplicationWindow(Application* App)
 {
 	return ((_Application*)App)->Window;
 }

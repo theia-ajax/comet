@@ -3,14 +3,13 @@
 #include "AssetTypes.h"
 #include "Math2D.h"
 #include "SpriteDatabase.h"
+#include "ColorUtil.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
 
 typedef struct DrawConfig {
 	SDL_Renderer* Renderer;
 } DrawConfig;
-
-typedef struct ColorU8 { uint8 R, G, B, A; } ColorU8;
 
 typedef struct SpriteDraw {
 	SpriteId SpriteId;
@@ -32,7 +31,4 @@ void DrawAABB(AABB AABB_, uint32 Color);
 void DrawPolygon(Vec2 TxPos, Rot2 TxRot, const Vec2* Verts, int32 Count, uint32 Color);
 void DrawRender(void);
 
-void ColorV4ToBytes(Vec4 Color, uint8* R, uint8* G, uint8* B, uint8* A);
-ColorU8 ColorU8FromVec4(Vec4 Color);
-ColorU8 ColorU8FromColorU32(uint32 Color);
-ColorU8 ColorU8FromHSV(float32 H, float32 S, float32 V, float32 A);
+

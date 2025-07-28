@@ -69,7 +69,7 @@ typedef struct ParticlePhysicsConfigFile {
 } ParticlePhysicsConfigFile;
 
 typedef struct ParticlePhysicsRenderConfig {
-	uint32* HeatRampColors;
+	ColorU8* HeatRampColors;
 	SpriteSheetId ParticleSpriteSheetId;
 	SpriteId ParticleSpriteId;
 } ParticlePhysicsRenderConfig;
@@ -272,19 +272,35 @@ bool GameInitialize(const GameInitParams* params)
 	LoadHeatRamp(StringIdCStr(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName));
 	UpdateParticleSpriteId();
 
-	CreateSpawners();
-
-	GGame.World = CreateGameWorld();
-
-	if (!GGame.World) {
-		LogError("Shit");
-		exit(1);
+	{
+		const uint32 HeatRampSize = 1024;
+		arrsetlen(GGame.ParticleRenderConfig.HeatRampColors, HeatRampSize);
+		GradientColorPoint ColorPoints[] = {
+			(GradientColorPoint){.Position = 0, .Color = V4(0, 0, 0, 1)},
+			(GradientColorPoint){.Position = 0.25f, .Color = V4(151 / 255.0f, 42 / 255.0f, 68 / 255.0f, 1)},
+			(GradientColorPoint){.Position = 0.6f, .Color = V4(236 / 255.0f, 49 / 255.0f, 216 / 255.0f, 1)},
+			(GradientColorPoint){.Position = 1, .Color = V4(1, 1, 1, 1)},
+		};
+		ColorGradientFromColorPoints(
+			ColorPoints,
+			ARRAY_COUNT(ColorPoints),
+			HeatRampSize,
+			GGame.ParticleRenderConfig.HeatRampColors);
 	}
 
-	GGame.LevelEntity = CreateEntity(GGame.World);
-	*AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
-		.TintColor = V4(0.0f, 0.0f, 0.0f, 1.0f),
-	};
+	CreateSpawners();
+
+	// GGame.World = CreateGameWorld();
+
+	// if (!GGame.World) {
+	// 	LogError("Shit");
+	// 	exit(1);
+	// }
+
+	// GGame.LevelEntity = CreateEntity(GGame.World);
+	// *AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
+	// 	.TintColor = V4(0.0f, 0.0f, 0.0f, 1.0f),
+	// };
 
 	// GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));
 	// CreateEnemy(GGame.World, V2(256, 128));
@@ -438,7 +454,7 @@ void GameShutdown(void)
 	LogInfo("Destroying Renderer");
 	SDL_DestroyRenderer(GGame.Renderer);
 
-	DestroyGameWorld(GGame.World);
+	// DestroyGameWorld(GGame.World);
 	StringIdPoolsShutdown();
 	FrameAllocatorShutdown();
 
@@ -457,6 +473,12 @@ void GameProcessEvent(const SDL_Event* event)
 		case SDL_EVENT_KEY_DOWN:
 			switch (event->key.scancode) {
 				case SDL_SCANCODE_F1: GGame.DebugDrawEnabled = !GGame.DebugDrawEnabled; break;
+				case SDL_SCANCODE_F4:
+					ColorGradientExportToImageFile(
+						"assets/heat_color_ramp.generated.png",
+						GGame.ParticleRenderConfig.HeatRampColors,
+						arrlenu(GGame.ParticleRenderConfig.HeatRampColors));
+					break;
 				case SDL_SCANCODE_F:
 					if (EntityIdIsValid(GGame.World, GGame.PlayerEntity)) {
 						DestroyEntity(GGame.World, GGame.PlayerEntity);
@@ -528,32 +550,32 @@ void GameUpdate(const GameTime* gameTime)
 
 	CheckConfigFileChanges();
 
-	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
-	MovementSystemUpdate(GGame.World, gameTime);
+	// ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
+	// MovementSystemUpdate(GGame.World, gameTime);
 
-	{
-		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
-		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
-			// todo: very dumb and bad just getting absolute basic case working
-			// Tform2 ParentTransform;
-			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
-			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
-			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
-			Tform2 ParentT2 = (Tform2){0};
-			float32 ParentRotation = 0.0f;
-			if (ChildOf->Parent.RawValue != 0) {
-				TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
-				ParentT2 = T2Component(ParentTransform);
-				ParentRotation = ParentTransform->Rotation;
-			}
-			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
-			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
-		}
-		QueryFree(Query);
-	}
+	// {
+	// 	EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+	// 	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
+	// 		// todo: very dumb and bad just getting absolute basic case working
+	// 		// Tform2 ParentTransform;
+	// 		TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
+	// 		LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
+	// 		ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
+	// 		Tform2 ParentT2 = (Tform2){0};
+	// 		float32 ParentRotation = 0.0f;
+	// 		if (ChildOf->Parent.RawValue != 0) {
+	// 			TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
+	// 			ParentT2 = T2Component(ParentTransform);
+	// 			ParentRotation = ParentTransform->Rotation;
+	// 		}
+	// 		Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
+	// 		Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
+	// 	}
+	// 	QueryFree(Query);
+	// }
 
-	DamageSystemUpdate(GGame.World, gameTime);
-	LifetimeSystemUpdate(GGame.World, gameTime);
+	// DamageSystemUpdate(GGame.World, gameTime);
+	// LifetimeSystemUpdate(GGame.World, gameTime);
 
 	// if (GGame.Frame == 1 && false) {
 	// 	const float32 SpacingX = 16.0f;
@@ -588,7 +610,7 @@ void GameUpdate(const GameTime* gameTime)
 					.Acceleration = Accel,
 					.Heat = 0.0f,
 					.Flags = PhysicsObjectFlags_None,
-					.Tint = 0xFFCC00CC,
+					.Tint = (ColorU8){.R = 0xCC, .G = 0x00, .B = 0xCC, .A = 0xFF},
 				});
 			} else {
 				Spawner->SpawnTimer -= gameTime->DeltaTimeF;
@@ -629,15 +651,15 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderClear(GGame.Renderer);
 
-	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
-	if (BackgroundTint != NULL) {
-		ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
-		SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
-		SDL_RenderFillRect(GGame.Renderer, NULL);
-	}
+	// RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
+	// if (BackgroundTint != NULL) {
+	// 	ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
+	// 	SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
+	// 	SDL_RenderFillRect(GGame.Renderer, NULL);
+	// }
 
-	SpriteSystemRender(GGame.World);
-	ColliderSystemDebugRender(GGame.World);
+	// SpriteSystemRender(GGame.World);
+	// ColliderSystemDebugRender(GGame.World);
 
 	SDL_SetRenderTarget(GGame.Renderer, GGame.ParticleRenderTexture);
 
@@ -656,6 +678,18 @@ void GameRender(const GameTime* gameTime)
 
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
+
+		int WindowWidth, WindowHeight;
+		SDL_GetCurrentRenderOutputSize(GGame.Renderer, &WindowWidth, &WindowHeight);
+
+		uint32 ColorCount = arrlenu(GGame.ParticleRenderConfig.HeatRampColors);
+		for (uint32 x = 0; x < ColorCount; x++) {
+			ColorU8 C = GGame.ParticleRenderConfig.HeatRampColors[x];
+			SDL_SetRenderDrawColor(GGame.Renderer, C.R, C.G, C.B, C.A);
+			SDL_RenderRect(
+				GGame.Renderer,
+				&(SDL_FRect){.x = WindowWidth - ColorCount + x, .y = 0, .w = 1.0f, .h = 4.0f});
+		}
 	}
 	SDL_RenderPresent(GGame.Renderer);
 }
@@ -874,7 +908,7 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 		Vec2 Pos = Object->Position;
 		float32 Radius = Object->Radius;
 		SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
-		uint32 TintColor;
+		ColorU8 TintColor;
 		if ((Object->Flags & 1) != 0) {
 			TintColor = Object->Tint;
 		} else {
@@ -902,7 +936,7 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 			.Position = Pos,
 			.Scale = V2(Scale, Scale),
 			.UseTint = true,
-			.TintColor = ColorU8FromColorU32(TintColor),
+			.TintColor = TintColor,
 			.Layer = Layer,
 		});
 		// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
@@ -1084,16 +1118,20 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			ConfigOut->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
 
+			
 			ConfigOut->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
 			ConfigOut->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
 			ConfigOut->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
 			ConfigOut->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
 			ConfigOut->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
-
+			
 			ConfigOut->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
 			ConfigOut->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
 			ConfigOut->Physics.SquishZoneForceMax =
-				IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
+			IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
+			
+			ConfigOut->Physics.SurfaceTensionScalar = IniReadFloat(Ini, Section, "SurfaceTension", 0.0);
+			ConfigOut->Physics.SurfaceTensionExtraRadius = IniReadFloat(Ini, Section, "SurfaceTensionExtraRadius", 0.0);
 		}
 
 		ini_destroy(Ini);
@@ -1157,11 +1195,14 @@ void LoadHeatRamp(const char* HeatRampFileName)
 	if (HeatRampImage) {
 		arrsetlen(GGame.ParticleRenderConfig.HeatRampColors, 0);
 
+		const SDL_PixelFormatDetails* FormatDetails = SDL_GetPixelFormatDetails(HeatRampImage->Data->Surface->format);
+
 		for (uint8* Pixel = HeatRampImage->Data->Pixels;
 			 Pixel != HeatRampImage->Data->Pixels + (HeatRampImage->Data->Width * HeatRampImage->Data->BytesPerPixel);
 			 Pixel += HeatRampImage->Data->BytesPerPixel)
 		{
-			uint32 Color = *((uint32*)Pixel);
+			ColorU8 Color;
+			SDL_GetRGBA(*((uint32*)Pixel), FormatDetails, NULL, &Color.R, &Color.G, &Color.B, &Color.A);
 			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
 		}
 	}

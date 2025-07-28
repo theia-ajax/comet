@@ -28,7 +28,7 @@ typedef struct PhysicsObject {
 	Vec2 Acceleration;
 	float32 Radius;
 	float32 Heat;
-	uint32 Tint;
+	ColorU8 Tint;
 	float32 SecondsAlive;
 	float32 Temp[4];
 } PhysicsObject;
@@ -63,6 +63,8 @@ typedef struct PhysicsConfig {
 	Vec2 Gravity;
 	Vec2 HeatForce;
 	float32 HeatTransferRate;
+	float32 SurfaceTensionScalar;
+	float32 SurfaceTensionExtraRadius;
 	Vec4 Bounds;
 	float32 CellSize;
 	int32 MaxPhysicsObjects;

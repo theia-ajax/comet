@@ -113,3 +113,5 @@ typedef double float64;
 // -------------------------------------------------------
 
 SDL_NORETURN void PanicAndAbort(const char* Title, const char* Message);
+
+typedef struct ColorU8 { uint8 R, G, B, A; } ColorU8;

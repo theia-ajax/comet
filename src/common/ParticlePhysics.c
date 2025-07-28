@@ -3,6 +3,8 @@
 #include <SDL3/SDL_thread.h>
 #include <stb_ds.h>
 
+#include "Log.h"
+
 #define USE_GRID_SOLVER
 
 #ifndef PARTICLE_PHYSICS_SOLVER_WORKER_COUNT
@@ -505,22 +507,30 @@ static void _PhysicsSolveCollision(PhysicsObject* Object0, PhysicsObject* Object
 	const Vec2 CollisionVec = Sub(Object0->Position, Object1->Position);
 	float32 Distance = Len(CollisionVec);
 	float32 ContactDistance = Object0->Radius + Object1->Radius;
-	if (Distance < ContactDistance) {
+
+	if (Distance < ContactDistance + Max(GPhysics.Config.SurfaceTensionExtraRadius, 0.0)) {
 		const Vec2 Direction = DivV2F(CollisionVec, Distance);
-		Vec2 Delta = Mul(Direction, (ContactDistance - Distance) * 0.5f);
 
-		Object0->Position = Add(Object0->Position, Delta);
-		Object1->Position = Sub(Object1->Position, Delta);
+		if (Distance < ContactDistance) {
+			Vec2 Delta = Mul(Direction, (ContactDistance - Distance) * 0.5f);
 
-		if (Object0->Heat > Object1->Heat) {
-			float32 Transfer = Object0->Heat * GPhysics.Config.HeatTransferRate;
-			Object0->Heat -= Transfer;
-			Object1->Heat += Transfer;
-		} else if (Object0->Heat < Object1->Heat) {
-			float32 Transfer = Object1->Heat * GPhysics.Config.HeatTransferRate;
-			Object0->Heat += Transfer;
-			Object1->Heat -= Transfer;
+			Object0->Position = Add(Object0->Position, Delta);
+			Object1->Position = Sub(Object1->Position, Delta);
+
+			if (Object0->Heat > Object1->Heat) {
+				float32 Transfer = Object0->Heat * GPhysics.Config.HeatTransferRate;
+				Object0->Heat -= Transfer;
+				Object1->Heat += Transfer;
+			} else if (Object0->Heat < Object1->Heat) {
+				float32 Transfer = Object1->Heat * GPhysics.Config.HeatTransferRate;
+				Object0->Heat += Transfer;
+				Object1->Heat -= Transfer;
+			}
 		}
+
+		// Surface tension
+		PhysicsObjectAccelerate(Object0, Mul(Direction, -GPhysics.Config.SurfaceTensionScalar));
+		PhysicsObjectAccelerate(Object1, Mul(Direction, GPhysics.Config.SurfaceTensionScalar));
 	}
 }
 
@@ -548,6 +558,13 @@ static void _PhysicsUpdateGridObjectHandles(void)
 			ASSERT(Cell->Objects.Count < FixedListCapacity(Cell->Objects));
 			*FixedListPush(Cell->Objects) = (PhysicsObjectHandle){ObjectIndex};
 			GPhysics.Objects[ObjectIndex].GridCell = Cell - GPhysics.Grid;
+
+			if (Cell->Objects.Count >= (int32)((float32)KMaxObjectsPerCell * 0.95f)) {
+				LogError(
+					"ParticlePhysics: Cell neared capacity at %d/%d",
+					Cell->Objects.Count,
+					KMaxObjectsPerCell);
+			}
 		} else {
 			GPhysics.Objects[ObjectIndex].GridCell = NONE;
 		}
