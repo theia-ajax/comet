@@ -57,7 +57,7 @@ project "comet"
 		links { "SDL3", "m", "stdc++" }
 		libdirs { "vcpkg_installed/arm64-linux/lib" }
 		includedirs { "vcpkg_installed/arm64-linux/include" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=1" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
 
 	filter "platforms:win64"
 		links { "SDL3" }
