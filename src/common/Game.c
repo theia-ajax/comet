@@ -167,14 +167,15 @@ bool GameInitialize(const GameInitParams* params)
 	const char* SelectedRenderDriver = NULL;
 	const char* DefaultRenderDriver = NULL;
 
+	LogInfo("Available render drivers:");
 	for (int DriverIndex = 0; DriverIndex < SDL_GetNumRenderDrivers(); DriverIndex++) {
 		const char* Driver = SDL_GetRenderDriver(DriverIndex);
+		LogInfo("%02d) %s", DriverIndex + 1, Driver);
 		if (DriverIndex == 0) {
 			DefaultRenderDriver = Driver;
 		}
-		if (RenderDriverName && SDL_strcasecmp(RenderDriverName, Driver) == 0) {
+		if (RenderDriverName && !SelectedRenderDriver && SDL_strcasecmp(RenderDriverName, Driver) == 0) {
 			SelectedRenderDriver = Driver;
-			break;
 		}
 	}
 
