@@ -22,8 +22,13 @@ while getopts 'c:p:hr' flag; do
 done
 
 makeconfig="${config}_${platform}"
+premake="premake5"
 
-premake5 gmake
+if [ "$platform" = "rpi" ]; then
+	premake="./external/tools/rpi/premake5"
+fi
+
+$premake gmake
 make -C bin/ config=$makeconfig
 
 if $run; then
