@@ -24,6 +24,10 @@ static struct {
 	SDL_Surface* Canvas;
 	SDL_Texture* CanvasTexture;
 	SDL_Point CursorPos;
+	SDL_Rect CanvasFrameRect;
+	uint32 BackgroundColor;
+	uint32 ForegroundColor;
+	uint32 Margin;
 } GDebug;
 
 static void DebugCreateOrFixupCanvas(SDL_Renderer* renderer);
@@ -38,6 +42,10 @@ void DebugInitialize(const DebugConfig* config)
 
 	GDebug.Canvas = SDL_CreateSurface(Config.CanvasWidth, Config.CanvasHeight, SDL_PIXELFORMAT_ARGB8888);
 	ASSERT(GDebug.Canvas);
+
+	GDebug.BackgroundColor = Config.BackgroundColor;
+	GDebug.ForegroundColor = (Config.ForegroundColor != 0) ? Config.ForegroundColor : 0xFFFFFFFF;
+	GDebug.Margin = Config.Margin;
 }
 
 void DebugShutdown(void)
@@ -55,14 +63,13 @@ void DebugNextFrame(void)
 	}
 
 	SDL_FillSurfaceRect(GDebug.Canvas, NULL, 0x00000000);
-	GDebug.CursorPos = (SDL_Point){0};
+	ZERO_STRUCT(&GDebug.CursorPos);
+	GDebug.CanvasFrameRect = (SDL_Rect){0};
+	GDebug.CanvasFrameRect.h = GDebug.Margin * 2;
 }
 
 void DebugDraw(SDL_Renderer* renderer)
 {
-	SDL_SetRenderDrawColorFloat(renderer, 0.5f, 0.0f, 0.1f, 0.1f);
-	SDL_RenderFillRect(renderer, &(SDL_FRect){0.0f, 0.0f, (float32)GDebug.Canvas->w, (float32)GDebug.Canvas->h});
-
 	for (int32 RawIndex = 0; RawIndex < ARRAY_COUNT(GDebug.LinesRingBuffer); RawIndex++) {
 		int32 Index =
 			(GDebug.LinesRingIndex + ARRAY_COUNT(GDebug.LinesRingBuffer)) % ARRAY_COUNT(GDebug.LinesRingBuffer);
@@ -87,12 +94,35 @@ void DebugDraw(SDL_Renderer* renderer)
 
 	SDL_Surface* CanvasTextureSurface;
 	if (SDL_LockTextureToSurface(GDebug.CanvasTexture, NULL, &CanvasTextureSurface)) {
-		SDL_FillSurfaceRect(CanvasTextureSurface, NULL, 0x00000000);
-		SDL_BlitSurface(GDebug.Canvas, NULL, CanvasTextureSurface, NULL);
+		SDL_Rect IntRect = (SDL_Rect){
+			(int)GDebug.CanvasFrameRect.x,
+			(int)GDebug.CanvasFrameRect.y,
+			(int)GDebug.CanvasFrameRect.w,
+			(int)GDebug.CanvasFrameRect.h,
+		};
+		SDL_FillSurfaceRect(CanvasTextureSurface, &GDebug.CanvasFrameRect, 0x00000000);
+		SDL_BlitSurface(GDebug.Canvas, &GDebug.CanvasFrameRect, CanvasTextureSurface, &GDebug.CanvasFrameRect);
 		SDL_UnlockTexture(GDebug.CanvasTexture);
 	}
 
-	SDL_RenderTexture(renderer, GDebug.CanvasTexture, NULL, &(SDL_FRect){.w = GDebug.Canvas->w, .h = GDebug.Canvas->h});
+	SDL_FRect CanvasFrameFRect;
+	SDL_RectToFRect(&GDebug.CanvasFrameRect, &CanvasFrameFRect);
+
+	const SDL_PixelFormatDetails* FormatDetails = SDL_GetPixelFormatDetails(GDebug.Canvas->format);
+	{
+		uint8 R, G, B, A;
+		SDL_GetRGBA(GDebug.BackgroundColor, FormatDetails, NULL, &R, &G, &B, &A);
+		SDL_SetRenderDrawColor(renderer, R, G, B, A);
+	}
+	SDL_RenderFillRect(renderer, &CanvasFrameFRect);
+	{
+		uint8 R, G, B, A;
+		SDL_GetRGBA(GDebug.ForegroundColor, FormatDetails, NULL, &R, &G, &B, &A);
+		SDL_SetRenderDrawColor(renderer, R, G, B, A);
+	}
+	SDL_RenderRect(renderer, &CanvasFrameFRect);
+
+	SDL_RenderTexture(renderer, GDebug.CanvasTexture, &CanvasFrameFRect, &CanvasFrameFRect);
 }
 
 static int32 NextIndex()
@@ -155,21 +185,30 @@ void DebugGetCursorXY(int32* x, int32* y)
 
 void DebugPrintf(const char* format, ...)
 {
+	enum { KCharWidth = 9, KLineHeight = 16 };
+
 	char Buffer[1024];
 	va_list Args;
 	va_start(Args, format);
 	SDL_vsnprintf(Buffer, ARRAY_COUNT(Buffer), format, Args);
 	va_end(Args);
 
-	sysfont_8x8_u32(
+	sysfont_9x16_u32(
 		GDebug.Canvas->pixels,
 		GDebug.Canvas->w,
 		GDebug.Canvas->h,
-		GDebug.CursorPos.x,
-		GDebug.CursorPos.y,
+		GDebug.CursorPos.x + GDebug.Margin,
+		GDebug.CursorPos.y + GDebug.Margin,
 		Buffer,
-		0xFFFFFF00);
+		GDebug.ForegroundColor);
 
 	GDebug.CursorPos.x = 0;
-	GDebug.CursorPos.y += 8;
+	GDebug.CursorPos.y += KLineHeight;
+
+	size_t Length = SDL_strnlen(Buffer, SDL_arraysize(Buffer));
+	int StringWidth = Length * KCharWidth + GDebug.Margin * 2;
+	if (StringWidth > GDebug.CanvasFrameRect.w) {
+		GDebug.CanvasFrameRect.w = StringWidth;
+	}
+	GDebug.CanvasFrameRect.h += KLineHeight;
 }

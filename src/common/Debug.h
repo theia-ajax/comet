@@ -3,6 +3,7 @@
 #include "Types.h"
 
 typedef struct SDL_Renderer SDL_Renderer;
+typedef struct SDL_FRect SDL_FRect;
 
 typedef struct Color {
 	uint8 r, g, b, a;
@@ -10,7 +11,10 @@ typedef struct Color {
 
 typedef struct DebugConfig {
 	int32 CanvasWidth, CanvasHeight;
-	SDL_Renderer *Renderer;
+	SDL_Renderer* Renderer;
+	uint32 BackgroundColor;
+	uint32 ForegroundColor;
+	uint32 Margin;
 } DebugConfig;
 
 void DebugInitialize(const DebugConfig* config);

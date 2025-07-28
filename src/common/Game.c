@@ -181,7 +181,10 @@ bool GameInitialize(const GameInitParams* params)
 	if (!RenderDriverName) {
 		LogInfo("No render driver name provided by config, using default '%s'", DefaultRenderDriver);
 	} else if (!SelectedRenderDriver) {
-		LogWarning("No render driver with name '%s' provided by config could be found, using default '%s'", RenderDriverName, DefaultRenderDriver);
+		LogWarning(
+			"No render driver with name '%s' provided by config could be found, using default '%s'",
+			RenderDriverName,
+			DefaultRenderDriver);
 	}
 
 	SelectedRenderDriver = SelectedRenderDriver ? SelectedRenderDriver : DefaultRenderDriver;
@@ -197,6 +200,7 @@ bool GameInitialize(const GameInitParams* params)
 	int WindowWidth, WindowHeight;
 	SDL_GetWindowSizeInPixels(GGame.Window, &WindowWidth, &WindowHeight);
 	SDL_SetRenderLogicalPresentation(GGame.Renderer, WindowWidth, WindowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_SetRenderDrawBlendMode(GGame.Renderer, SDL_BLENDMODE_BLEND);
 
 	SDL_PropertiesID RendererProperties = SDL_GetRendererProperties(GGame.Renderer);
 	SDL_PixelFormat* RendererPixelFormats = SDL_GetPointerProperty(
@@ -214,9 +218,12 @@ bool GameInitialize(const GameInitParams* params)
 	SDL_SetTextureScaleMode(GGame.ParticleRenderTexture, SDL_SCALEMODE_LINEAR);
 
 	DebugInitialize(&(DebugConfig){
-		.CanvasWidth = WindowWidth / 4,
-		.CanvasHeight = 16,
+		.CanvasWidth = WindowWidth,
+		.CanvasHeight = WindowHeight,
 		.Renderer = GGame.Renderer,
+		.BackgroundColor = 0x4F10207F,
+		.ForegroundColor = 0xFF00CF7F,
+		.Margin = 8,
 	});
 
 	AssetsInitialize(&(AssetsConfig){.TypeConfigs = {
@@ -427,10 +434,10 @@ void GameShutdown(void)
 	DrawShutdown();
 	AssetsShutdown();
 	DebugShutdown();
-	
+
 	LogInfo("Destroying Renderer");
 	SDL_DestroyRenderer(GGame.Renderer);
-	
+
 	DestroyGameWorld(GGame.World);
 	StringIdPoolsShutdown();
 	FrameAllocatorShutdown();
@@ -593,7 +600,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
-	PhysicsUpdate(1/60.0f);
+	PhysicsUpdate(1 / 60.0f);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -602,7 +609,7 @@ void GameUpdate(const GameTime* gameTime)
 		GGame.LastFPS = GGame.FramesThisSecond;
 		GGame.FramesThisSecond = 0;
 	}
-	DebugPrintf("FPS: %d, SIM: %0.3fms, DRAW: %0.3fms", GGame.LastFPS, gameTime->SimTimeMS, gameTime->RenderTimeMS);
+	DebugPrintf("FPS: %d, SIM: %0.3fms, DRAW: %06.3fms", GGame.LastFPS, gameTime->SimTimeMS, gameTime->RenderTimeMS);
 	// DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
 	DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
 	static bool ShowComponentCounts = false;

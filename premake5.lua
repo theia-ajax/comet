@@ -47,7 +47,7 @@ project "comet"
 	}
 	includedirs { "include" }
 	debugdir "."
-	defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=1" }
+	defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
