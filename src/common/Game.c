@@ -236,6 +236,7 @@ bool GameInitialize(const GameInitParams* params)
 		(ImageAsset*)LoadAsset(AssetType_Image, "assets/CelestialObjects.png");
 	ImageAsset* FlaresSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/flares.png");
 	ImageAsset* BigFlaresSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/bigflare.png");
+	ImageAsset* SmallFlaresSpriteSheetImageAsset = (ImageAsset*)LoadAsset(AssetType_Image, "assets/smallflare.png");
 
 	SpriteSheetAsset* ShipObjectsSpriteSheetDataAsset =
 		(SpriteSheetAsset*)LoadAsset(AssetType_SpriteSheetData, "assets/spritesheets/ship_objects/ship_objects.json");
@@ -254,6 +255,7 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.FlaresSpriteSheetHandle =
 		SpriteDatabaseCreateGridSpriteSheet(GetStringId("Flares"), FlaresSpriteSheetImageAsset, 64, 64);
 	SpriteDatabaseCreateGridSpriteSheet(GetStringId("BigFlare"), BigFlaresSpriteSheetImageAsset, 512, 512);
+	SpriteDatabaseCreateGridSpriteSheet(GetStringId("SmallFlare"), SmallFlaresSpriteSheetImageAsset, 128, 128);
 
 	DrawInitialize(&(DrawConfig){
 		.Renderer = GGame.Renderer,
