@@ -171,30 +171,7 @@ SDL_Surface* RenderSimulationToSurface()
 
 	SDL_Surface* RenderedSurface = SDL_RenderReadPixels(G.Renderer, NULL);
 
-	SDL_Surface* Result;
-
-#if 1
-	Result = SDL_ConvertSurface(RenderedSurface, SDL_PIXELFORMAT_BGRA32);
-	// SDL_DestroySurface(RenderedSurface);
-#else
-	Result = RenderedSurface;
-#endif
-
-	static int countdown = 100;
-	if (countdown > 0) {
-		countdown--;
-	} else if (countdown == 0) {
-		LogInfo("Done");
-		stbi_write_png(
-			"what.png",
-			Result->w,
-			Result->h,
-			Result->pitch / Result->w,
-			Result->pixels,
-			Result->pitch);
-		countdown = -1;
-	}
-	return Result;
+	return RenderedSurface;
 }
 
 void DestroyRenderedSurface(void* SurfacePtr)

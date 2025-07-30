@@ -260,7 +260,7 @@ void _UpdateSpawners(float32 DeltaTime)
 	}
 }
 
-inline int _FloatCompare(float32 A, float32 B)
+static inline int _FloatCompare(float32 A, float32 B)
 {
 	return (A < B) ? -1 : ((B > A) ? 1 : 0);
 }

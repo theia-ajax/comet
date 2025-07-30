@@ -69,7 +69,7 @@ class TheiaSurface(Structure):
 frames_per_second = 60
 fixed_delta_time = 1.0 / frames_per_second
 
-theia = CDLL("bin/theia/bin/linux64/release/libtheia.so")
+theia = CDLL("bin/theia/bin/linux64/debug/libtheia.so")
 
 (LogLevelNone,
  LogLevelError,
@@ -85,17 +85,16 @@ theia.RenderSimulationToFile.argtypes = [ c_char_p ]
 theia.RenderSimulationToSurface.restype = c_void_p
 theia.DestroyRenderedSurface.argtypes = [ c_void_p ]
 
-theia.Initialize(LogLevelInfo)
+theia.Initialize(LogLevelWarning)
 
 pygame.init()
 screen = pygame.display.set_mode((1480, 320))
 render_target = pygame.Surface(
 	(screen.get_width(), screen.get_height()),
-	flags=pygame.SRCALPHA,
 	depth=32)
-img = pygame.image.load("assets/shipsheet.png")
 clock = pygame.time.Clock()
 running = True
+sim_frame = 0
 
 while running:
 	for event in pygame.event.get():
@@ -104,28 +103,27 @@ while running:
 	
 	screen.fill('black')
 
-	theia.StepSimulation(fixed_delta_time)
+	theia.StepSimulation(1/30.0)
 
 	sim_surface_void_p = theia.RenderSimulationToSurface()
 	sim_surface_p = cast(sim_surface_void_p, POINTER(TheiaSurface))
 	sim_surface = sim_surface_p.contents
 	
 	sim_surface_pixels_type = c_uint32 * sim_surface.w * sim_surface.h
-	sim_surface_carray = sim_surface_pixels_type.from_address(addressof(sim_surface))
-	sim_surface_bytearray = bytes(sim_surface_carray)
+	sim_surface_carray = sim_surface_pixels_type.from_address(sim_surface.pixels)
+	sim_surface_bytes = bytes(sim_surface_carray)
 
-	# pygame.surfarray.blit_array(render_target, sim_surface_bytearray);
 	render_target_buffer = render_target.get_buffer()
-	render_target_buffer.write(sim_surface_bytearray)
+	render_target_buffer.write(sim_surface_bytes)
 	del render_target_buffer
 
 	theia.DestroyRenderedSurface(sim_surface_void_p)
 
 	screen.blit(render_target, (0, 0))
-	screen.blit(img, (0,0))
 
 	pygame.display.flip()
-	clock.tick(60)
+	clock.tick(frames_per_second)
+	sim_frame += 1
 
 pygame.quit()
 
