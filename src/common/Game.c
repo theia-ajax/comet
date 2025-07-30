@@ -20,6 +20,7 @@
 #include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
+#include "RenderUtil.h"
 
 enum {
 	Group_Friendly,
@@ -137,33 +138,10 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.GameResHeight = GGame.SandboxConfig->Rendering.Height;
 
 	const char* RenderDriverName = StringIdCStr(GGame.SandboxConfig->Rendering.RenderDriver);
-	const char* SelectedRenderDriver = NULL;
-	const char* DefaultRenderDriver = NULL;
-
-	LogInfo("Available render drivers:");
-	for (int DriverIndex = 0; DriverIndex < SDL_GetNumRenderDrivers(); DriverIndex++) {
-		const char* Driver = SDL_GetRenderDriver(DriverIndex);
-		LogInfo("%02d) %s", DriverIndex + 1, Driver);
-		if (DriverIndex == 0) {
-			DefaultRenderDriver = Driver;
-		}
-		if (RenderDriverName && !SelectedRenderDriver && SDL_strcasecmp(RenderDriverName, Driver) == 0) {
-			SelectedRenderDriver = Driver;
-		}
-	}
-
-	if (!RenderDriverName) {
-		LogInfo("No render driver name provided by config, using default '%s'", DefaultRenderDriver);
-	} else if (!SelectedRenderDriver) {
-		LogWarning(
-			"No render driver with name '%s' provided by config could be found, using default '%s'",
-			RenderDriverName,
-			DefaultRenderDriver);
-	}
-
-	SelectedRenderDriver = SelectedRenderDriver ? SelectedRenderDriver : DefaultRenderDriver;
+	const char* SelectedRenderDriver = SelectRenderDriver(RenderDriverName);
 
 	LogInfo("Creating renderer with '%s' driver.", SelectedRenderDriver);
+
 	GGame.IsRunning = true;
 #ifdef _DEBUG
 	GGame.DebugDrawEnabled = true;

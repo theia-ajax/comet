@@ -70,7 +70,9 @@
         "particlephysics.h": "c",
         "particlesandbox.h": "c",
         "random.h": "c",
-        "regex": "c"
+        "regex": "c",
+        "sdl_main.h": "c",
+        "windows.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

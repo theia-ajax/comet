@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+
 #include <stddef.h>
 #include <stdio.h>
 
@@ -6,6 +7,7 @@
 #include "ColorUtil.h"
 #include "Log.h"
 #include "ParticleSandbox.h"
+#include "RenderUtil.h"
 #include "StringId.h"
 
 #define RND_IMPLEMENTATION
@@ -23,7 +25,9 @@
 #define SOKOL_TIME_IMPL
 #include <sokol_time.h>
 
-void Initialize(LogLevel LoggingLevel, const char *RenderDriver);
+#define LOG_CALL(x) (x), LogInfo(#x)
+
+void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver);
 void Shutdown(void);
 void StepSimulation(float32 DeltaTime);
 void RenderSimulationToFile(const char* FileName);
@@ -39,7 +43,7 @@ struct {
 	SDL_Texture* ParticleTexture;
 } G;
 
-void Initialize(LogLevel LoggingLevel, const char *RenderDriver)
+void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 {
 	stm_setup();
 	LoggingInitialize(LoggingLevel);
@@ -61,7 +65,15 @@ void Initialize(LogLevel LoggingLevel, const char *RenderDriver)
 	// Initialize Renderer
 	{
 		G.Window = SDL_CreateWindow("theia", 1480, 320, 0);
-		G.Renderer = SDL_CreateRenderer(G.Window, RenderDriver ? RenderDriver : "vulkan");
+		SDL_HideWindow(G.Window);
+
+		const char* RenderDriver = SelectRenderDriver(RequestedRenderDriver);
+		G.Renderer = SDL_CreateRenderer(G.Window, RenderDriver);
+		if (G.Renderer) {
+			LogInfo("Created renderer with %s render driver", RenderDriver);
+		} else {
+			LogError("Failed to create renderer: %s", SDL_GetError());
+		}
 		SDL_SetRenderDrawBlendMode(G.Renderer, SDL_BLENDMODE_BLEND);
 
 		SDL_PropertiesID RendererProperties = SDL_GetRendererProperties(G.Renderer);
@@ -111,18 +123,18 @@ void Initialize(LogLevel LoggingLevel, const char *RenderDriver)
 		}
 	}
 
-	ParticleSandboxInitialize(&Config);
+	LOG_CALL(ParticleSandboxInitialize(&Config));
 }
 
 void Shutdown(void)
 {
-	UnloadImageData(&G.ParticleImage);
-	arrfree(G.HeatGradient);
-	SDL_DestroyTexture(G.RenderTexture);
-	SDL_DestroyRenderer(G.Renderer);
-	SDL_DestroyWindow(G.Window);
+	LOG_CALL(UnloadImageData(&G.ParticleImage));
+	LOG_CALL(arrfree(G.HeatGradient));
+	LOG_CALL(SDL_DestroyTexture(G.RenderTexture));
+	LOG_CALL(SDL_DestroyRenderer(G.Renderer));
+	LOG_CALL(SDL_DestroyWindow(G.Window));
 
-	ParticleSandboxShutdown();
+	LOG_CALL(ParticleSandboxShutdown());
 	StringIdPoolsShutdown();
 	LoggingShutdown();
 }

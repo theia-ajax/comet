@@ -94,6 +94,8 @@ project "theia"
 		"src/common/ParticleSandbox.c",
 		"src/common/Random.h",
 		"src/common/Random.c",
+		"src/common/RenderUtil.h",
+		"src/common/RenderUtil.c",
 		"src/common/StringId.h",
 		"src/common/StringId.c",
 		"src/lib/**.c",
@@ -123,5 +125,4 @@ project "theia"
 		libdirs { "vcpkg_installed/x64-windows/lib" }
 
 	filter {"platforms:win64", "configurations:debug"}
-		kind "ConsoleApp"
 		libdirs { "vcpkg_installed/x64-windows/debug/lib" }

@@ -54,6 +54,8 @@
 
 from ctypes import *
 import pygame
+import argparse
+import platform
 
 class TheiaSurface(Structure):
 	_fields_ = [("flags", c_uint32),
@@ -66,10 +68,30 @@ class TheiaSurface(Structure):
 			 	("reserved", c_void_p),
 				]
 
+default_platform = 'unknown'
+libname = 'libtheia.so'
+
+if platform.system() == 'Windows':
+	default_platform = 'win64'
+	libname = 'theia'
+	# load in additional libraries because windows dll searching is a mess
+	libgcc = WinDLL(r'.\external\bin\win64\libgcc_s_seh-1.dll')
+	libsdl3 = WinDLL(r'.\SDL3.dll')
+elif platform.system() == 'Linux':
+	default_platform = 'linux64'
+
+parser = argparse.ArgumentParser(prog='theia_lib_test');
+parser.add_argument('-p', '--platform', default=default_platform)
+parser.add_argument('-c', '--configuration', default='release')
+parser.add_argument('-r', '--render-driver', default=None)
+args = parser.parse_args()
+
 frames_per_second = 60
 fixed_delta_time = 1.0 / frames_per_second
 
-theia = CDLL("bin/theia/bin/linux64/release/libtheia.so")
+libpath = "bin/theia/bin/{}/{}/{}".format(args.platform, args.configuration, libname)
+print(libpath)
+theia = CDLL(libpath)
 
 (LogLevelNone,
  LogLevelError,
@@ -85,7 +107,10 @@ theia.RenderSimulationToFile.argtypes = [ c_char_p ]
 theia.RenderSimulationToSurface.restype = c_void_p
 theia.DestroyRenderedSurface.argtypes = [ c_void_p ]
 
-theia.Initialize(LogLevelWarning, "vulkan".encode('utf-8'))
+render_driver_param = args.render_driver
+if render_driver_param != None:
+	render_driver_param = render_driver_param.encode('utf-8')
+theia.Initialize(LogLevelInfo, render_driver_param)
 
 pygame.init()
 screen = pygame.display.set_mode((1480, 320))
