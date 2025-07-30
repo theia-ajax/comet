@@ -91,7 +91,7 @@ typedef struct DurabilityComponent {
 } DurabilityComponent;
 
 typedef struct TimerComponent {
-	flt32 SecondsElapsed;
+	float32 SecondsElapsed;
 } TimerComponent;
 
 typedef struct BehaviorComponent {

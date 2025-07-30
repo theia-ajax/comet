@@ -31,13 +31,13 @@ enum { KSpriteAnimationMaxFrames = 64 };
 typedef struct SpriteAnimationFrameData {
 	SpriteId Sprite;
 	Vec2 PositionOffset;
-	flt32 RotationOffset;
+	float32 RotationOffset;
 } SpriteAnimationFrameData;
 
 typedef struct SpriteAnimationData {
 	SpriteAnimationFrameData Frames[KSpriteAnimationMaxFrames];
 	int32 FrameCount;
-	flt32 SecondsPerFrame;
+	float32 SecondsPerFrame;
 } SpriteAnimationData;
 
 typedef struct ParticlePhysicsRenderConfig {
@@ -292,28 +292,28 @@ bool GameInitialize(const GameInitParams* params)
 	// 	};
 	// }
 
-	GBossIdleAnimationData = (SpriteAnimationData){
-		.Frames =
-			{
-				{.Sprite = SpriteFindByName("boss-01-1")}, {.Sprite = SpriteFindByName("boss-01-2")},
-				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-4")},
-				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-6")},
-				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-8")},
-				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
-				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
-				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-6")},
-				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-4")},
-				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-2")},
-				{.Sprite = SpriteFindByName("boss-01-1")},
-			},
-		.FrameCount = 19,
-		.SecondsPerFrame = 1.0f / 6.0f,
-	};
+	// GBossIdleAnimationData = (SpriteAnimationData){
+	// 	.Frames =
+	// 		{
+	// 			{.Sprite = SpriteFindByName("boss-01-1")}, {.Sprite = SpriteFindByName("boss-01-2")},
+	// 			{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-4")},
+	// 			{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-6")},
+	// 			{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-8")},
+	// 			{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+	// 			{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+	// 			{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-6")},
+	// 			{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-4")},
+	// 			{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-2")},
+	// 			{.Sprite = SpriteFindByName("boss-01-1")},
+	// 		},
+	// 	.FrameCount = 19,
+	// 	.SecondsPerFrame = 1.0f / 6.0f,
+	// };
 
-	GBossEntity = CreateEntity(World);
-	AddComponent(TransformComponent, World, GBossEntity)->Position = V2(600, 100);
-	AddComponent(SpriteComponent, World, GBossEntity);
-	AddComponent(TimerComponent, World, GBossEntity);
+	// GBossEntity = CreateEntity(World);
+	// AddComponent(TransformComponent, World, GBossEntity)->Position = V2(600, 100);
+	// AddComponent(SpriteComponent, World, GBossEntity);
+	// AddComponent(TimerComponent, World, GBossEntity);
 
 	LogInfo("Game Initialization Complete");
 
