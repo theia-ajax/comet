@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.lua": "lua",
         "sokol_app.h": "c",
         "sokol_glue.h": "c",
         "sprite_draw.h": "c",
@@ -66,7 +67,10 @@
         "assettypes.h": "c",
         "spritedatabase.h": "c",
         "stb_image_write.h": "c",
-        "particlephysics.h": "c"
+        "particlephysics.h": "c",
+        "particlesandbox.h": "c",
+        "random.h": "c",
+        "regex": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,
