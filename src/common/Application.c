@@ -40,7 +40,7 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 
 	stm_setup();
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 1440, 320, SDL_WINDOW_RESIZABLE);
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1480, 320, SDL_WINDOW_RESIZABLE);
 	App->Window = Window;
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis

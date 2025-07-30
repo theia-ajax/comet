@@ -4,6 +4,9 @@
 #include "ParticlePhysics.h"
 #include "StringId.h"
 
+typedef struct SDL_Renderer SDL_Renderer;
+typedef struct SDL_Texture SDL_Texture;
+
 typedef struct ParticleSandboxRenderingConfig {
 	int32 Width;
 	int32 Height;
@@ -25,7 +28,6 @@ typedef struct ParticleSandboxSpawnersConfig {
 	float32 Spacing;
 	float32 Interval;
 	float32 ObjectRadius;
-
 } ParticleSandboxSpawnersConfig;
 
 typedef struct ParticleSandboxConfig {
@@ -34,12 +36,25 @@ typedef struct ParticleSandboxConfig {
 	PhysicsConfig Physics;
 } ParticleSandboxConfig;
 
-typedef struct ParticlePhysicsConfigFile {
-	ParticleSandboxConfig Config;
-	struct {
-		const char* FileName;
-		SDL_Time LastModified;
-	} Meta;
-} ParticlePhysicsConfigFile;
+typedef struct ParticleSandboxRenderContext {
+	SDL_Renderer* Renderer;
+	SDL_Texture* TargetTexture;
+	SDL_Texture* ParticleTexture;
+	ColorU8* HeatGradient;
+} ParticleSandboxRenderContext;
 
-void ParticleSandboxInitialize(void);
+void ParticleSandboxInitialize(const ParticleSandboxConfig* Config);
+void ParticleSandboxShutdown(void);
+ParticleSandboxConfig ParticleSandboxDefaultConfig(void);
+const ParticleSandboxConfig ParticleSandboxGetConfig(void);
+
+void ParticleSandboxSetSpawnersEnabled(bool Enabled);
+bool ParticleSandboxGetSpawnersEnabled(void);
+bool ParticleSandboxToggleSpawnersEnabled(void);
+
+void ParticleSandboxReset(void);
+
+void ParticleSandboxApplyConfig(const ParticleSandboxConfig* Config);
+
+void ParticleSandboxUpdate(float32 DeltaTime);
+void ParticleSandboxRenderToTexture(ParticleSandboxRenderContext* Context);

@@ -119,9 +119,8 @@ void PhysicsLibTest(Vec2* Struct)
 
 void PhysicsShutdown(void)
 {
-	LogInfo("Physics");
-	// arrfree(GPhysics.Objects);
-	// arrfree(GPhysics.Constraints);
+	arrfree(GPhysics.Objects);
+	arrfree(GPhysics.Constraints);
 }
 
 void PhysicsUpdate(float DeltaTime)

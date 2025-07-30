@@ -14,12 +14,12 @@
 #include "Log.h"
 #include "Math2D.h"
 #include "ParticlePhysics.h"
+#include "ParticleSandbox.h"
 #include "Physics.h"
 #include "Random.h"
 #include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
-#include "ParticleSandbox.h"
 
 enum {
 	Group_Friendly,
@@ -46,13 +46,13 @@ typedef struct ParticlePhysicsRenderConfig {
 	SpriteId ParticleSpriteId;
 } ParticlePhysicsRenderConfig;
 
-typedef struct ParticleSpawner {
-	Vec2 Position;
-	Vec2 SpawnAcceleration;
-	float32 SpawnInterval;
-	float32 SpawnTimer;
-	float32 ObjectRadius;
-} ParticleSpawner;
+typedef struct ParticlePhysicsConfigFile {
+	ParticleSandboxConfig Config;
+	struct {
+		const char* FileName;
+		SDL_Time LastModified;
+	} Meta;
+} ParticlePhysicsConfigFile;
 
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, float32 Rotation, float32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
@@ -65,7 +65,6 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut);
 bool CheckConfigFileChanges();
 void LoadHeatRamp(const char* HeatRampFileName);
 void UpdateParticleSpriteId();
-void CreateSpawners();
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity);
 void MovementSystemUpdate(GameWorld* World, const GameTime* Time);
@@ -102,8 +101,6 @@ struct {
 	ParticleSandboxConfig* SandboxConfig;
 
 	ParticlePhysicsRenderConfig ParticleRenderConfig;
-	ParticleSpawner* Spawners;
-	bool SpawnersEnabled;
 	bool DebugDrawEnabled;
 } GGame;
 
@@ -124,6 +121,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	FrameAllocatorInitialize(KILOBYTES(640));
 
+	RandomSetSeed((uint32)SDL_GetPerformanceCounter());
 	uint32 RandomSeed = (uint32)SDL_GetPerformanceCounter();
 	rnd_pcg_seed(&GGame.RandomGen, RandomSeed);
 	uint64 HashtableSeed = (uint64)rnd_pcg_next(&GGame.RandomGen) | (((uint64)rnd_pcg_next(&GGame.RandomGen)) << 32);
@@ -170,7 +168,6 @@ bool GameInitialize(const GameInitParams* params)
 #ifdef _DEBUG
 	GGame.DebugDrawEnabled = true;
 #endif
-	GGame.SpawnersEnabled = true;
 	GGame.Window = params->Window;
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, SelectedRenderDriver);
 	int WindowWidth, WindowHeight;
@@ -244,7 +241,7 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	PhysicsInitialize(&GGame.SandboxConfig->Physics);
+	ParticleSandboxInitialize(GGame.SandboxConfig);
 	LoadHeatRamp(StringIdCStr(GGame.SandboxConfig->Rendering.HeatColorsImageFileName));
 	UpdateParticleSpriteId();
 
@@ -263,8 +260,6 @@ bool GameInitialize(const GameInitParams* params)
 			HeatRampSize,
 			GGame.ParticleRenderConfig.HeatRampColors);
 	}
-
-	CreateSpawners();
 
 	// GGame.World = CreateGameWorld();
 
@@ -461,11 +456,8 @@ void GameProcessEvent(const SDL_Event* event)
 						LogError("DELETED!");
 					}
 					break;
-				case SDL_SCANCODE_R:
-					PhysicsClearAllObjects();
-					GGame.SpawnersEnabled = true;
-					break;
-				case SDL_SCANCODE_S: GGame.SpawnersEnabled = !GGame.SpawnersEnabled; break;
+				case SDL_SCANCODE_R: ParticleSandboxReset(); break;
+				case SDL_SCANCODE_S: ParticleSandboxToggleSpawnersEnabled(); break;
 				default: break;
 			}
 			break;
@@ -571,34 +563,7 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// }
 
-	// Update Spawners
-	if (GGame.SpawnersEnabled) {
-		for (int32 SpawnerIndex = 0; SpawnerIndex < arrlen(GGame.Spawners); SpawnerIndex += 5) {
-			ParticleSpawner* Spawner = &GGame.Spawners[SpawnerIndex];
-
-			if (Spawner->SpawnTimer <= 0.0f) {
-				Spawner->SpawnTimer += Spawner->SpawnInterval;
-				Vec2 Accel = Spawner->SpawnAcceleration;
-				Accel.X += rnd_pcg_nextf(&GGame.RandomGen) * 10000.0f - 5000.0f;
-				PhysicsAddObject(&(PhysicsObject){
-					.Position = Spawner->Position,
-					.Radius = Spawner->ObjectRadius,
-					.Acceleration = Accel,
-					.Heat = 0.0f,
-					.Flags = PhysicsObjectFlags_None,
-					.Tint = (ColorU8){.R = 0xCC, .G = 0x00, .B = 0xCC, .A = 0xFF},
-				});
-			} else {
-				Spawner->SpawnTimer -= gameTime->DeltaTimeF;
-			}
-		}
-
-		if (PhysicsGetObjectCount() >= PhysicsGetConfig()->MaxPhysicsObjects) {
-			GGame.SpawnersEnabled = false;
-		}
-	}
-
-	PhysicsUpdate(1 / 60.0f);
+	ParticleSandboxUpdate(1.0f / 60.0f);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -637,12 +602,12 @@ void GameRender(const GameTime* gameTime)
 	// SpriteSystemRender(GGame.World);
 	// ColliderSystemDebugRender(GGame.World);
 
+	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
+
 	SDL_SetRenderTarget(GGame.Renderer, GGame.ParticleRenderTexture);
 
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 0);
 	SDL_RenderClear(GGame.Renderer);
-
-	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 
 	DrawRender();
 
@@ -901,10 +866,9 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 		float32 HeatScale = GGame.SandboxConfig->Rendering.HeatScale;
 		float32 ExtraRadius = GGame.SandboxConfig->Rendering.ExtraRadius;
 		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
-		float32 Layer =
-			GGame.SandboxConfig->Rendering.UseHeatAsLayer
-				? ((GGame.SandboxConfig->Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
-				: 0;
+		float32 Layer = GGame.SandboxConfig->Rendering.UseHeatAsLayer
+						  ? ((GGame.SandboxConfig->Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
+						  : 0;
 
 		// DrawCircle(Pos, Scale, TintColor);
 		DrawSprite(&(SpriteDraw){
@@ -1024,7 +988,7 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 		}
 
 		ConfigOut->Meta.FileName = FileName;
-		ParticleSandboxConfig *Sandbox = &ConfigOut->Config;
+		ParticleSandboxConfig* Sandbox = &ConfigOut->Config;
 
 		if (ConfigOut->Meta.LastModified == 0) {
 			SDL_PathInfo PathInfo;
@@ -1095,18 +1059,17 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 			Sandbox->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
 
-			
 			Sandbox->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
 			Sandbox->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
 			Sandbox->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
 			Sandbox->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
 			Sandbox->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
-			
+
 			Sandbox->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
 			Sandbox->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
 			Sandbox->Physics.SquishZoneForceMax =
-			IniReadFloat(Ini, Section, "SquishZoneForceMax", Sandbox->Physics.SquishZoneForceMin);
-			
+				IniReadFloat(Ini, Section, "SquishZoneForceMax", Sandbox->Physics.SquishZoneForceMin);
+
 			Sandbox->Physics.SurfaceTensionScalar = IniReadFloat(Ini, Section, "SurfaceTension", 0.0);
 			Sandbox->Physics.SurfaceTensionExtraRadius = IniReadFloat(Ini, Section, "SurfaceTensionExtraRadius", 0.0);
 		}
@@ -1124,7 +1087,7 @@ void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const Particle
 			if (New->Config.Physics.MaxPhysicsObjects < Old->Config.Physics.MaxPhysicsObjects) {
 				PhysicsClearAllObjects();
 			}
-			GGame.SpawnersEnabled = true;
+			ParticleSandboxSetSpawnersEnabled(true);
 		}
 
 		PhysicsReconfigure(&New->Config.Physics);
@@ -1144,7 +1107,7 @@ void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const Particle
 	if (SDL_memcmp(&Old->Config.Physics.Bounds, &New->Config.Physics.Bounds, sizeof(Old->Config.Physics.Bounds)) != 0 ||
 		SDL_memcmp(&Old->Config.Spawners, &New->Config.Spawners, sizeof(Old->Config.Spawners)) != 0)
 	{
-		CreateSpawners();
+		// CreateSpawners();
 	}
 }
 
@@ -1203,25 +1166,5 @@ void UpdateParticleSpriteId()
 	} else {
 		GGame.ParticleRenderConfig.ParticleSpriteId =
 			SpriteFindByNameId(GGame.SandboxConfig->Rendering.ParticleSpriteName);
-	}
-}
-
-void CreateSpawners()
-{
-	arrsetlen(GGame.Spawners, 0);
-
-	for (float32 SpawnerX =
-			 GGame.SandboxConfig->Spawners.Offset.X + GGame.SandboxConfig->Physics.Bounds.X;
-		 SpawnerX < GGame.SandboxConfig->Physics.Bounds.Z;
-		 SpawnerX += Max(GGame.SandboxConfig->Spawners.Spacing, 1.0f))
-	{
-		arrput(
-			GGame.Spawners,
-			((ParticleSpawner){
-				.Position = V2(SpawnerX, GGame.SandboxConfig->Spawners.Offset.Y),
-				.SpawnAcceleration = V2(0, 0.0f),
-				.SpawnInterval = GGame.SandboxConfig->Spawners.Interval,
-				.ObjectRadius = Max(GGame.SandboxConfig->Spawners.ObjectRadius, 0.1f),
-			}));
 	}
 }

@@ -80,10 +80,22 @@ project "theia"
 	toolset "gcc"
 	location "bin/theia"
 	files { 
+		"src/common/AssetTypes.h",
+		"src/common/AssetTypes.c",
+		"src/common/ColorUtil.h",
+		"src/common/ColorUtil.c",
+		"src/common/JsonHelpers.h",
+		"src/common/JsonHelpers.c",
 		"src/common/Log.h",
 		"src/common/Log.c",
 		"src/common/ParticlePhysics.h",
 		"src/common/ParticlePhysics.c",
+		"src/common/ParticleSandbox.h",
+		"src/common/ParticleSandbox.c",
+		"src/common/Random.h",
+		"src/common/Random.c",
+		"src/common/StringId.h",
+		"src/common/StringId.c",
 		"src/lib/**.c",
 		"src/lib/**.h",
 	}
