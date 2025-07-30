@@ -61,6 +61,29 @@ void PhysicsObjectAccelerate(PhysicsObject* Object, Vec2 Acceleration)
 
 void PhysicsInitialize(const PhysicsConfig* Config)
 {
+	LogInfo(__FUNCTION__);
+	LogInfo("Max Physics Objects: %d", Config->MaxPhysicsObjects);
+	LogInfo(
+		"Bounds: %0.2f, %0.2f, %0.2f, %0.2f",
+		Config->Bounds.X,
+		Config->Bounds.Y,
+		Config->Bounds.Z,
+		Config->Bounds.W);
+	LogInfo("Cell Size: %0.2f", Config->CellSize);
+	LogInfo("Gravity: %0.2f, %0.2f", Config->Gravity.X, Config->Gravity.Y);
+	LogInfo("Heat Force: %0.2f, %0.2f", Config->HeatForce.X, Config->HeatForce.Y);
+	LogInfo("Heat Transfer Rate: %0.6f", Config->HeatTransferRate);
+	LogInfo("Surface Tension Scalar: %0.6f", Config->SurfaceTensionScalar);
+	LogInfo("Surface Tension Extra Radius: %0.6f", Config->SurfaceTensionExtraRadius);
+	LogInfo("Heat Decay: %0.4f", Config->HeatDecay);
+	LogInfo("Heater Heat Delta: %0.4f", Config->HeaterHeatDelta);
+	LogInfo("Cooler Heat Delta: %0.4f", Config->CoolerHeatDelta);
+	LogInfo("Heater Zone Size: %0.4f", Config->HeaterZoneSize);
+	LogInfo("Cooler Zone Size: %0.4f", Config->CoolerZoneSize);
+	LogInfo("Squish Zone Size: %0.4f", Config->SquishZoneSize);
+	LogInfo("Squish Zone Force Min: %0.4f", Config->SquishZoneForceMin);
+	LogInfo("Squish Zone Force Max: %0.4f", Config->SquishZoneForceMax);
+
 	arrsetcap(GPhysics.Objects, 1024);
 	arrsetcap(GPhysics.Constraints, 1024);
 	PhysicsReconfigure(Config);
@@ -88,10 +111,17 @@ void PhysicsReconfigure(const PhysicsConfig* Config)
 	SDL_memset(GPhysics.Grid, 0, GPhysics.GridWidth * GPhysics.GridHeight * sizeof(*GPhysics.Grid));
 }
 
+void PhysicsLibTest(Vec2* Struct)
+{
+	LogInfo(__FUNCTION__);
+	LogInfo("%0.2f, %0.2f", Struct->X, Struct->Y);
+}
+
 void PhysicsShutdown(void)
 {
-	arrfree(GPhysics.Objects);
-	arrfree(GPhysics.Constraints);
+	LogInfo("Physics");
+	// arrfree(GPhysics.Objects);
+	// arrfree(GPhysics.Constraints);
 }
 
 void PhysicsUpdate(float DeltaTime)
@@ -112,12 +142,22 @@ void PhysicsUpdate(float DeltaTime)
 PhysicsConfig PhysicsDefaultConfig(void)
 {
 	return (PhysicsConfig){
-		.Bounds = (Vec4){0, 0, 1920, 1080},
-		.CellSize = 24.0f,
-		.Gravity = (Vec2){0.0f, 100.0f},
-		.HeatForce = (Vec2){0.0f, -200.0f},
-		.HeatTransferRate = 0.005f,
-		.MaxPhysicsObjects = 1000,
+		.Bounds = (Vec4){0, 0, 370, 80},
+		.MaxPhysicsObjects = 800,
+		.CellSize = 4.0f,
+		.Gravity = (Vec2){0.0f, 200.0f},
+		.HeatForce = (Vec2){0.0f, -360.0f},
+		.HeatTransferRate = 0.00001f,
+		.HeatDecay = 0.3f,
+		.HeaterZoneSize = 0.22f,
+		.HeaterHeatDelta = 0.33f,
+		.CoolerZoneSize = 0.3f,
+		.CoolerHeatDelta = -2.0f,
+		.SquishZoneSize = 0.5f,
+		.SquishZoneForceMin = 0.0f,
+		.SquishZoneForceMax = 1000.0f,
+		.SurfaceTensionScalar = 20.0f,
+		.SurfaceTensionExtraRadius = 0.0f,
 	};
 }
 
@@ -560,10 +600,7 @@ static void _PhysicsUpdateGridObjectHandles(void)
 			GPhysics.Objects[ObjectIndex].GridCell = Cell - GPhysics.Grid;
 
 			if (Cell->Objects.Count >= (int32)((float32)KMaxObjectsPerCell * 0.95f)) {
-				LogError(
-					"ParticlePhysics: Cell neared capacity at %d/%d",
-					Cell->Objects.Count,
-					KMaxObjectsPerCell);
+				LogError("ParticlePhysics: Cell neared capacity at %d/%d", Cell->Objects.Count, KMaxObjectsPerCell);
 			}
 		} else {
 			GPhysics.Objects[ObjectIndex].GridCell = NONE;

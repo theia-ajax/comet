@@ -78,6 +78,8 @@ typedef struct PhysicsConfig {
 	float32 SquishZoneForceMax;
 } PhysicsConfig;
 
+void PhysicsLibTest(Vec2 *Struct);
+
 void PhysicsInitialize(const PhysicsConfig* Config);
 void PhysicsReconfigure(const PhysicsConfig *Config);
 void PhysicsShutdown(void);

@@ -47,6 +47,7 @@ project "comet"
 	}
 	includedirs { "include" }
 	debugdir "."
+	defines { "LOGGING_WRITE_TO_FILE" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
@@ -72,5 +73,43 @@ project "comet"
 		kind "ConsoleApp"
 		libdirs { "vcpkg_installed/x64-windows/debug/lib" }
 
+project "theia"
+	kind "SharedLib"
+	language "C"
+	cdialect "gnu17"
+	toolset "gcc"
+	location "bin/theia"
+	files { 
+		"src/common/Log.h",
+		"src/common/Log.c",
+		"src/common/ParticlePhysics.h",
+		"src/common/ParticlePhysics.c",
+		"src/lib/**.c",
+		"src/lib/**.h",
+	}
+	includedirs { "include", "src/common" }
+	debugdir "."
+	
+	filter "platforms:linux64"
+		links { "SDL3", "m", "stdc++" }
+		libdirs { "vcpkg_installed/x64-linux/lib" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
+	
+	filter "platforms:rpi"
+		links { "SDL3", "m", "stdc++" }
+		libdirs { "vcpkg_installed/arm64-linux/lib" }
+		includedirs { "vcpkg_installed/arm64-linux/include" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
 
+	filter "platforms:win64"
+		links { "SDL3" }
+		defines { "__WINDOWS__" }
+		includedirs { "vcpkg_installed/x64-windows/include" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
+		
+	filter {"platforms:win64", "configurations:release"}
+		libdirs { "vcpkg_installed/x64-windows/lib" }
 
+	filter {"platforms:win64", "configurations:debug"}
+		kind "ConsoleApp"
+		libdirs { "vcpkg_installed/x64-windows/debug/lib" }

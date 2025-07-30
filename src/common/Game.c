@@ -19,6 +19,7 @@
 #include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
+#include "ParticleSandbox.h"
 
 enum {
 	Group_Friendly,
@@ -38,35 +39,6 @@ typedef struct SpriteAnimationData {
 	int32 FrameCount;
 	flt32 SecondsPerFrame;
 } SpriteAnimationData;
-
-typedef struct ParticlePhysicsConfigFile {
-	struct {
-		int32 Width;
-		int32 Height;
-		StringId RenderDriver;
-		StringId HeatColorsImageFileName;
-		float32 SpriteScale;
-		float32 ExtraRadius;
-		float32 HeatScale;
-		StringId ParticleSpriteName;
-		StringId ParticleSpriteSheetName;
-		int32 ParticleSpriteIndex;
-		bool UseSpriteIndex;
-		bool UseHeatAsLayer;
-		bool InvertLayer;
-	} Rendering;
-	struct {
-		Vec2 Offset;
-		float32 Spacing;
-		float32 Interval;
-		float32 ObjectRadius;
-	} Spawners;
-	PhysicsConfig Physics;
-	struct {
-		const char* FileName;
-		SDL_Time LastModified;
-	} Meta;
-} ParticlePhysicsConfigFile;
 
 typedef struct ParticlePhysicsRenderConfig {
 	ColorU8* HeatRampColors;
@@ -127,6 +99,8 @@ struct {
 	int32 LastFPS;
 	int32 FramesThisSecond;
 	ParticlePhysicsConfigFile ParticlePhysicsConfigFile;
+	ParticleSandboxConfig* SandboxConfig;
+
 	ParticlePhysicsRenderConfig ParticleRenderConfig;
 	ParticleSpawner* Spawners;
 	bool SpawnersEnabled;
@@ -157,13 +131,14 @@ bool GameInitialize(const GameInitParams* params)
 
 	StringIdPoolsInitialize();
 
-	GGame.ParticlePhysicsConfigFile.Physics = PhysicsDefaultConfig();
+	GGame.SandboxConfig = &GGame.ParticlePhysicsConfigFile.Config;
+	GGame.SandboxConfig->Physics = PhysicsDefaultConfig();
 	ReadConfigFile("particles.ini", &GGame.ParticlePhysicsConfigFile);
 
-	GGame.GameResWidth = GGame.ParticlePhysicsConfigFile.Rendering.Width;
-	GGame.GameResHeight = GGame.ParticlePhysicsConfigFile.Rendering.Height;
+	GGame.GameResWidth = GGame.SandboxConfig->Rendering.Width;
+	GGame.GameResHeight = GGame.SandboxConfig->Rendering.Height;
 
-	const char* RenderDriverName = StringIdCStr(GGame.ParticlePhysicsConfigFile.Rendering.RenderDriver);
+	const char* RenderDriverName = StringIdCStr(GGame.SandboxConfig->Rendering.RenderDriver);
 	const char* SelectedRenderDriver = NULL;
 	const char* DefaultRenderDriver = NULL;
 
@@ -269,8 +244,8 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	PhysicsInitialize(&GGame.ParticlePhysicsConfigFile.Physics);
-	LoadHeatRamp(StringIdCStr(GGame.ParticlePhysicsConfigFile.Rendering.HeatColorsImageFileName));
+	PhysicsInitialize(&GGame.SandboxConfig->Physics);
+	LoadHeatRamp(StringIdCStr(GGame.SandboxConfig->Rendering.HeatColorsImageFileName));
 	UpdateParticleSpriteId();
 
 	{
@@ -922,13 +897,13 @@ void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderCo
 			}
 		}
 
-		float32 SpriteScale = GGame.ParticlePhysicsConfigFile.Rendering.SpriteScale;
-		float32 HeatScale = GGame.ParticlePhysicsConfigFile.Rendering.HeatScale;
-		float32 ExtraRadius = GGame.ParticlePhysicsConfigFile.Rendering.ExtraRadius;
+		float32 SpriteScale = GGame.SandboxConfig->Rendering.SpriteScale;
+		float32 HeatScale = GGame.SandboxConfig->Rendering.HeatScale;
+		float32 ExtraRadius = GGame.SandboxConfig->Rendering.ExtraRadius;
 		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
 		float32 Layer =
-			GGame.ParticlePhysicsConfigFile.Rendering.UseHeatAsLayer
-				? ((GGame.ParticlePhysicsConfigFile.Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
+			GGame.SandboxConfig->Rendering.UseHeatAsLayer
+				? ((GGame.SandboxConfig->Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
 				: 0;
 
 		// DrawCircle(Pos, Scale, TintColor);
@@ -1049,6 +1024,7 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 		}
 
 		ConfigOut->Meta.FileName = FileName;
+		ParticleSandboxConfig *Sandbox = &ConfigOut->Config;
 
 		if (ConfigOut->Meta.LastModified == 0) {
 			SDL_PathInfo PathInfo;
@@ -1062,40 +1038,40 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 		{
 			int Section = ini_find_section(Ini, "Rendering", 0);
 
-			ConfigOut->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
-			ConfigOut->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
-			ConfigOut->Rendering.RenderDriver = IniReadStringId(Ini, Section, "RenderDriver", KInvalidStringId);
-			ConfigOut->Rendering.HeatColorsImageFileName =
+			Sandbox->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
+			Sandbox->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
+			Sandbox->Rendering.RenderDriver = IniReadStringId(Ini, Section, "RenderDriver", KInvalidStringId);
+			Sandbox->Rendering.HeatColorsImageFileName =
 				IniReadStringId(Ini, Section, "HeatColorsImage", KInvalidStringId);
-			ConfigOut->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
-			ConfigOut->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
-			ConfigOut->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
-			ConfigOut->Rendering.ParticleSpriteName =
+			Sandbox->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
+			Sandbox->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
+			Sandbox->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
+			Sandbox->Rendering.ParticleSpriteName =
 				IniReadStringId(Ini, Section, "ParticleSprite", GetStringId("explosion-01"));
-			ConfigOut->Rendering.ParticleSpriteSheetName =
+			Sandbox->Rendering.ParticleSpriteSheetName =
 				IniReadStringId(Ini, Section, "ParticleSpriteSheet", KInvalidStringId);
-			ConfigOut->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
-			ConfigOut->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
-			ConfigOut->Rendering.UseHeatAsLayer = IniReadBool(Ini, Section, "UseHeatAsLayer", true);
-			ConfigOut->Rendering.InvertLayer = IniReadBool(Ini, Section, "InvertLayer", false);
+			Sandbox->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
+			Sandbox->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
+			Sandbox->Rendering.UseHeatAsLayer = IniReadBool(Ini, Section, "UseHeatAsLayer", true);
+			Sandbox->Rendering.InvertLayer = IniReadBool(Ini, Section, "InvertLayer", false);
 		}
 
 		{
 			int Section = ini_find_section(Ini, "Spawners", 0);
 
-			ConfigOut->Spawners.Offset.X = IniReadFloat(Ini, Section, "OffsetX", 0.0);
-			ConfigOut->Spawners.Offset.Y = IniReadFloat(Ini, Section, "OffsetY", 0.0);
-			ConfigOut->Spawners.Interval = IniReadFloat(Ini, Section, "Interval", 0.0);
-			ConfigOut->Spawners.Spacing = IniReadFloat(Ini, Section, "Spacing", 32.0);
-			ConfigOut->Spawners.ObjectRadius = IniReadFloat(Ini, Section, "ObjectRadius", 1.0);
+			Sandbox->Spawners.Offset.X = IniReadFloat(Ini, Section, "OffsetX", 0.0);
+			Sandbox->Spawners.Offset.Y = IniReadFloat(Ini, Section, "OffsetY", 0.0);
+			Sandbox->Spawners.Interval = IniReadFloat(Ini, Section, "Interval", 0.0);
+			Sandbox->Spawners.Spacing = IniReadFloat(Ini, Section, "Spacing", 32.0);
+			Sandbox->Spawners.ObjectRadius = IniReadFloat(Ini, Section, "ObjectRadius", 1.0);
 		}
 
 		{
 			int Section = ini_find_section(Ini, "Physics", 0);
-			ConfigOut->Physics.MaxPhysicsObjects = IniReadInt(Ini, Section, "MaxObjectCount", 128);
+			Sandbox->Physics.MaxPhysicsObjects = IniReadInt(Ini, Section, "MaxObjectCount", 128);
 
-			ConfigOut->Physics.Bounds.X = IniReadFloat(Ini, Section, "BoundsOffsetX", 0.0);
-			ConfigOut->Physics.Bounds.Y = IniReadFloat(Ini, Section, "BoundsOffsetY", 0.0);
+			Sandbox->Physics.Bounds.X = IniReadFloat(Ini, Section, "BoundsOffsetX", 0.0);
+			Sandbox->Physics.Bounds.Y = IniReadFloat(Ini, Section, "BoundsOffsetY", 0.0);
 
 			float32 BoundsWidth = IniReadFloat(Ini, Section, "BoundsWidth", GGame.GameResWidth);
 			float32 BoundsHeight = IniReadFloat(Ini, Section, "BoundsHeight", GGame.GameResHeight);
@@ -1106,33 +1082,33 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 				BoundsHeight = GGame.GameResHeight;
 			};
 
-			ConfigOut->Physics.Bounds.Z = ConfigOut->Physics.Bounds.X + BoundsWidth;
-			ConfigOut->Physics.Bounds.W = ConfigOut->Physics.Bounds.Y + BoundsHeight;
+			Sandbox->Physics.Bounds.Z = Sandbox->Physics.Bounds.X + BoundsWidth;
+			Sandbox->Physics.Bounds.W = Sandbox->Physics.Bounds.Y + BoundsHeight;
 
-			ConfigOut->Physics.CellSize = IniReadFloat(Ini, Section, "CellSize", 8.0);
+			Sandbox->Physics.CellSize = IniReadFloat(Ini, Section, "CellSize", 8.0);
 
-			ConfigOut->Physics.Gravity.X = IniReadFloat(Ini, Section, "GravityX", 0.0);
-			ConfigOut->Physics.Gravity.Y = IniReadFloat(Ini, Section, "GravityY", 100.0);
+			Sandbox->Physics.Gravity.X = IniReadFloat(Ini, Section, "GravityX", 0.0);
+			Sandbox->Physics.Gravity.Y = IniReadFloat(Ini, Section, "GravityY", 100.0);
 
-			ConfigOut->Physics.HeatForce.X = IniReadFloat(Ini, Section, "HeatForceX", 0.0);
-			ConfigOut->Physics.HeatForce.Y = IniReadFloat(Ini, Section, "HeatForceY", -160.0);
+			Sandbox->Physics.HeatForce.X = IniReadFloat(Ini, Section, "HeatForceX", 0.0);
+			Sandbox->Physics.HeatForce.Y = IniReadFloat(Ini, Section, "HeatForceY", -160.0);
 
-			ConfigOut->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
+			Sandbox->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
 
 			
-			ConfigOut->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
-			ConfigOut->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
-			ConfigOut->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
-			ConfigOut->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
-			ConfigOut->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
+			Sandbox->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
+			Sandbox->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
+			Sandbox->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
+			Sandbox->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
+			Sandbox->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
 			
-			ConfigOut->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
-			ConfigOut->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
-			ConfigOut->Physics.SquishZoneForceMax =
-			IniReadFloat(Ini, Section, "SquishZoneForceMax", ConfigOut->Physics.SquishZoneForceMin);
+			Sandbox->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
+			Sandbox->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
+			Sandbox->Physics.SquishZoneForceMax =
+			IniReadFloat(Ini, Section, "SquishZoneForceMax", Sandbox->Physics.SquishZoneForceMin);
 			
-			ConfigOut->Physics.SurfaceTensionScalar = IniReadFloat(Ini, Section, "SurfaceTension", 0.0);
-			ConfigOut->Physics.SurfaceTensionExtraRadius = IniReadFloat(Ini, Section, "SurfaceTensionExtraRadius", 0.0);
+			Sandbox->Physics.SurfaceTensionScalar = IniReadFloat(Ini, Section, "SurfaceTension", 0.0);
+			Sandbox->Physics.SurfaceTensionExtraRadius = IniReadFloat(Ini, Section, "SurfaceTensionExtraRadius", 0.0);
 		}
 
 		ini_destroy(Ini);
@@ -1143,30 +1119,30 @@ bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
 
 void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const ParticlePhysicsConfigFile* New)
 {
-	if (SDL_memcmp(&Old->Physics, &New->Physics, sizeof(Old->Physics)) != 0) {
-		if (Old->Physics.MaxPhysicsObjects != New->Physics.MaxPhysicsObjects) {
-			if (New->Physics.MaxPhysicsObjects < Old->Physics.MaxPhysicsObjects) {
+	if (SDL_memcmp(&Old->Config.Physics, &New->Config.Physics, sizeof(Old->Config.Physics)) != 0) {
+		if (Old->Config.Physics.MaxPhysicsObjects != New->Config.Physics.MaxPhysicsObjects) {
+			if (New->Config.Physics.MaxPhysicsObjects < Old->Config.Physics.MaxPhysicsObjects) {
 				PhysicsClearAllObjects();
 			}
 			GGame.SpawnersEnabled = true;
 		}
 
-		PhysicsReconfigure(&New->Physics);
+		PhysicsReconfigure(&New->Config.Physics);
 	}
 
-	if (!StringIdEq(Old->Rendering.HeatColorsImageFileName, New->Rendering.HeatColorsImageFileName)) {
-		LoadHeatRamp(StringIdCStr(New->Rendering.HeatColorsImageFileName));
+	if (!StringIdEq(Old->Config.Rendering.HeatColorsImageFileName, New->Config.Rendering.HeatColorsImageFileName)) {
+		LoadHeatRamp(StringIdCStr(New->Config.Rendering.HeatColorsImageFileName));
 	}
 
-	if (!StringIdEq(Old->Rendering.ParticleSpriteName, New->Rendering.ParticleSpriteName) ||
-		!StringIdEq(Old->Rendering.ParticleSpriteSheetName, New->Rendering.ParticleSpriteSheetName) ||
-		Old->Rendering.ParticleSpriteIndex != New->Rendering.ParticleSpriteIndex)
+	if (!StringIdEq(Old->Config.Rendering.ParticleSpriteName, New->Config.Rendering.ParticleSpriteName) ||
+		!StringIdEq(Old->Config.Rendering.ParticleSpriteSheetName, New->Config.Rendering.ParticleSpriteSheetName) ||
+		Old->Config.Rendering.ParticleSpriteIndex != New->Config.Rendering.ParticleSpriteIndex)
 	{
 		UpdateParticleSpriteId();
 	}
 
-	if (SDL_memcmp(&Old->Physics.Bounds, &New->Physics.Bounds, sizeof(Old->Physics.Bounds)) != 0 ||
-		SDL_memcmp(&Old->Spawners, &New->Spawners, sizeof(Old->Spawners)) != 0)
+	if (SDL_memcmp(&Old->Config.Physics.Bounds, &New->Config.Physics.Bounds, sizeof(Old->Config.Physics.Bounds)) != 0 ||
+		SDL_memcmp(&Old->Config.Spawners, &New->Config.Spawners, sizeof(Old->Config.Spawners)) != 0)
 	{
 		CreateSpawners();
 	}
@@ -1211,22 +1187,22 @@ void LoadHeatRamp(const char* HeatRampFileName)
 
 void UpdateParticleSpriteId()
 {
-	if (StringIdIsValid(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteSheetName)) {
+	if (StringIdIsValid(GGame.SandboxConfig->Rendering.ParticleSpriteSheetName)) {
 		GGame.ParticleRenderConfig.ParticleSpriteSheetId =
-			SpriteSheetFindByName(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteSheetName);
+			SpriteSheetFindByName(GGame.SandboxConfig->Rendering.ParticleSpriteSheetName);
 
-		if (GGame.ParticlePhysicsConfigFile.Rendering.UseSpriteIndex) {
+		if (GGame.SandboxConfig->Rendering.UseSpriteIndex) {
 			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByIndex(
 				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
-				GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteIndex);
+				GGame.SandboxConfig->Rendering.ParticleSpriteIndex);
 		} else {
 			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByNameId(
 				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
-				GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
+				GGame.SandboxConfig->Rendering.ParticleSpriteName);
 		}
 	} else {
 		GGame.ParticleRenderConfig.ParticleSpriteId =
-			SpriteFindByNameId(GGame.ParticlePhysicsConfigFile.Rendering.ParticleSpriteName);
+			SpriteFindByNameId(GGame.SandboxConfig->Rendering.ParticleSpriteName);
 	}
 }
 
@@ -1235,17 +1211,17 @@ void CreateSpawners()
 	arrsetlen(GGame.Spawners, 0);
 
 	for (float32 SpawnerX =
-			 GGame.ParticlePhysicsConfigFile.Spawners.Offset.X + GGame.ParticlePhysicsConfigFile.Physics.Bounds.X;
-		 SpawnerX < GGame.ParticlePhysicsConfigFile.Physics.Bounds.Z;
-		 SpawnerX += Max(GGame.ParticlePhysicsConfigFile.Spawners.Spacing, 1.0f))
+			 GGame.SandboxConfig->Spawners.Offset.X + GGame.SandboxConfig->Physics.Bounds.X;
+		 SpawnerX < GGame.SandboxConfig->Physics.Bounds.Z;
+		 SpawnerX += Max(GGame.SandboxConfig->Spawners.Spacing, 1.0f))
 	{
 		arrput(
 			GGame.Spawners,
 			((ParticleSpawner){
-				.Position = V2(SpawnerX, GGame.ParticlePhysicsConfigFile.Spawners.Offset.Y),
+				.Position = V2(SpawnerX, GGame.SandboxConfig->Spawners.Offset.Y),
 				.SpawnAcceleration = V2(0, 0.0f),
-				.SpawnInterval = GGame.ParticlePhysicsConfigFile.Spawners.Interval,
-				.ObjectRadius = Max(GGame.ParticlePhysicsConfigFile.Spawners.ObjectRadius, 0.1f),
+				.SpawnInterval = GGame.SandboxConfig->Spawners.Interval,
+				.ObjectRadius = Max(GGame.SandboxConfig->Spawners.ObjectRadius, 0.1f),
 			}));
 	}
 }

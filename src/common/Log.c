@@ -38,7 +38,10 @@ const enum TermColor LogLevelColors[] = {
 _Static_assert(ARRAY_COUNT(LogLevelColors) == LogLevel_Count, "");
 
 LogLevel GLogLevel = LogLevel_Disabled;
+
+#ifdef LOGGING_WRITE_TO_FILE
 FILE* GLogFile;
+#endif
 
 static void _InternalLogV(LogLevel Level, const char* Format, va_list Args);
 static void _InternalSetTerminalColor(enum TermColor Color);
@@ -46,7 +49,9 @@ static void _InternalSetTerminalColor(enum TermColor Color);
 void LoggingInitialize(LogLevel Level)
 {
 	GLogLevel = Level;
+#ifdef LOGGING_WRITE_TO_FILE
 	GLogFile = fopen("log.txt", "w");
+#endif
 
 	LogInfo(__FUNCTION__);
 }
@@ -55,7 +60,9 @@ void LoggingShutdown(void)
 {
 	LogInfo(__FUNCTION__);
 	GLogLevel = LogLevel_None;
+#ifdef LOGGING_WRITE_TO_FILE
 	fclose(GLogFile);
+#endif
 	_InternalSetTerminalColor(TermColor_Normal);
 }
 
@@ -115,7 +122,9 @@ static void _InternalLogV(LogLevel Level, const char* Format, va_list Args)
 	SDL_snprintf(Output.Data, FixedArrayCapacity(Output), "[%s] %s\n", LogLevelNames[Level], Formatted.Data);
 
 	fprintf(stdout, Output.Data);
+#ifdef LOGGING_WRITE_TO_FILE
 	fprintf(GLogFile, Output.Data);
+#endif
 }
 
 #include <SDL3/SDL_platform_defines.h>
