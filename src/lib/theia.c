@@ -23,7 +23,7 @@
 #define SOKOL_TIME_IMPL
 #include <sokol_time.h>
 
-void Initialize(LogLevel LoggingLevel);
+void Initialize(LogLevel LoggingLevel, const char *RenderDriver);
 void Shutdown(void);
 void StepSimulation(float32 DeltaTime);
 void RenderSimulationToFile(const char* FileName);
@@ -39,7 +39,7 @@ struct {
 	SDL_Texture* ParticleTexture;
 } G;
 
-void Initialize(LogLevel LoggingLevel)
+void Initialize(LogLevel LoggingLevel, const char *RenderDriver)
 {
 	stm_setup();
 	LoggingInitialize(LoggingLevel);
@@ -61,7 +61,7 @@ void Initialize(LogLevel LoggingLevel)
 	// Initialize Renderer
 	{
 		G.Window = SDL_CreateWindow("theia", 1480, 320, 0);
-		G.Renderer = SDL_CreateRenderer(G.Window, "vulkan");
+		G.Renderer = SDL_CreateRenderer(G.Window, RenderDriver ? RenderDriver : "vulkan");
 		SDL_SetRenderDrawBlendMode(G.Renderer, SDL_BLENDMODE_BLEND);
 
 		SDL_PropertiesID RendererProperties = SDL_GetRendererProperties(G.Renderer);

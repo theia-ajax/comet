@@ -69,7 +69,7 @@ class TheiaSurface(Structure):
 frames_per_second = 60
 fixed_delta_time = 1.0 / frames_per_second
 
-theia = CDLL("bin/theia/bin/linux64/debug/libtheia.so")
+theia = CDLL("bin/theia/bin/linux64/release/libtheia.so")
 
 (LogLevelNone,
  LogLevelError,
@@ -79,13 +79,13 @@ theia = CDLL("bin/theia/bin/linux64/debug/libtheia.so")
  LogLevelDisabled,
  LogLevelCount) = (0, 1, 2, 3, 4, 5, 6)
 
-theia.Initialize.argtypes = [ c_int ]
+theia.Initialize.argtypes = [ c_int, c_char_p ]
 theia.StepSimulation.argtypes = [ c_float ]
 theia.RenderSimulationToFile.argtypes = [ c_char_p ]
 theia.RenderSimulationToSurface.restype = c_void_p
 theia.DestroyRenderedSurface.argtypes = [ c_void_p ]
 
-theia.Initialize(LogLevelWarning)
+theia.Initialize(LogLevelWarning, "vulkan".encode('utf-8'))
 
 pygame.init()
 screen = pygame.display.set_mode((1480, 320))
@@ -103,7 +103,7 @@ while running:
 	
 	screen.fill('black')
 
-	theia.StepSimulation(1/30.0)
+	theia.StepSimulation(fixed_delta_time)
 
 	sim_surface_void_p = theia.RenderSimulationToSurface()
 	sim_surface_p = cast(sim_surface_void_p, POINTER(TheiaSurface))
