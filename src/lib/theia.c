@@ -1,7 +1,9 @@
 #include <SDL3/SDL.h>
 
-#include <stddef.h>
-#include <stdio.h>
+#include <stb_ds.h>
+#include <stb_image.h>
+#include <stb_image_write.h>
+#include <sokol_time.h>
 
 #include "AssetTypes.h"
 #include "ColorUtil.h"
@@ -9,21 +11,7 @@
 #include "ParticleSandbox.h"
 #include "RenderUtil.h"
 #include "StringId.h"
-
-#define RND_IMPLEMENTATION
 #include "Random.h"
-
-#define STB_DS_IMPLEMENTATION
-#include <stb_ds.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
-
-#define SOKOL_TIME_IMPL
-#include <sokol_time.h>
 
 #define LOG_CALL(x) (x), LogInfo(#x)
 
@@ -64,8 +52,7 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 
 	// Initialize Renderer
 	{
-		G.Window = SDL_CreateWindow("theia", 1480, 320, 0);
-		SDL_HideWindow(G.Window);
+		G.Window = SDL_CreateWindow("theia", Config.Rendering.Width, Config.Rendering.Height, SDL_WINDOW_HIDDEN);
 
 		const char* RenderDriver = SelectRenderDriver(RequestedRenderDriver);
 		G.Renderer = SDL_CreateRenderer(G.Window, RenderDriver);

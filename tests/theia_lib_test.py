@@ -139,7 +139,9 @@ while running:
 
 	rendered_surf = pygame.image.frombuffer(sim_surface_bytes, (sim_surface.w, sim_surface.h), "BGRA")
 
-	screen.blit(rendered_surf, (0, 0))
+	scaled_surf = pygame.transform.smoothscale(rendered_surf, (1480, 320))
+
+	screen.blit(scaled_surf, (0, 0))
 
 	theia.DestroyRenderedSurface(sim_surface_void_p)
 	
