@@ -1,17 +1,18 @@
 #include <SDL3/SDL.h>
 
+#include <sokol_time.h>
 #include <stb_ds.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
-#include <sokol_time.h>
 
-#include "AssetTypes.h"
 #include "ColorUtil.h"
 #include "Log.h"
 #include "ParticleSandbox.h"
+#include "Random.h"
 #include "RenderUtil.h"
 #include "StringId.h"
-#include "Random.h"
+
+#include "data.h"
 
 #define LOG_CALL(x) (x), LogInfo(#x)
 
@@ -21,13 +22,15 @@ void StepSimulation(float32 DeltaTime);
 void RenderSimulationToFile(const char* FileName);
 SDL_Surface* RenderSimulationToSurface();
 void DestroyRenderedSurface(void* SurfacePtr);
+// void ParticleImageToSourceFile(void);
 
 struct {
 	SDL_Window* Window;
 	SDL_Renderer* Renderer;
 	SDL_Texture* RenderTexture;
 	ColorU8* HeatGradient;
-	ImageData ParticleImage;
+	// ImageData ParticleImage;
+	SDL_Surface *ParticleImageSurface;
 	SDL_Texture* ParticleTexture;
 } G;
 
@@ -98,12 +101,14 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 
 	// Particle texture
 	{
-		const char* ParticleImageFileName = "assets/smallflare.png";
-		if (!LoadImageData(ParticleImageFileName, &G.ParticleImage)) {
-			LogError("Failed to load particle image '%s'", ParticleImageFileName);
-		}
+		// const char* ParticleImageFileName = "assets/smallflare.png";
+		// if (!LoadImageData(ParticleImageFileName, &G.ParticleImage)) {
+		// 	LogError("Failed to load particle image '%s'", ParticleImageFileName);
+		// }
 
-		G.ParticleTexture = SDL_CreateTextureFromSurface(G.Renderer, G.ParticleImage.Surface);
+		G.ParticleImageSurface = Data_CreateImageSurface();
+
+		G.ParticleTexture = SDL_CreateTextureFromSurface(G.Renderer, G.ParticleImageSurface);
 
 		if (!G.ParticleTexture) {
 			LogError("Failed to create particle texture: '%s'", SDL_GetError());
@@ -115,7 +120,8 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 
 void Shutdown(void)
 {
-	LOG_CALL(UnloadImageData(&G.ParticleImage));
+	// LOG_CALL(UnloadImageData(&G.ParticleImage));
+	LOG_CALL(SDL_DestroySurface(G.ParticleImageSurface));
 	LOG_CALL(arrfree(G.HeatGradient));
 	LOG_CALL(SDL_DestroyTexture(G.RenderTexture));
 	LOG_CALL(SDL_DestroyRenderer(G.Renderer));
@@ -177,3 +183,48 @@ void DestroyRenderedSurface(void* SurfacePtr)
 {
 	SDL_DestroySurface((SDL_Surface*)SurfacePtr);
 }
+
+#if 0
+void ParticleImageToSourceFile(void)
+{
+	FILE* File = fopen("src/lib/data.h", "w");
+
+	if (!File) {
+		return;
+	}
+
+	int Width = G.ParticleImage.Width;
+	int Height = G.ParticleImage.Height;
+	uint8* Bytes = (uint8*)G.ParticleImage.Pixels;
+
+	fprintf(File, "#pragma once\n\n");
+	fprintf(File, "const int KImageWidth = %d;\n", Width);
+	fprintf(File, "const int KImageHeight = %d;\n", Height);
+	fprintf(File, "const unsigned char KImageData[%d * %d * 4] = {", Width, Height);
+
+	for (int Index = 0; Index < Width * Height * 4; Index += 4) {
+		if (Index % 32 == 0) {
+			fprintf(File, "\n\t");
+		}
+
+		fprintf(
+			File,
+			"0x%02x, 0x%02x, 0x%02x, 0x%02x, ",
+			Bytes[Index],
+			Bytes[Index + 1],
+			Bytes[Index + 2],
+			Bytes[Index + 3]);
+
+	}
+
+	fprintf(File, "\n};\n");
+	
+	fprintf(File, "inline SDL_Surface *Data_CreateImageSurface()\n");
+	fprintf(File, "{\n");
+	fprintf(File, "\treturn SDL_CreateSurfaceFrom(KImageWidth, KImageHeight, SDL_PIXELFORMAT_BGRA32, (void*)KImageData, KImageWidth * 4);\n");
+	fprintf(File, "}\n");
+
+	fclose(File);
+}
+#endif
+

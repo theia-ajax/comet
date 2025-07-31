@@ -87,8 +87,6 @@ parser.add_argument('-r', '--render-driver', default=None)
 args = parser.parse_args()
 
 frames_per_second = 60
-if args.platform == "rpi":
-	frames_per_second = 30
 fixed_delta_time = 1.0 / frames_per_second
 
 libpath = "bin/theia/bin/{}/{}/{}".format(args.platform, args.configuration, libname)
@@ -135,11 +133,11 @@ while running:
 	
 	sim_surface_pixels_type = c_uint32 * sim_surface.w * sim_surface.h
 	sim_surface_carray = sim_surface_pixels_type.from_address(sim_surface.pixels)
-	sim_surface_bytes = bytes(sim_surface_carray)
+	sim_surface_bytes = memoryview(sim_surface_carray)
 
 	rendered_surf = pygame.image.frombuffer(sim_surface_bytes, (sim_surface.w, sim_surface.h), "BGRA")
 
-	scaled_surf = pygame.transform.smoothscale(rendered_surf, (1480, 320))
+	scaled_surf = pygame.transform.smoothscale(rendered_surf, (screen.get_width(), screen.get_height()))
 
 	screen.blit(scaled_surf, (0, 0))
 
