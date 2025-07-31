@@ -17,10 +17,10 @@
 #include "ParticleSandbox.h"
 #include "Physics.h"
 #include "Random.h"
+#include "RenderUtil.h"
 #include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
-#include "RenderUtil.h"
 
 enum {
 	Group_Friendly,
