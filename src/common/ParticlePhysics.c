@@ -495,6 +495,8 @@ static void _PhysicsSolveAllCollisions(void)
 #ifdef USE_GRID_SOLVER
 	enum { KChunks = PARTICLE_PHYSICS_SOLVER_WORKER_COUNT };
 	_Static_assert(KChunks > 0, "");
+	
+	ONCE(LogInfo("Collision solver will use %d worker threads.", KChunks));
 
 	if (KChunks == 1) {
 		for (int32 CellY = 0; CellY < GPhysics.GridHeight; CellY++) {

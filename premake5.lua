@@ -32,6 +32,7 @@ filter "configurations:debug"
 	
 filter "configurations:release"
 	optimize "On"
+	symbols "Off"
 
 project "comet"
 	kind "WindowedApp"
@@ -107,7 +108,7 @@ project "theia"
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
 		libdirs { "vcpkg_installed/x64-linux/lib" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
 	
 	filter "platforms:rpi"
 		links { "SDL3", "m", "stdc++" }
