@@ -21,17 +21,14 @@ typedef struct ParticleSandbox {
 	PhysicsObject* ObjectBuffer;
 } ParticleSandbox;
 
-typedef struct HeatCompareUserData {
-	bool Invert;
-} HeatCompareUserData;
-
 ParticleSandbox GSandbox;
 
 void _ApplyConfigChanges(const ParticleSandboxConfig* Old, const ParticleSandboxConfig* New);
 void _CreateSpawners(void);
 void _DestroySpawners(void);
 void _UpdateSpawners(float32 DeltaTime);
-int _ParticleHeatCompareUserData(void* UserData, const void* A, const void* B);
+int _ParticleHeatCompare(const void* A, const void* B);
+int _ParticleHeatReverseCompare(const void* A, const void* B);
 
 void ParticleSandboxInitialize(const ParticleSandboxConfig* Config)
 {
@@ -124,16 +121,11 @@ void ParticleSandboxRenderToTexture(ParticleSandboxRenderContext* Context)
 	SDL_memcpy(GSandbox.ObjectBuffer, Objects, sizeof(*Objects) * ObjectCount);
 
 	if (GSandbox.Config.Rendering.UseHeatAsLayer) {
-		HeatCompareUserData UserData = {
-			.Invert = GSandbox.Config.Rendering.InvertLayer,
-		};
-
-		SDL_qsort_r(
+		SDL_qsort(
 			GSandbox.ObjectBuffer,
 			ObjectCount,
 			sizeof(*GSandbox.ObjectBuffer),
-			_ParticleHeatCompareUserData,
-			&UserData);
+			GSandbox.Config.Rendering.InvertLayer ? _ParticleHeatReverseCompare : _ParticleHeatCompare);
 	}
 
 	SDL_Texture* Texture = Context->ParticleTexture;
@@ -260,16 +252,14 @@ void _UpdateSpawners(float32 DeltaTime)
 	}
 }
 
-static inline int _FloatCompare(float32 A, float32 B)
+int _ParticleHeatCompare(const void* A, const void* B)
 {
-	return (A < B) ? -1 : ((B > A) ? 1 : 0);
-}
-
-int _ParticleHeatCompareUserData(void* UserData, const void* A, const void* B)
-{
-	const HeatCompareUserData* Data = (const HeatCompareUserData*)UserData;
 	const PhysicsObject* ObjA = (const PhysicsObject*)A;
 	const PhysicsObject* ObjB = (const PhysicsObject*)B;
+	return COMPARE(ObjA->Heat, ObjB->Heat);
+}
 
-	return (!Data->Invert) ? _FloatCompare(ObjA->Heat, ObjB->Heat) : _FloatCompare(ObjB->Heat, ObjA->Heat);
+int _ParticleHeatReverseCompare(const void* A, const void* B)
+{
+	return _ParticleHeatCompare(B, A);
 }
