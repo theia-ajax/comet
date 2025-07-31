@@ -137,7 +137,7 @@ while running:
 	sim_surface_carray = sim_surface_pixels_type.from_address(sim_surface.pixels)
 	sim_surface_bytes = bytes(sim_surface_carray)
 
-	rendered_surf = pygame.image.frombytes(sim_surface_bytes, (sim_surface.w, sim_surface.h), "BGRA")
+	rendered_surf = pygame.image.frombuffer(sim_surface_bytes, (sim_surface.w, sim_surface.h), "BGRA")
 
 	screen.blit(rendered_surf, (0, 0))
 
