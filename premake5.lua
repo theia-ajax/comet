@@ -107,7 +107,7 @@ project "theia"
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
 		libdirs { "vcpkg_installed/x64-linux/lib" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
+		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 	
 	filter "platforms:rpi"
 		links { "SDL3", "m", "stdc++" }

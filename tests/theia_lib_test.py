@@ -87,6 +87,8 @@ parser.add_argument('-r', '--render-driver', default=None)
 args = parser.parse_args()
 
 frames_per_second = 60
+if args.platform == "rpi":
+	frames_per_second = 30
 fixed_delta_time = 1.0 / frames_per_second
 
 libpath = "bin/theia/bin/{}/{}/{}".format(args.platform, args.configuration, libname)
