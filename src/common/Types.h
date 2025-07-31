@@ -35,7 +35,7 @@ typedef double float64;
 #endif
 #endif
 
-#define KILOBYTES(N) ((N)*1024)
+#define KILOBYTES(N) ((N) * 1024)
 #define MEGABYTES(N) (KILOBYTES(N) * 1024)
 #define GIGABYTES(N) (MEGABYTES(N) * 1024)
 #define TERABYTES(N) (TERABYTES(N) * 1024)
@@ -107,11 +107,26 @@ typedef double float64;
 #define FixedListRemoveAt(list, index) (FixedListPop(list), (list).Data[index] = (list).Data[(list).Count])
 
 #define HANDLE_INTERNAL_TYPE int32
-#define DEFINE_HANDLE(Type) typedef struct Type { HANDLE_INTERNAL_TYPE Value; } Type
+#define DEFINE_HANDLE(Type)                                                                                            \
+	typedef struct Type {                                                                                              \
+		HANDLE_INTERNAL_TYPE Value;                                                                                    \
+	} Type
 #define VALID_HANDLE(Handle) ((Handle).Value != NONE)
+
+#define UNIQUE_STATIC_NAME(x) CAT(CAT(x, _), __LINE__)
+#define ONCE(x)                                                                                                        \
+	{                                                                                                                  \
+		static bool UNIQUE_STATIC_NAME(RunOnce) = false;                                                               \
+		if (!UNIQUE_STATIC_NAME(RunOnce)) {                                                                            \
+			UNIQUE_STATIC_NAME(RunOnce) = true;                                                                        \
+			x;                                                                                                         \
+		}                                                                                                              \
+	}
 
 // -------------------------------------------------------
 
 SDL_NORETURN void PanicAndAbort(const char* Title, const char* Message);
 
-typedef struct ColorU8 { uint8 R, G, B, A; } ColorU8;
+typedef struct ColorU8 {
+	uint8 R, G, B, A;
+} ColorU8;
