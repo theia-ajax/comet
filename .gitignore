@@ -4,3 +4,4 @@ imgui_log.txt
 log.txt
 /*.dll
 vcpkg_installed/
+__pycache__/
