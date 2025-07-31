@@ -116,9 +116,6 @@ theia.Initialize(LogLevelInfo, render_driver_param)
 
 pygame.init()
 screen = pygame.display.set_mode((1480, 320))
-render_target = pygame.Surface(
-	(screen.get_width(), screen.get_height()),
-	depth=32)
 clock = pygame.time.Clock()
 running = True
 sim_frame = 0
@@ -140,14 +137,12 @@ while running:
 	sim_surface_carray = sim_surface_pixels_type.from_address(sim_surface.pixels)
 	sim_surface_bytes = bytes(sim_surface_carray)
 
-	render_target_buffer = render_target.get_buffer()
-	render_target_buffer.write(sim_surface_bytes)
-	del render_target_buffer
+	rendered_surf = pygame.image.frombytes(sim_surface_bytes, (sim_surface.w, sim_surface.h), "BGRA")
+
+	screen.blit(rendered_surf, (0, 0))
 
 	theia.DestroyRenderedSurface(sim_surface_void_p)
-
-	screen.blit(render_target, (0, 0))
-
+	
 	pygame.display.flip()
 	clock.tick(frames_per_second)
 	sim_frame += 1
