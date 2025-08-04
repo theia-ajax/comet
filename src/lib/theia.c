@@ -66,6 +66,11 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 	{
 		G.Window = SDL_CreateWindow("theia", Config.Rendering.Width, Config.Rendering.Height, SDL_WINDOW_HIDDEN);
 
+		if (!G.Window) {
+			LogError("Failed to create window: %s", SDL_GetError());
+			return;
+		}
+
 		const char* RenderDriver = SelectRenderDriver(RequestedRenderDriver);
 		G.Renderer = SDL_CreateRenderer(G.Window, RenderDriver);
 		if (G.Renderer) {
