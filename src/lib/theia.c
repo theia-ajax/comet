@@ -64,6 +64,11 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 
 	// Initialize Renderer
 	{
+		if (!SDL_Init(SDL_INIT_VIDEO)) {
+			LogError("SDL_Init error: %s", SDL_GetError());
+			return;
+		}
+
 		G.Window = SDL_CreateWindow("theia", Config.Rendering.Width, Config.Rendering.Height, SDL_WINDOW_HIDDEN);
 
 		if (!G.Window) {
@@ -148,6 +153,8 @@ void Shutdown(void)
 	LOG_CALL(SDL_DestroyTexture(G.RenderTexture));
 	LOG_CALL(SDL_DestroyRenderer(G.Renderer));
 	LOG_CALL(SDL_DestroyWindow(G.Window));
+
+	SDL_Quit();
 
 	LOG_CALL(ParticleSandboxShutdown());
 	StringIdPoolsShutdown();
