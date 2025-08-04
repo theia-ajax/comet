@@ -41,7 +41,7 @@ def _load_theia_sim_lib(platform):
 
 SIM_PLATFORM_LINUX_64 = "Linux_x86_64"
 SIM_PLATFORM_LINUX_ARM = "Linux_aarch64"
-SIM_PLATFORM_WINDOWS_64 = "Windows_x86_64"
+SIM_PLATFORM_WINDOWS_64 = "Windows_AMD64"
 
 class _SimLib:
 	VALID_PLATFORMS = [
