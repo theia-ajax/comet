@@ -30,12 +30,16 @@ struct {
 	SDL_Texture* RenderTexture;
 	ColorU8* HeatGradient;
 	// ImageData ParticleImage;
-	SDL_Surface *ParticleImageSurface;
+	SDL_Surface* ParticleImageSurface;
 	SDL_Texture* ParticleTexture;
+	SDL_Surface* BlankSurface;
+	bool InitializedRenderer;
 } G;
 
 void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 {
+	ZERO_STRUCT(&G);
+
 	stm_setup();
 	LoggingInitialize(LoggingLevel);
 	StringIdPoolsInitialize();
@@ -49,9 +53,14 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 	LogInfo("refcount: %u", offsetof(SDL_Surface, refcount));
 	LogInfo("reserved: %u", offsetof(SDL_Surface, reserved));
 
-	RandomSetSeed((uint32)SDL_GetPerformanceCounter());
+	RandomSetSeed(0);
 
 	ParticleSandboxConfig Config = ParticleSandboxDefaultConfig();
+
+	LOG_CALL(ParticleSandboxInitialize(&Config));
+
+	G.BlankSurface = SDL_CreateSurface(Config.Rendering.Width, Config.Rendering.Height, SDL_PIXELFORMAT_BGRA32);
+	SDL_memset4(G.BlankSurface->pixels, 0x00000000, Config.Rendering.Width * Config.Rendering.Height);
 
 	// Initialize Renderer
 	{
@@ -63,6 +72,7 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 			LogInfo("Created renderer with %s render driver", RenderDriver);
 		} else {
 			LogError("Failed to create renderer: %s", SDL_GetError());
+			return;
 		}
 		SDL_SetRenderDrawBlendMode(G.Renderer, SDL_BLENDMODE_BLEND);
 
@@ -84,6 +94,11 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 			Config.Rendering.Width,
 			Config.Rendering.Height);
 		SDL_SetTextureScaleMode(G.RenderTexture, SDL_SCALEMODE_LINEAR);
+
+		if (!G.RenderTexture) {
+			LogError("Failed to create render texture: %s", SDL_GetError());
+			return;
+		}
 	}
 
 	// Heat gradient
@@ -115,11 +130,13 @@ void Initialize(LogLevel LoggingLevel, const char* RequestedRenderDriver)
 		}
 	}
 
-	LOG_CALL(ParticleSandboxInitialize(&Config));
+	G.InitializedRenderer = true;
 }
 
 void Shutdown(void)
 {
+	SDL_DestroySurface(G.BlankSurface);
+
 	// LOG_CALL(UnloadImageData(&G.ParticleImage));
 	LOG_CALL(SDL_DestroySurface(G.ParticleImageSurface));
 	LOG_CALL(arrfree(G.HeatGradient));
@@ -160,28 +177,34 @@ void RenderSimulationToFile(const char* FileName)
 
 SDL_Surface* RenderSimulationToSurface()
 {
-	SDL_SetRenderDrawColor(G.Renderer, 0, 0, 0, 0);
-	SDL_RenderClear(G.Renderer);
+	if (G.InitializedRenderer) {
+		SDL_SetRenderDrawColor(G.Renderer, 0, 0, 0, 0);
+		SDL_RenderClear(G.Renderer);
 
-	ParticleSandboxRenderToTexture(&(ParticleSandboxRenderContext){
-		.HeatGradient = G.HeatGradient,
-		.Renderer = G.Renderer,
-		.TargetTexture = G.RenderTexture,
-		.ParticleTexture = G.ParticleTexture,
-	});
+		ParticleSandboxRenderToTexture(&(ParticleSandboxRenderContext){
+			.HeatGradient = G.HeatGradient,
+			.Renderer = G.Renderer,
+			.TargetTexture = G.RenderTexture,
+			.ParticleTexture = G.ParticleTexture,
+		});
 
-	if (!SDL_RenderTexture(G.Renderer, G.RenderTexture, NULL, NULL)) {
-		LogError("%s", SDL_GetError());
+		if (!SDL_RenderTexture(G.Renderer, G.RenderTexture, NULL, NULL)) {
+			LogError("%s", SDL_GetError());
+		}
+
+		SDL_Surface* RenderedSurface = SDL_RenderReadPixels(G.Renderer, NULL);
+
+		return RenderedSurface;
+	} else {
+		return G.BlankSurface;
 	}
-
-	SDL_Surface* RenderedSurface = SDL_RenderReadPixels(G.Renderer, NULL);
-
-	return RenderedSurface;
 }
 
 void DestroyRenderedSurface(void* SurfacePtr)
 {
-	SDL_DestroySurface((SDL_Surface*)SurfacePtr);
+	if ((SDL_Surface*)SurfacePtr != G.BlankSurface) {
+		SDL_DestroySurface((SDL_Surface*)SurfacePtr);
+	}
 }
 
 #if 0
@@ -227,4 +250,3 @@ void ParticleImageToSourceFile(void)
 	fclose(File);
 }
 #endif
-
