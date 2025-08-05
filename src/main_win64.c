@@ -1,14 +1,19 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdlib.h>
-
 #include "common/Application.h"
+
+#include "cvc/cvc.h"
 
 Application *GApp = NULL;
 
 int main(int argc, char* argv[])
 {
 	Application* App = ApplicationInitialize(&(ApplicationConfig){});
+
+	CVCVideoCapture *Video = CVCVideoCaptureOpenAny("assets/aos.mp4");
+	CVCDestroyVideoCapture(Video);
+
 	GApp = App;
 	ApplicationRun(App);
 	ApplicationShutdown(App);

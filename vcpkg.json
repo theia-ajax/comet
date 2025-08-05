@@ -5,6 +5,7 @@
       "features": [
         "vulkan"
       ]
-    }
+    },
+    "opencv4"
   ]
 }

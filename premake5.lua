@@ -4,6 +4,7 @@ workspace "comet"
 	location "bin"
 	files { "*.natvis" }
 	includedirs { "include" }
+	links {"cvc"}
 
 filter "platforms:linux64"
 	system "Linux"
@@ -33,6 +34,18 @@ filter "configurations:debug"
 filter "configurations:release"
 	optimize "On"
 	symbols "Off"
+
+project "cvc"
+	kind "StaticLib"
+	language "C++"
+	cppdialect "C++17"
+	toolset "gcc"
+	location "bin/cvc"
+	files {
+		"src/cvc/**.c",
+		"src/cvc/**.h",
+	}
+	-- links { "opencv_videoio" }
 
 project "comet"
 	kind "WindowedApp"
@@ -73,6 +86,8 @@ project "comet"
 	filter {"platforms:win64", "configurations:debug"}
 		kind "ConsoleApp"
 		libdirs { "vcpkg_installed/x64-windows/debug/lib" }
+
+
 
 project "theia"
 	kind "SharedLib"
