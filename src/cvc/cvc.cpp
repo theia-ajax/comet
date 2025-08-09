@@ -3,17 +3,17 @@
 #include <opencv4/opencv2/videoio.hpp>
 #include <vector>
 
-CVCVideoCapture* CVCVideoCaptureOpenAny(const char* FileName)
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenAny(const char* FileName)
 {
-	CVCVideoCaptureOpenWithApiAndParams(FileName, CVCVideoCaptureApis_Any, nullptr, 0);
+	return CVCVideoCaptureOpenWithApiAndParams(FileName, CVCVideoCaptureApis_Any, nullptr, 0);
 }
 
-CVCVideoCapture* CVCVideoCaptureOpenWithApi(const char* FileName, CVCVideoCaptureApis Api)
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenWithApi(const char* FileName, CVCVideoCaptureApis Api)
 {
 	return CVCVideoCaptureOpenWithApiAndParams(FileName, Api, nullptr, 0);
 }
 
-CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
 	const char* FileName,
 	CVCVideoCaptureApis Api,
 	const CVCVideoCaptureProperty* Params,
@@ -30,7 +30,7 @@ CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
 	cv::VideoCapture* NewVideoCapture = nullptr;
 
 	try {
-		NewVideoCapture = new cv::VideoCapture(std::string(FileName), Api, ParamVector);
+		NewVideoCapture = new cv::VideoCapture(cv::String(FileName), static_cast<int>(Api), ParamVector);
 	} catch (...) {
 		NewVideoCapture = nullptr;
 	}
@@ -40,7 +40,7 @@ CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
 	return Result;
 }
 
-void CVCDestroyVideoCapture(CVCVideoCapture* VideoCapture)
+CVC_API void CVCDestroyVideoCapture(CVCVideoCapture* VideoCapture)
 {
 	if (VideoCapture != nullptr) {
 		cv::VideoCapture* RawVideoCapture = reinterpret_cast<cv::VideoCapture*>(VideoCapture);

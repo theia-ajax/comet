@@ -1,11 +1,32 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
+#ifdef __WINDOWS__
+#ifdef CVC_NO_EXPORT
+#define API
+#else
+#define API __declspec(dllexport)
 #endif
+#else
+#ifdef __GNUC__
+#define API  __attribute__((__visibility__("default")))
+#else
+#define API
+#endif
+#endif
+
+#if defined __cplusplus
+#define EXTERN extern "C"
+#else
+	#include <stdarg.h>
+	#include <stdbool.h>
+	#include <stdint.h>
+	#include <stddef.h>
+	#define EXTERN extern
+#endif
+
+#define CVC_API EXTERN API
+
+#include <stdint.h>
 
 typedef enum CVCVideoCaptureApis {
 	CVCVideoCaptureApis_Any = 0,
@@ -132,16 +153,12 @@ typedef struct CVCVideoCaptureProperty {
 	int Value;
 } CVCVideoCaptureProperty;
 
-CVCVideoCapture* CVCVideoCaptureOpenAny(const char* FileName);
-CVCVideoCapture* CVCVideoCaptureOpenWithApi(const char* FileName, CVCVideoCaptureApis Api);
-CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenAny(const char* FileName);
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenWithApi(const char* FileName, CVCVideoCaptureApis Api);
+CVC_API CVCVideoCapture* CVCVideoCaptureOpenWithApiAndParams(
 	const char* FileName,
 	CVCVideoCaptureApis Api,
 	const CVCVideoCaptureProperty* Props,
 	size_t PropCount);
 
-void CVCDestroyVideoCapture(CVCVideoCapture *VideoCapture);
-
-#ifdef __cplusplus
-}
-#endif
+CVC_API void CVCDestroyVideoCapture(CVCVideoCapture *VideoCapture);
