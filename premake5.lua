@@ -46,33 +46,6 @@ filter "configurations:release"
 	optimize "On"
 	symbols "Off"
 
-project "cvc"
-	kind "SharedLib"
-	language "C++"
-	cppdialect "C++17"
-	toolset "gcc"
-	location "bin/cvc"
-	files {
-		"src/cvc/**.cpp",
-		"src/cvc/**.h",
-	}
-	links { "stdc++" }
-
-	filter "configurations:debug"
-		links { "opencv_videoio4d", "opencv_core4d", "opencv_video4d" }
-
-	filter "configurations:release"
-		links { "opencv_videoio4", "opencv_core4" }
-
-	filter "platforms:linux64"
-		includedirs { "vcpkg_installed/x64-linux/include/opencv4" }
-
-	filter "platforms:rpi"
-		includedirs { "vcpkg_installed/arm64-linux/include/opencv4" }
-	
-	filter "platforms:win64"
-		includedirs { "vcpkg_installed/x64-windows/include/opencv4" }
-
 project "comet"
 	kind "WindowedApp"
 	language "C"
@@ -88,7 +61,7 @@ project "comet"
 	includedirs { "include" }
 	debugdir "."
 	defines { "LOGGING_WRITE_TO_FILE" }
-	links {"cvc"}
+	links { "avformat", "avcodec", "avutil", "swscale" }
 
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
@@ -105,8 +78,6 @@ project "comet"
 
 	filter {"platforms:win64", "configurations:debug"}
 		kind "ConsoleApp"
-
-
 
 project "theia"
 	kind "SharedLib"
@@ -138,6 +109,7 @@ project "theia"
 	}
 	includedirs { "include", "src/common" }
 	debugdir "."
+	links { "avformat", "avcodec", "avutil", "swscale" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
