@@ -40,7 +40,7 @@ filter {"platforms:win64", "configurations:debug"}
 filter "configurations:debug"
 	optimize "Off"
 	symbols "On"
-	defines { "_DEBUG" }
+	defines { "_DEBUG", "SDL_ASSERT_LEVEL=2" }
 	
 filter "configurations:release"
 	optimize "On"
