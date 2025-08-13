@@ -586,7 +586,7 @@ void GameRender(const GameTime* gameTime)
 
 	// SpriteSystemRender(GGame.World);
 	// ColliderSystemDebugRender(GGame.World);
-	SDL_RenderTexture(GGame.Renderer, VideoDecoderRenderNextFrame(GGame.VidDecoder, GGame.Renderer), NULL, NULL);
+	SDL_RenderTexture(GGame.Renderer, VideoDecoderRenderNextFrame(GGame.VidDecoder, GGame.Renderer, gameTime), NULL, NULL);
 
 	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 

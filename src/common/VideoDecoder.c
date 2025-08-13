@@ -7,6 +7,8 @@
 #include <libswscale/swscale.h>
 #include <stb_ds.h>
 
+#include "Debug.h"
+#include "Game.h"
 #include "Log.h"
 
 enum { KMaxVideoDecoders = 4 };
@@ -130,6 +132,43 @@ void DestroyVideoDecoder(VideoDecoderId VideoDecoderHandle)
 	ASSERT(false && "TODO");
 }
 
+void VideoDecoderSeekSeconds(VideoDecoderId VideoDecoderHandle, float32 Seconds)
+{
+	if (!VALID_INDEX(VideoDecoderHandle.Value, KMaxVideoDecoders)) {
+		return;
+	}
+
+	VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
+
+	int SeekFlags = AVSEEK_FLAG_ANY;
+	
+	const int StreamIndex = Decoder->VideoStreamIndex;
+	const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
+	const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
+	const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
+	const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
+	const float32 DurationSeconds = DurationTimestamp * TimeBase;
+	
+	if (!Decoder->Started) {
+		Decoder->Started = true;
+		SeekFlags = AVSEEK_FLAG_FRAME;
+	} else {
+		Decoder->ElapsedSeconds += DeltaTime;
+		if (Decoder->ElapsedSeconds > DurationSeconds) {
+			Decoder->ElapsedSeconds -= DurationSeconds;
+			SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+		}
+	}
+	
+	const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
+	av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
+}
+
+float32 VideoDecoderGetDurationSeconds(VideoDecoderId VideoDecoderHandle)
+{
+
+}
+
 void VideoDecoderUpdate(VideoDecoderId VideoDecoderHandle, float32 DeltaTime)
 {
 	if (!VALID_INDEX(VideoDecoderHandle.Value, KMaxVideoDecoders)) {
@@ -139,37 +178,40 @@ void VideoDecoderUpdate(VideoDecoderId VideoDecoderHandle, float32 DeltaTime)
 	VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
 
 	int SeekFlags = AVSEEK_FLAG_ANY;
+	
+	const int StreamIndex = Decoder->VideoStreamIndex;
+	const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
+	const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
+	const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
+	const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
+	const float32 DurationSeconds = DurationTimestamp * TimeBase;
+	
 	if (!Decoder->Started) {
 		Decoder->Started = true;
-		SeekFlags = 0;
+		SeekFlags = AVSEEK_FLAG_FRAME;
 	} else {
 		Decoder->ElapsedSeconds += DeltaTime;
-		int TimeBaseNumerator = Decoder->FormatContext->streams[Decoder->VideoStreamIndex]->time_base.num;
-		int TimeBaseDenominator = Decoder->FormatContext->streams[Decoder->VideoStreamIndex]->time_base.den;
-		float32 TimeBase = (float32)TimeBaseNumerator / (float32)TimeBaseDenominator;
-
-		const float32 DurationSeconds = Decoder->FormatContext->streams[Decoder->VideoStreamIndex]->duration * TimeBase;
-
 		if (Decoder->ElapsedSeconds > DurationSeconds) {
 			Decoder->ElapsedSeconds -= DurationSeconds;
-			SeekFlags = 0;
+			SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
 		}
-
-		int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
-
-		LogInfo(
-			"%d %d %0.3f/%0.3f %d",
-			TimeBaseNumerator,
-			TimeBaseDenominator,
-			Decoder->ElapsedSeconds,
-			DurationSeconds,
-			ElapsedTimestamp);
-
-		av_seek_frame(Decoder->FormatContext, Decoder->VideoStreamIndex, ElapsedTimestamp, SeekFlags);
 	}
+	
+	const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
+	av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
+
+	DebugPrintf(
+		"SEC: %0.3f/%0.3f   FRM: %llu/%llu",
+		Decoder->ElapsedSeconds,
+		DurationSeconds,
+		ElapsedTimestamp,
+		DurationTimestamp);
 }
 
-SDL_Texture* VideoDecoderRenderNextFrame(VideoDecoderId VideoDecoderHandle, SDL_Renderer* Renderer)
+SDL_Texture* VideoDecoderRenderNextFrame(
+	VideoDecoderId VideoDecoderHandle,
+	SDL_Renderer* Renderer,
+	const GameTime* gameTime)
 {
 	SDL_Texture* Result = NULL;
 
@@ -190,6 +232,7 @@ SDL_Texture* VideoDecoderRenderNextFrame(VideoDecoderId VideoDecoderHandle, SDL_
 	if (ReadFrameRet >= 0) {
 		if (Decoder->Packet->stream_index == Decoder->VideoStreamIndex) {
 			bool GotFrame = false;
+			int SafetyValve = 12;
 
 			do {
 				int Ret = avcodec_send_packet(Decoder->CodecContext, Decoder->Packet);
@@ -209,7 +252,9 @@ SDL_Texture* VideoDecoderRenderNextFrame(VideoDecoderId VideoDecoderHandle, SDL_
 						GotFrame = true;
 					}
 				}
-			} while (!GotFrame);
+			} while (!GotFrame && --SafetyValve > 0);
+
+			LogInfo("%d", SafetyValve);
 		}
 	}
 
