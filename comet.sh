@@ -18,5 +18,6 @@ while getopts 'c:p:h' flag; do
 	esac
 done
 
+binpath='./bin/comet/bin/${platform}/${config}/comet'
 
-./bin/comet/bin/${platform}/${config}/comet
+[[ -f "$binpath" ]] && ./$binpath || ./build.sh -c $config -p $platform -r

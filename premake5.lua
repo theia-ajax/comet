@@ -61,7 +61,7 @@ project "comet"
 	includedirs { "include" }
 	debugdir "."
 	defines { "LOGGING_WRITE_TO_FILE" }
-	links { "avformat", "avcodec", "avutil", "swscale" }
+	links { "avformat", "avcodec", "avutil", "swscale", "swresample" }
 
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
@@ -109,7 +109,7 @@ project "theia"
 	}
 	includedirs { "include", "src/common" }
 	debugdir "."
-	links { "avformat", "avcodec", "avutil", "swscale" }
+	links { "avformat", "avcodec", "avutil", "swscale", "libswresample" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }
