@@ -134,34 +134,34 @@ void DestroyVideoDecoder(VideoDecoderId VideoDecoderHandle)
 
 void VideoDecoderSeekSeconds(VideoDecoderId VideoDecoderHandle, float32 Seconds)
 {
-	if (!VALID_INDEX(VideoDecoderHandle.Value, KMaxVideoDecoders)) {
-		return;
-	}
+	// if (!VALID_INDEX(VideoDecoderHandle.Value, KMaxVideoDecoders)) {
+	// 	return;
+	// }
 
-	VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
+	// VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
 
-	int SeekFlags = AVSEEK_FLAG_ANY;
+	// int SeekFlags = AVSEEK_FLAG_ANY;
 	
-	const int StreamIndex = Decoder->VideoStreamIndex;
-	const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
-	const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
-	const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
-	const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
-	const float32 DurationSeconds = DurationTimestamp * TimeBase;
+	// const int StreamIndex = Decoder->VideoStreamIndex;
+	// const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
+	// const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
+	// const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
+	// const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
+	// const float32 DurationSeconds = DurationTimestamp * TimeBase;
 	
-	if (!Decoder->Started) {
-		Decoder->Started = true;
-		SeekFlags = AVSEEK_FLAG_FRAME;
-	} else {
-		Decoder->ElapsedSeconds += DeltaTime;
-		if (Decoder->ElapsedSeconds > DurationSeconds) {
-			Decoder->ElapsedSeconds -= DurationSeconds;
-			SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
-		}
-	}
+	// if (!Decoder->Started) {
+	// 	Decoder->Started = true;
+	// 	SeekFlags = AVSEEK_FLAG_FRAME;
+	// } else {
+	// 	Decoder->ElapsedSeconds += DeltaTime;
+	// 	if (Decoder->ElapsedSeconds > DurationSeconds) {
+	// 		Decoder->ElapsedSeconds -= DurationSeconds;
+	// 		SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+	// 	}
+	// }
 	
-	const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
-	av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
+	// const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
+	// av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
 }
 
 float32 VideoDecoderGetDurationSeconds(VideoDecoderId VideoDecoderHandle)
