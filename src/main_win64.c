@@ -1,7 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdlib.h>
-
 #include "common/Application.h"
 
 Application *GApp = NULL;
@@ -9,6 +8,7 @@ Application *GApp = NULL;
 int main(int argc, char* argv[])
 {
 	Application* App = ApplicationInitialize(&(ApplicationConfig){});
+
 	GApp = App;
 	ApplicationRun(App);
 	ApplicationShutdown(App);

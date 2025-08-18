@@ -72,7 +72,15 @@
         "random.h": "c",
         "regex": "c",
         "sdl_main.h": "c",
-        "windows.h": "c"
+        "windows.h": "c",
+        "cv.h": "c",
+        "tracking_c.h": "c",
+        "avformat.h": "c",
+        "avcodec.h": "c",
+        "avutil.h": "c",
+        "ranges": "c",
+        "span": "c",
+        "xutility": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

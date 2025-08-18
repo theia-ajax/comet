@@ -7,4 +7,4 @@ if "%1"=="debug" (
 )
 
 del *.dll
-xcopy /y /d %BINPATH%*.dll .
+xcopy %BINPATH%*.dll . /d /Y >NUL

@@ -12,6 +12,8 @@ typedef struct _Application {
 
 static const ApplicationConfig DefaultApplicationConfig = {};
 
+void VidTest(void);
+
 Application* ApplicationInitialize(const ApplicationConfig* Config)
 {
 	Config = (Config != NULL) ? Config : &DefaultApplicationConfig;
@@ -60,6 +62,8 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 	ASSERT(Success);
 
 	Result = (Application*)App;
+
+	// VidTest();
 
 	return Result;
 }

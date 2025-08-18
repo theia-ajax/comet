@@ -21,6 +21,7 @@
 #include "SpriteDatabase.h"
 #include "StringId.h"
 #include "Util.h"
+#include "VideoDecoder.h"
 
 enum {
 	Group_Friendly,
@@ -103,6 +104,8 @@ struct {
 
 	ParticlePhysicsRenderConfig ParticleRenderConfig;
 	bool DebugDrawEnabled;
+
+	VideoDecoderId VidDecoder;
 } GGame;
 
 SpriteAnimationData GBossIdleAnimationData;
@@ -294,6 +297,8 @@ bool GameInitialize(const GameInitParams* params)
 	// AddComponent(TimerComponent, World, GBossEntity);
 
 	LogInfo("Game Initialization Complete");
+
+	GGame.VidDecoder = CreateVideoDecoderFromFile("assets/aos.mp4");
 
 	return true;
 }
@@ -519,29 +524,30 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// 	QueryFree(Query);
 	// }
-
+	
 	// DamageSystemUpdate(GGame.World, gameTime);
 	// LifetimeSystemUpdate(GGame.World, gameTime);
-
+	
 	// if (GGame.Frame == 1 && false) {
-	// 	const float32 SpacingX = 16.0f;
-	// 	const float32 SpacingY = 12.0f;
-	// 	PhysicsConfig Config = *PhysicsGetConfig();
-	// 	for (float32 y = Config.Bounds.Y + Config.CellSize + 84.0f; y < Config.Bounds.W - Config.CellSize; y +=
-	// 																									   SpacingX)
-	// 	{
-	// 		for (float32 x = Config.Bounds.X + Config.CellSize; x < Config.Bounds.Z - Config.CellSize; x += SpacingY) {
-	// 			PhysicsAddObject(&(PhysicsObject){
-	// 				.Position = V2(x, y),
-	// 				.Radius = 3.0f,
-	// 				.Heat = rnd_pcg_nextf(&GGame.RandomGen),
-	// 				.Acceleration = V2(10000 * (rnd_pcg_nextf(&GGame.RandomGen) < 0.5f ? -1.0f : 1.0f), 0),
-	// 			});
-	// 		}
-	// 	}
-	// }
-
-	ParticleSandboxUpdate(1.0f / 60.0f);
+		// 	const float32 SpacingX = 16.0f;
+		// 	const float32 SpacingY = 12.0f;
+		// 	PhysicsConfig Config = *PhysicsGetConfig();
+		// 	for (float32 y = Config.Bounds.Y + Config.CellSize + 84.0f; y < Config.Bounds.W - Config.CellSize; y +=
+		// 																									   SpacingX)
+		// 	{
+			// 		for (float32 x = Config.Bounds.X + Config.CellSize; x < Config.Bounds.Z - Config.CellSize; x += SpacingY) {
+				// 			PhysicsAddObject(&(PhysicsObject){
+					// 				.Position = V2(x, y),
+					// 				.Radius = 3.0f,
+					// 				.Heat = rnd_pcg_nextf(&GGame.RandomGen),
+					// 				.Acceleration = V2(10000 * (rnd_pcg_nextf(&GGame.RandomGen) < 0.5f ? -1.0f : 1.0f), 0),
+					// 			});
+					// 		}
+					// 	}
+					// }
+					
+	// ParticleSandboxUpdate(1.0f / 60.0f);
+	VideoDecoderUpdate(GGame.VidDecoder, gameTime->DeltaTimeF);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -562,6 +568,7 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
+
 	GGame.Frame++;
 }
 
@@ -579,6 +586,7 @@ void GameRender(const GameTime* gameTime)
 
 	// SpriteSystemRender(GGame.World);
 	// ColliderSystemDebugRender(GGame.World);
+	SDL_RenderTexture(GGame.Renderer, VideoDecoderRenderNextFrame(GGame.VidDecoder, GGame.Renderer, gameTime), NULL, NULL);
 
 	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
 
@@ -587,13 +595,13 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 0);
 	SDL_RenderClear(GGame.Renderer);
 
+	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
 
 	SDL_SetRenderTarget(GGame.Renderer, NULL);
 
 	SDL_RenderTexture(GGame.Renderer, GGame.ParticleRenderTexture, NULL, NULL);
 
-	// PhysicsDebugDraw(GGame.Renderer);
 
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
@@ -610,6 +618,8 @@ void GameRender(const GameTime* gameTime)
 				&(SDL_FRect){.x = WindowWidth - ColorCount + x, .y = 0, .w = 1.0f, .h = 4.0f});
 		}
 	}
+
+
 	SDL_RenderPresent(GGame.Renderer);
 }
 
