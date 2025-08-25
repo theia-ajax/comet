@@ -20,3 +20,5 @@ void LogVerbose(const char* Format, ...);
 void LogInfo(const char* Format, ...);
 void LogWarning(const char* Format, ...);
 void LogError(const void* Format, ...);
+
+#define LogExpressionIf()

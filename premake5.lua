@@ -109,7 +109,7 @@ project "theia"
 	}
 	includedirs { "include", "src/common" }
 	debugdir "."
-	links { "avformat", "avcodec", "avutil", "swscale", "libswresample" }
+	links { "avformat", "avcodec", "avutil", "swscale", "swresample" }
 	
 	filter "platforms:linux64"
 		links { "SDL3", "m", "stdc++" }

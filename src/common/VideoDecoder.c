@@ -141,14 +141,14 @@ void VideoDecoderSeekSeconds(VideoDecoderId VideoDecoderHandle, float32 Seconds)
 	// VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
 
 	// int SeekFlags = AVSEEK_FLAG_ANY;
-	
+
 	// const int StreamIndex = Decoder->VideoStreamIndex;
 	// const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
 	// const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
 	// const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
 	// const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
 	// const float32 DurationSeconds = DurationTimestamp * TimeBase;
-	
+
 	// if (!Decoder->Started) {
 	// 	Decoder->Started = true;
 	// 	SeekFlags = AVSEEK_FLAG_FRAME;
@@ -159,14 +159,13 @@ void VideoDecoderSeekSeconds(VideoDecoderId VideoDecoderHandle, float32 Seconds)
 	// 		SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
 	// 	}
 	// }
-	
+
 	// const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
 	// av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
 }
 
 float32 VideoDecoderGetDurationSeconds(VideoDecoderId VideoDecoderHandle)
 {
-
 }
 
 void VideoDecoderUpdate(VideoDecoderId VideoDecoderHandle, float32 DeltaTime)
@@ -178,27 +177,27 @@ void VideoDecoderUpdate(VideoDecoderId VideoDecoderHandle, float32 DeltaTime)
 	VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
 
 	int SeekFlags = AVSEEK_FLAG_ANY;
-	
+
 	const int StreamIndex = Decoder->VideoStreamIndex;
 	const int TimeBaseNumerator = Decoder->FormatContext->streams[StreamIndex]->time_base.num;
 	const int TimeBaseDenominator = Decoder->FormatContext->streams[StreamIndex]->time_base.den;
 	const float64 TimeBase = (float64)TimeBaseNumerator / (float64)TimeBaseDenominator;
 	const int64_t DurationTimestamp = Decoder->FormatContext->streams[StreamIndex]->duration;
 	const float32 DurationSeconds = DurationTimestamp * TimeBase;
-	
+	int64 ElapsedTimestamp = 0;
+
 	if (!Decoder->Started) {
 		Decoder->Started = true;
-		SeekFlags = AVSEEK_FLAG_FRAME;
+		// SeekFlags = AVSEEK_FLAG_FRAME;
 	} else {
 		Decoder->ElapsedSeconds += DeltaTime;
 		if (Decoder->ElapsedSeconds > DurationSeconds) {
-			Decoder->ElapsedSeconds -= DurationSeconds;
+			Decoder->ElapsedSeconds = 0;
 			SeekFlags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
 		}
+		ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
+		av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
 	}
-	
-	const int64 ElapsedTimestamp = (int64)(Decoder->ElapsedSeconds / TimeBase);
-	av_seek_frame(Decoder->FormatContext, StreamIndex, ElapsedTimestamp, SeekFlags);
 
 	DebugPrintf(
 		"SEC: %0.3f/%0.3f   FRM: %llu/%llu",
@@ -221,18 +220,16 @@ SDL_Texture* VideoDecoderRenderNextFrame(
 
 	VideoDecoder* Decoder = &Storage[VideoDecoderHandle.Value];
 
-	// if (av_read_frame(Decoder->FormatContext, Decoder->Packet) >= 0)
-
-	int ReadFrameRet = av_read_frame(Decoder->FormatContext, Decoder->Packet);
-	// if (ReadFrameRet < 0){
-	// 	av_seek_frame(Decoder->FormatContext, Decoder->VideoStreamIndex, 0, AVSEEK_FLAG_ANY);
-	// 	ReadFrameRet = av_read_frame(Decoder->FormatContext, Decoder->Packet);
-	// }
+	int ReadFrameSafetyValve = 5;
+	int ReadFrameRet = NONE;
+	do {
+		ReadFrameRet = av_read_frame(Decoder->FormatContext, Decoder->Packet);
+	} while (ReadFrameRet < 0 && --ReadFrameSafetyValve > 0);
 
 	if (ReadFrameRet >= 0) {
 		if (Decoder->Packet->stream_index == Decoder->VideoStreamIndex) {
-			bool GotFrame = false;
-			int SafetyValve = 12;
+			bool ReceivedFrame = false;
+			int ReceiveFrameSafetyValve = 10;
 
 			do {
 				int Ret = avcodec_send_packet(Decoder->CodecContext, Decoder->Packet);
@@ -249,12 +246,16 @@ SDL_Texture* VideoDecoderRenderNextFrame(
 							Decoder->CodecContext->height,
 							Decoder->FrameRgb->data,
 							Decoder->FrameRgb->linesize);
-						GotFrame = true;
+						ReceivedFrame = true;
 					}
 				}
-			} while (!GotFrame && --SafetyValve > 0);
+			} while (!ReceivedFrame && --ReceiveFrameSafetyValve > 0);
 
-			LogInfo("%d", SafetyValve);
+			DebugPrintf("ReceiveFrameSafetyValve: %d", ReceiveFrameSafetyValve);
+
+			if (ReceiveFrameSafetyValve <= 0) {
+				LogWarning("Safety valve tripped.");
+			}
 		}
 	}
 

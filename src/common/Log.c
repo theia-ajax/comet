@@ -46,6 +46,16 @@ FILE* GLogFile;
 static void _InternalLogV(LogLevel Level, const char* Format, va_list Args);
 static void _InternalSetTerminalColor(enum TermColor Color);
 
+#define _InternalLogVArg(Level)                                                                                            \
+	{                                                                                                                  \
+		if (GLogLevel >= Level) {                                                                                      \
+			va_list Args;                                                                                              \
+			va_start(Args, Format);                                                                                    \
+			_InternalLogV(Level, Format, Args);                                                                        \
+			va_end(Args);                                                                                              \
+		}                                                                                                              \
+	}
+
 void LoggingInitialize(LogLevel Level)
 {
 	GLogLevel = Level;
@@ -73,42 +83,22 @@ void LoggingSetLogLevel(LogLevel Level)
 
 void LogVerbose(const char* Format, ...)
 {
-	if (GLogLevel >= LogLevel_Verbose) {
-		va_list Args;
-		va_start(Args, Format);
-		_InternalLogV(LogLevel_Verbose, Format, Args);
-		va_end(Args);
-	}
+	_InternalLogVArg(LogLevel_Verbose);
 }
 
 void LogInfo(const char* Format, ...)
 {
-	if (GLogLevel >= LogLevel_Info) {
-		va_list Args;
-		va_start(Args, Format);
-		_InternalLogV(LogLevel_Info, Format, Args);
-		va_end(Args);
-	}
+	_InternalLogVArg(LogLevel_Info);
 }
 
 void LogWarning(const char* Format, ...)
 {
-	if (GLogLevel >= LogLevel_Warning) {
-		va_list Args;
-		va_start(Args, Format);
-		_InternalLogV(LogLevel_Warning, Format, Args);
-		va_end(Args);
-	}
+	_InternalLogVArg(LogLevel_Warning);
 }
 
 void LogError(const void* Format, ...)
 {
-	if (GLogLevel >= LogLevel_Error) {
-		va_list Args;
-		va_start(Args, Format);
-		_InternalLogV(LogLevel_Error, Format, Args);
-		va_end(Args);
-	}
+	_InternalLogVArg(LogLevel_Error);
 }
 
 static void _InternalLogV(LogLevel Level, const char* Format, va_list Args)

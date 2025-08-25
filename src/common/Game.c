@@ -175,7 +175,7 @@ bool GameInitialize(const GameInitParams* params)
 		.CanvasWidth = WindowWidth,
 		.CanvasHeight = WindowHeight,
 		.Renderer = GGame.Renderer,
-		.BackgroundColor = 0x4F10207F,
+		.BackgroundColor = 0xCF10207F,
 		.ForegroundColor = 0xFF00CF7F,
 		.Margin = 8,
 	});
