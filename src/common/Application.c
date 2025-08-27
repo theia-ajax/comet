@@ -32,6 +32,7 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 
 	Application* Result = NULL;
 	_Application* App = SDL_malloc(sizeof(_Application));
+	SDL_zerop(App);
 
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		PanicAndAbort("SDL Error", SDL_GetError());
@@ -51,7 +52,7 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 
 	stm_setup();
 
-	SDL_Window* Window = SDL_CreateWindow("Comet", 1480, 320, SDL_WINDOW_RESIZABLE);
+	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
 	App->Window = Window;
 
 	// SDL_WINDOWPOS_CENTERED doesn't seem to include window decoration which is especially noticable on the Y axis
@@ -101,8 +102,6 @@ void ApplicationRun(Application* App)
 
 	while (GameIsRunning()) {
 		uint64 FrameStartTicks = stm_now();
-
-		SDL_zerop(&_App->InputState);
 
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {

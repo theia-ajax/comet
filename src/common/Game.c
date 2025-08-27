@@ -15,7 +15,6 @@
 #include "JsonHelpers.h"
 #include "Log.h"
 #include "Math2D.h"
-#include "ParticleSandbox.h"
 #include "Physics.h"
 #include "Random.h"
 #include "RenderUtil.h"
@@ -117,7 +116,7 @@ bool GameInitialize(const GameInitParams* params)
 	GGame.Renderer = SDL_CreateRenderer(GGame.Window, SelectedRenderDriver);
 	int WindowWidth, WindowHeight;
 	SDL_GetWindowSizeInPixels(GGame.Window, &WindowWidth, &WindowHeight);
-	SDL_SetRenderLogicalPresentation(GGame.Renderer, WindowWidth, WindowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_SetRenderLogicalPresentation(GGame.Renderer, 640, 360, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 	SDL_SetRenderDrawBlendMode(GGame.Renderer, SDL_BLENDMODE_BLEND);
 
 	DebugInitialize(&(DebugConfig){
@@ -171,61 +170,59 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	ParticleSandboxInitializeFromConfigFile("particles.ini");
+	GGame.World = CreateGameWorld();
 
-	// GGame.World = CreateGameWorld();
+	if (!GGame.World) {
+		LogError("Shit");
+		exit(1);
+	}
 
-	// if (!GGame.World) {
-	// 	LogError("Shit");
-	// 	exit(1);
-	// }
+	GGame.LevelEntity = CreateEntity(GGame.World);
+	*AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
+		.TintColor = V4(0.0f, 0.0f, 0.1f, 1.0f),
+	};
 
-	// GGame.LevelEntity = CreateEntity(GGame.World);
-	// *AddComponent(RenderTintComponent, GGame.World, GGame.LevelEntity) = (RenderTintComponent){
-	// 	.TintColor = V4(0.0f, 0.0f, 0.0f, 1.0f),
-	// };
+	GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));
+	CreateEnemy(GGame.World, V2(256, 128));
 
-	// GGame.PlayerEntity = CreatePlayerShip(GGame.World, V2(64, 128));
-	// CreateEnemy(GGame.World, V2(256, 128));
+	{
+		EntityId BackgroundEntity = CreateEntity(GGame.World);
+		*AddComponent(TransformComponent, GGame.World, BackgroundEntity) = (TransformComponent){
+			.Position = V2(372, 128),
+		};
+		*AddComponent(SpriteComponent, GGame.World, BackgroundEntity) = (SpriteComponent){
+			.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
+		};
+		*AddComponent(SpriteTilesComponent, GGame.World, BackgroundEntity) = (SpriteTilesComponent){
+			.Tiles = {4, 4},
+		};
+		*AddComponent(RenderLayerComponent, GGame.World, BackgroundEntity) = (RenderLayerComponent){
+			.Layer = -1000,
+		};
+	}
 
-	// {
-	// 	EntityId BackgroundEntity = CreateEntity(GGame.World);
-	// 	*AddComponent(TransformComponent, GGame.World, BackgroundEntity) = (TransformComponent){
-	// 		.Position = V2(372, 128),
-	// 	};
-	// 	*AddComponent(SpriteComponent, GGame.World, BackgroundEntity) = (SpriteComponent){
-	// 		.SpriteId = SpriteSheetFindSpriteByIndex(GGame.BackgroundObjectsSpriteSheetHandle, 44),
-	// 	};
-	// 	*AddComponent(SpriteTilesComponent, GGame.World, BackgroundEntity) = (SpriteTilesComponent){
-	// 		.Tiles = {4, 4},
-	// 	};
-	// 	*AddComponent(RenderLayerComponent, GGame.World, BackgroundEntity) = (RenderLayerComponent){
-	// 		.Layer = -1000,
-	// 	};
-	// }
+	GBossIdleAnimationData = (SpriteAnimationData){
+		.Frames =
+			{
+				{.Sprite = SpriteFindByName("boss-01-1")}, {.Sprite = SpriteFindByName("boss-01-2")},
+				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-4")},
+				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-6")},
+				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
+				{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-6")},
+				{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-4")},
+				{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-2")},
+				{.Sprite = SpriteFindByName("boss-01-1")},
+			},
+		.FrameCount = 19,
+		.SecondsPerFrame = 1.0f / 6.0f,
+	};
 
-	// GBossIdleAnimationData = (SpriteAnimationData){
-	// 	.Frames =
-	// 		{
-	// 			{.Sprite = SpriteFindByName("boss-01-1")}, {.Sprite = SpriteFindByName("boss-01-2")},
-	// 			{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-4")},
-	// 			{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-6")},
-	// 			{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-8")},
-	// 			{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
-	// 			{.Sprite = SpriteFindByName("boss-01-8")}, {.Sprite = SpriteFindByName("boss-01-8")},
-	// 			{.Sprite = SpriteFindByName("boss-01-7")}, {.Sprite = SpriteFindByName("boss-01-6")},
-	// 			{.Sprite = SpriteFindByName("boss-01-5")}, {.Sprite = SpriteFindByName("boss-01-4")},
-	// 			{.Sprite = SpriteFindByName("boss-01-3")}, {.Sprite = SpriteFindByName("boss-01-2")},
-	// 			{.Sprite = SpriteFindByName("boss-01-1")},
-	// 		},
-	// 	.FrameCount = 19,
-	// 	.SecondsPerFrame = 1.0f / 6.0f,
-	// };
-
-	// GBossEntity = CreateEntity(World);
-	// AddComponent(TransformComponent, World, GBossEntity)->Position = V2(600, 100);
-	// AddComponent(SpriteComponent, World, GBossEntity);
-	// AddComponent(TimerComponent, World, GBossEntity);
+	GBossEntity = CreateEntity(GGame.World);
+	AddComponent(TransformComponent, GGame.World, GBossEntity)->Position = V2(600, 100);
+	AddComponent(SpriteComponent, GGame.World, GBossEntity);
+	AddComponent(TimerComponent, GGame.World, GBossEntity);
 
 	LogInfo("Game Initialization Complete");
 
@@ -330,7 +327,6 @@ void GameShutdown(void)
 	LogInfo(__FUNCTION__);
 
 	ClearSdlEventHandlers();
-	ParticleSandboxShutdown();
 	SpriteDatabaseShutdown();
 	DrawShutdown();
 	AssetsShutdown();
@@ -403,52 +399,32 @@ void GameUpdate(const GameTime* gameTime)
 	FrameAllocatorNextFrame();
 	DebugNextFrame();
 
-	// ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
-	// MovementSystemUpdate(GGame.World, gameTime);
+	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
+	MovementSystemUpdate(GGame.World, gameTime);
 
-	// {
-	// 	EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
-	// 	for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
-	// 		// todo: very dumb and bad just getting absolute basic case working
-	// 		// Tform2 ParentTransform;
-	// 		TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
-	// 		LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
-	// 		ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
-	// 		Tform2 ParentT2 = (Tform2){0};
-	// 		float32 ParentRotation = 0.0f;
-	// 		if (ChildOf->Parent.RawValue != 0) {
-	// 			TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
-	// 			ParentT2 = T2Component(ParentTransform);
-	// 			ParentRotation = ParentTransform->Rotation;
-	// 		}
-	// 		Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
-	// 		Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
-	// 	}
-	// 	QueryFree(Query);
-	// }
+	{
+		EntityId* Query = WorldQueryEntities(GGame.World, REQUIRED(Transform, LocalTransform, ChildOf), REJECTED());
+		for (EntityId* Iter = QueryBegin(Query); Iter != QueryEnd(Query); Iter++) {
+			// todo: very dumb and bad just getting absolute basic case working
+			// Tform2 ParentTransform;
+			TransformComponent* Transform = GetComponent(TransformComponent, GGame.World, *Iter);
+			LocalTransformComponent* LocalTransform = GetComponent(LocalTransformComponent, GGame.World, *Iter);
+			ChildOfComponent* ChildOf = GetComponent(ChildOfComponent, GGame.World, *Iter);
+			Tform2 ParentT2 = (Tform2){0};
+			float32 ParentRotation = 0.0f;
+			if (ChildOf->Parent.RawValue != 0) {
+				TransformComponent* ParentTransform = GetComponent(TransformComponent, GGame.World, ChildOf->Parent);
+				ParentT2 = T2Component(ParentTransform);
+				ParentRotation = ParentTransform->Rotation;
+			}
+			Transform->Position = TransformV2(ParentT2, LocalTransform->LocalPosition);
+			Transform->Rotation = ParentRotation + LocalTransform->LocalRotation;
+		}
+		QueryFree(Query);
+	}
 
-	// DamageSystemUpdate(GGame.World, gameTime);
-	// LifetimeSystemUpdate(GGame.World, gameTime);
-
-	// if (GGame.Frame == 1 && false) {
-	// 	const float32 SpacingX = 16.0f;
-	// 	const float32 SpacingY = 12.0f;
-	// 	PhysicsConfig Config = *PhysicsGetConfig();
-	// 	for (float32 y = Config.Bounds.Y + Config.CellSize + 84.0f; y < Config.Bounds.W - Config.CellSize; y +=
-	// 																									   SpacingX)
-	// 	{
-	// 		for (float32 x = Config.Bounds.X + Config.CellSize; x < Config.Bounds.Z - Config.CellSize; x += SpacingY) {
-	// 			PhysicsAddObject(&(PhysicsObject){
-	// 				.Position = V2(x, y),
-	// 				.Radius = 3.0f,
-	// 				.Heat = rnd_pcg_nextf(&GGame.RandomGen),
-	// 				.Acceleration = V2(10000 * (rnd_pcg_nextf(&GGame.RandomGen) < 0.5f ? -1.0f : 1.0f), 0),
-	// 			});
-	// 		}
-	// 	}
-	// }
-
-	ParticleSandboxUpdate(1.0f / 60.0f);
+	DamageSystemUpdate(GGame.World, gameTime);
+	LifetimeSystemUpdate(GGame.World, gameTime);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -476,27 +452,24 @@ void GameRender(const GameTime* gameTime)
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 255);
 	SDL_RenderClear(GGame.Renderer);
 
-	// RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
-	// if (BackgroundTint != NULL) {
-	// 	ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
-	// 	SDL_SetRenderDrawColor(GGame.Renderer, Color.R, Color.G, Color.B, Color.A);
-	// 	SDL_RenderFillRect(GGame.Renderer, NULL);
-	// }
+	SDL_Color BackgroundColor = {};
+	RenderTintComponent* BackgroundTint = TryGetComponent(RenderTintComponent, GGame.World, GGame.LevelEntity);
+	if (BackgroundTint != NULL) {
+		ColorU8 Color = ColorU8FromVec4(BackgroundTint->TintColor);
+		BackgroundColor = *(SDL_Color*)&Color;
+	}
 
-	// SpriteSystemRender(GGame.World);
-	// ColliderSystemDebugRender(GGame.World);
+	SpriteSystemRender(GGame.World);
+	ColliderSystemDebugRender(GGame.World);
 
-	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 0);
+	SDL_SetRenderDrawColor(GGame.Renderer, BackgroundColor.r, BackgroundColor.g, BackgroundColor.b, BackgroundColor.a);
 	SDL_RenderClear(GGame.Renderer);
 
 	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
 
-	ParticleSandboxRender(GGame.Renderer);
-
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
-		ParticleSandboxDebugDraw(GGame.Renderer);
 	}
 
 	SDL_RenderPresent(GGame.Renderer);
@@ -577,6 +550,7 @@ struct DamageEvent {
 	EntityId DamageReceiver;
 	EntityId DamageSource;
 };
+
 static int32 DamageEventCompare(struct DamageEvent A, struct DamageEvent B)
 {
 	return ENTITY_ID_EQ(A.DamageReceiver, B.DamageReceiver) ? EntityIdCompare(A.DamageSource, B.DamageSource)
