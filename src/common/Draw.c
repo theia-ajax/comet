@@ -6,7 +6,7 @@
 #include "Log.h"
 #include "Math2D.h"
 #include "SpriteDatabase.h"
-#include "Util.h"
+#include "Algorithm.h"
 
 // Constants
 

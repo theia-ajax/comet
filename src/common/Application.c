@@ -5,24 +5,33 @@
 
 #include "Game.h"
 #include "Log.h"
+#include "SdlEventHandler.h"
 
 typedef struct _Application {
 	SDL_Window* Window;
+	GameInput InputState;
 } _Application;
 
 static const ApplicationConfig DefaultApplicationConfig = {};
 
-void VidTest(void);
+bool ApplicationHandleSdlEvent(const SDL_Event* Event, void* Context);
 
 Application* ApplicationInitialize(const ApplicationConfig* Config)
 {
+#ifdef _DEBUG
+	LogLevel LoggingLevel = LogLevel_Info;
+#else
+	LogLevel LoggingLevel = LogLevel_Warning;
+#endif
+
+	LoggingLevel = LogLevel_Info;
+	LoggingInitialize(LoggingLevel);
+	LogInfo(__FUNCTION__);
+
 	Config = (Config != NULL) ? Config : &DefaultApplicationConfig;
 
 	Application* Result = NULL;
-
 	_Application* App = SDL_malloc(sizeof(_Application));
-
-	LoggingInitialize(LogLevel_Info);
 
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		PanicAndAbort("SDL Error", SDL_GetError());
@@ -88,31 +97,19 @@ void ApplicationRun(Application* App)
 	uint64 RenderTimeTicks = 0;
 	double ElapsedSeconds = 0.0;
 
-	GameInput InputState = {0};
+	AddSdlEventHandler(ApplicationHandleSdlEvent, App);
 
 	while (GameIsRunning()) {
 		uint64 FrameStartTicks = stm_now();
 
+		SDL_zerop(&_App->InputState);
+
 		SDL_Event Event;
 		while (SDL_PollEvent(&Event)) {
-			switch (Event.type) {
-				case SDL_EVENT_QUIT: GameRequestShutdown(); break;
-				case SDL_EVENT_KEY_DOWN:
-					if (Event.key.scancode == SDL_SCANCODE_ESCAPE) {
-						GameRequestShutdown();
-					}
-					if (Event.key.scancode == SDL_SCANCODE_RETURN && (Event.key.mod & SDL_KMOD_ALT) != 0) {
-						SDL_SetWindowFullscreen(Window, !((SDL_GetWindowFlags(Window) & SDL_WINDOW_FULLSCREEN) != 0));
-					}
-					InputState.KeyStates[Event.key.scancode] = true;
-					break;
-				case SDL_EVENT_KEY_UP: InputState.KeyStates[Event.key.scancode] = false; break;
-				default: break;
-			}
-			GameProcessEvent(&Event);
+			HandleSdlEvent(&Event);
 		}
 
-		GameSendInput(&InputState);
+		GameSendInput(&_App->InputState);
 
 		DeltaTicks = stm_laptime(&NowTicks);
 		double DeltaTimeSeconds = stm_sec(DeltaTicks);
@@ -143,4 +140,38 @@ void ApplicationRun(Application* App)
 SDL_Window* GetApplicationWindow(Application* App)
 {
 	return ((_Application*)App)->Window;
+}
+
+bool ApplicationHandleSdlEvent(const SDL_Event* Event, void* Context)
+{
+	_Application* App = (_Application*)Context;
+	bool Handled = false;
+
+	switch (Event->type) {
+		case SDL_EVENT_QUIT:
+			GameRequestShutdown();
+			Handled = true;
+			break;
+		case SDL_EVENT_KEY_DOWN:
+			switch (Event->key.scancode) {
+				case SDL_SCANCODE_ESCAPE:
+					GameRequestShutdown();
+					Handled = true;
+					break;
+				case SDL_SCANCODE_RETURN:
+					if ((Event->key.mod & SDL_KMOD_ALT) != 0) {
+						SDL_SetWindowFullscreen(
+							App->Window,
+							!((SDL_GetWindowFlags(App->Window) & SDL_WINDOW_FULLSCREEN) != 0));
+						Handled = true;
+					}
+					break;
+			}
+			App->InputState.KeyStates[Event->key.scancode] = true;
+			break;
+		case SDL_EVENT_KEY_UP: App->InputState.KeyStates[Event->key.scancode] = false; break;
+		default: break;
+	}
+
+	return Handled;
 }

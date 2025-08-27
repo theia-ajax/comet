@@ -18,6 +18,16 @@ struct json_value_s* JsonLoadFile(const char* fileName)
 	return ParsedJson;
 }
 
+struct json_object_s* JsonLoadFileAsObject(const char* FileName)
+{
+	return json_value_as_object(JsonLoadFile(FileName));
+}
+
+struct json_array_s* JsonLoadFileAsArray(const char* FileName)
+{
+	return json_value_as_array(JsonLoadFile(FileName));
+}
+
 bool JsonParseNumber(struct json_value_s* NumberValue, double* NumberOut)
 {
 	ASSERT(NumberOut);

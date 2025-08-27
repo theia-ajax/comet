@@ -26,7 +26,6 @@ typedef struct GameTime {
 bool GameInitialize(const GameInitParams* params);
 void GameShutdown(void);
 void GameSendInput(const GameInput* input);
-void GameProcessEvent(const SDL_Event* event);
 void GameUpdate(const GameTime* time);
 void GameRender(const GameTime* time);
 bool GameIsRunning(void);

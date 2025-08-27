@@ -61,10 +61,10 @@ project "comet"
 	includedirs { "include" }
 	debugdir "."
 	defines { "LOGGING_WRITE_TO_FILE" }
-	links { "avformat", "avcodec", "avutil", "swscale", "swresample" }
+	links { "avformat", "avcodec", "avutil", "swscale" }
 
 	filter "platforms:linux64"
-		links { "SDL3", "m", "stdc++" }
+		links { "SDL3", "m", "stdc++", "swresample" }
 		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
 	
 	filter "platforms:rpi"
@@ -78,58 +78,3 @@ project "comet"
 
 	filter {"platforms:win64", "configurations:debug"}
 		kind "ConsoleApp"
-
-project "theia"
-	kind "SharedLib"
-	language "C"
-	cdialect "gnu17"
-	toolset "gcc"
-	location "bin/theia"
-	files { 
-		"src/common/AssetTypes.h",
-		"src/common/AssetTypes.c",
-		"src/common/ColorUtil.h",
-		"src/common/ColorUtil.c",
-		"src/common/JsonHelpers.h",
-		"src/common/JsonHelpers.c",
-		"src/common/Log.h",
-		"src/common/Log.c",
-		"src/common/ParticlePhysics.h",
-		"src/common/ParticlePhysics.c",
-		"src/common/ParticleSandbox.h",
-		"src/common/ParticleSandbox.c",
-		"src/common/Random.h",
-		"src/common/Random.c",
-		"src/common/RenderUtil.h",
-		"src/common/RenderUtil.c",
-		"src/common/StringId.h",
-		"src/common/StringId.c",
-		"src/lib/**.c",
-		"src/lib/**.h",
-	}
-	includedirs { "include", "src/common" }
-	debugdir "."
-	links { "avformat", "avcodec", "avutil", "swscale", "libswresample" }
-	
-	filter "platforms:linux64"
-		links { "SDL3", "m", "stdc++" }
-		libdirs { "vcpkg_installed/x64-linux/lib" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
-	
-	filter "platforms:rpi"
-		links { "SDL3", "m", "stdc++" }
-		libdirs { "vcpkg_installed/arm64-linux/lib" }
-		includedirs { "vcpkg_installed/arm64-linux/include" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=4" }
-
-	filter "platforms:win64"
-		links { "SDL3" }
-		defines { "__WINDOWS__" }
-		includedirs { "vcpkg_installed/x64-windows/include" }
-		defines { "PARTICLE_PHYSICS_SOLVER_WORKER_COUNT=8" }
-		
-	filter {"platforms:win64", "configurations:release"}
-		libdirs { "vcpkg_installed/x64-windows/lib" }
-
-	filter {"platforms:win64", "configurations:debug"}
-		libdirs { "vcpkg_installed/x64-windows/debug/lib" }

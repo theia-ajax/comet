@@ -1,4 +1,4 @@
-#include "Util.h"
+#include "Algorithm.h"
 
 #define BINARY_SEARCH_IMPL(type)                                                                                       \
 	BINARY_SEARCH_PROTOTYPE(type)                                                                                      \

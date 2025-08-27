@@ -10,7 +10,6 @@ typedef struct SDL_Texture SDL_Texture;
 typedef struct ParticleSandboxRenderingConfig {
 	int32 Width;
 	int32 Height;
-	StringId RenderDriver;
 	StringId HeatColorsImageFileName;
 	float32 SpriteScale;
 	float32 ExtraRadius;
@@ -43,7 +42,16 @@ typedef struct ParticleSandboxRenderContext {
 	ColorU8* HeatGradient;
 } ParticleSandboxRenderContext;
 
+typedef struct ParticlePhysicsConfigFile {
+	ParticleSandboxConfig Config;
+	struct {
+		const char* FileName;
+		int64 LastModified;
+	} Meta;
+} ParticlePhysicsConfigFile;
+
 void ParticleSandboxInitialize(const ParticleSandboxConfig* Config);
+void ParticleSandboxInitializeFromConfigFile(const char* ConfigFileName);
 void ParticleSandboxShutdown(void);
 ParticleSandboxConfig ParticleSandboxDefaultConfig(void);
 const ParticleSandboxConfig ParticleSandboxGetConfig(void);
@@ -58,3 +66,7 @@ void ParticleSandboxApplyConfig(const ParticleSandboxConfig* Config);
 
 void ParticleSandboxUpdate(float32 DeltaTime);
 void ParticleSandboxRenderToTexture(ParticleSandboxRenderContext* Context);
+void ParticleSandboxRender(SDL_Renderer* Renderer);
+
+bool ParticleSandboxExportHeatGradientToFile(const char* FileName);
+void ParticleSandboxDebugDraw(SDL_Renderer* Renderer);

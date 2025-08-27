@@ -6,22 +6,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "Algorithm.h"
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
 #include "FrameAllocator.h"
 #include "GameWorld.h"
+#include "JsonHelpers.h"
 #include "Log.h"
 #include "Math2D.h"
-#include "ParticlePhysics.h"
 #include "ParticleSandbox.h"
 #include "Physics.h"
 #include "Random.h"
 #include "RenderUtil.h"
+#include "SdlEventHandler.h"
 #include "SpriteDatabase.h"
 #include "StringId.h"
-#include "Util.h"
-#include "VideoDecoder.h"
 
 enum {
 	Group_Friendly,
@@ -42,31 +42,9 @@ typedef struct SpriteAnimationData {
 	float32 SecondsPerFrame;
 } SpriteAnimationData;
 
-typedef struct ParticlePhysicsRenderConfig {
-	ColorU8* HeatRampColors;
-	SpriteSheetId ParticleSpriteSheetId;
-	SpriteId ParticleSpriteId;
-} ParticlePhysicsRenderConfig;
-
-typedef struct ParticlePhysicsConfigFile {
-	ParticleSandboxConfig Config;
-	struct {
-		const char* FileName;
-		SDL_Time LastModified;
-	} Meta;
-} ParticlePhysicsConfigFile;
-
 static EntityId CreateProjectile(GameWorld* World, Vec2 Position, float32 Rotation, float32 Speed);
 static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position);
 static EntityId CreateEnemy(GameWorld* World, Vec2 Position);
-
-// Allocates new buffer to read file into, returns true if succesfully read file and *OutFileData will point to the
-// allocated buffer. The caller is responsible for freeing this buffer!
-bool ReadFileToNewBuffer(const char* FileName, char** OutFileData);
-bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut);
-bool CheckConfigFileChanges();
-void LoadHeatRamp(const char* HeatRampFileName);
-void UpdateParticleSpriteId();
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity);
 void MovementSystemUpdate(GameWorld* World, const GameTime* Time);
@@ -75,15 +53,13 @@ void LifetimeSystemUpdate(GameWorld* World, const GameTime* Time);
 void BehaviorSystemUpdate(GameWorld* World, const GameTime* Time);
 void SpriteSystemRender(GameWorld* World);
 void ColliderSystemDebugRender(GameWorld* World);
-void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderConfig* Config);
+
+bool GameHandleSdlEvent(const SDL_Event* Event, void* Context);
 
 struct {
 	bool IsRunning;
 	SDL_Window* Window;
 	SDL_Renderer* Renderer;
-	SDL_Texture* ParticleRenderTexture;
-	int32 GameResWidth;
-	int32 GameResHeight;
 	GameInput Input;
 	GameInput LastInput;
 	int32 Frame;
@@ -99,13 +75,7 @@ struct {
 	float32 SecondTimer;
 	int32 LastFPS;
 	int32 FramesThisSecond;
-	ParticlePhysicsConfigFile ParticlePhysicsConfigFile;
-	ParticleSandboxConfig* SandboxConfig;
-
-	ParticlePhysicsRenderConfig ParticleRenderConfig;
 	bool DebugDrawEnabled;
-
-	VideoDecoderId VidDecoder;
 } GGame;
 
 SpriteAnimationData GBossIdleAnimationData;
@@ -113,15 +83,7 @@ EntityId GBossEntity;
 
 bool GameInitialize(const GameInitParams* params)
 {
-#ifdef _DEBUG
-	LogLevel LoggingLevel = LogLevel_Info;
-#else
-	LogLevel LoggingLevel = LogLevel_Warning;
-#endif
-
-	LoggingLevel = LogLevel_Info;
-	LoggingInitialize(LoggingLevel);
-	LogInfo(__FUNCTION__);
+	AddSdlEventHandler(GameHandleSdlEvent, NULL);
 
 	FrameAllocatorInitialize(KILOBYTES(640));
 
@@ -133,14 +95,16 @@ bool GameInitialize(const GameInitParams* params)
 
 	StringIdPoolsInitialize();
 
-	GGame.SandboxConfig = &GGame.ParticlePhysicsConfigFile.Config;
-	GGame.SandboxConfig->Physics = PhysicsDefaultConfig();
-	ReadConfigFile("particles.ini", &GGame.ParticlePhysicsConfigFile);
+	StringId RenderDriverNameId = GetStringId("vulkan");
+	struct json_object_s* JsonConfig = JsonLoadFileAsObject("config.json");
+	if (JsonConfig) {
+		StringId RequestedRenderDriver = JsonGetStringId(JsonConfig, "render_driver", KInvalidStringId);
+		if (StringIdIsValid(RequestedRenderDriver)) {
+			RenderDriverNameId = RequestedRenderDriver;
+		}
+	}
 
-	GGame.GameResWidth = GGame.SandboxConfig->Rendering.Width;
-	GGame.GameResHeight = GGame.SandboxConfig->Rendering.Height;
-
-	const char* RenderDriverName = StringIdCStr(GGame.SandboxConfig->Rendering.RenderDriver);
+	const char* RenderDriverName = StringIdCStr(RenderDriverNameId);
 	const char* SelectedRenderDriver = SelectRenderDriver(RenderDriverName);
 
 	LogInfo("Creating renderer with '%s' driver.", SelectedRenderDriver);
@@ -155,21 +119,6 @@ bool GameInitialize(const GameInitParams* params)
 	SDL_GetWindowSizeInPixels(GGame.Window, &WindowWidth, &WindowHeight);
 	SDL_SetRenderLogicalPresentation(GGame.Renderer, WindowWidth, WindowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 	SDL_SetRenderDrawBlendMode(GGame.Renderer, SDL_BLENDMODE_BLEND);
-
-	SDL_PropertiesID RendererProperties = SDL_GetRendererProperties(GGame.Renderer);
-	SDL_PixelFormat* RendererPixelFormats = SDL_GetPointerProperty(
-		SDL_GetRendererProperties(GGame.Renderer),
-		SDL_PROP_RENDERER_TEXTURE_FORMATS_POINTER,
-		NULL);
-
-	SDL_PixelFormat Format = SDL_PIXELFORMAT_UNKNOWN;
-	if (RendererPixelFormats) {
-		Format = RendererPixelFormats[0];
-	}
-
-	GGame.ParticleRenderTexture =
-		SDL_CreateTexture(GGame.Renderer, Format, SDL_TEXTUREACCESS_TARGET, GGame.GameResWidth, GGame.GameResHeight);
-	SDL_SetTextureScaleMode(GGame.ParticleRenderTexture, SDL_SCALEMODE_LINEAR);
 
 	DebugInitialize(&(DebugConfig){
 		.CanvasWidth = WindowWidth,
@@ -222,25 +171,7 @@ bool GameInitialize(const GameInitParams* params)
 		.Renderer = GGame.Renderer,
 	});
 
-	ParticleSandboxInitialize(GGame.SandboxConfig);
-	LoadHeatRamp(StringIdCStr(GGame.SandboxConfig->Rendering.HeatColorsImageFileName));
-	UpdateParticleSpriteId();
-
-	{
-		const uint32 HeatRampSize = 1024;
-		arrsetlen(GGame.ParticleRenderConfig.HeatRampColors, HeatRampSize);
-		GradientColorPoint ColorPoints[] = {
-			(GradientColorPoint){.Position = 0, .Color = V4(0, 0, 0, 1)},
-			(GradientColorPoint){.Position = 0.25f, .Color = V4(151 / 255.0f, 42 / 255.0f, 68 / 255.0f, 1)},
-			(GradientColorPoint){.Position = 0.6f, .Color = V4(236 / 255.0f, 49 / 255.0f, 216 / 255.0f, 1)},
-			(GradientColorPoint){.Position = 1, .Color = V4(1, 1, 1, 1)},
-		};
-		ColorGradientFromColorPoints(
-			ColorPoints,
-			ARRAY_COUNT(ColorPoints),
-			HeatRampSize,
-			GGame.ParticleRenderConfig.HeatRampColors);
-	}
+	ParticleSandboxInitializeFromConfigFile("particles.ini");
 
 	// GGame.World = CreateGameWorld();
 
@@ -297,8 +228,6 @@ bool GameInitialize(const GameInitParams* params)
 	// AddComponent(TimerComponent, World, GBossEntity);
 
 	LogInfo("Game Initialization Complete");
-
-	GGame.VidDecoder = CreateVideoDecoderFromFile("assets/aos.mp4");
 
 	return true;
 }
@@ -400,6 +329,8 @@ void GameShutdown(void)
 {
 	LogInfo(__FUNCTION__);
 
+	ClearSdlEventHandlers();
+	ParticleSandboxShutdown();
 	SpriteDatabaseShutdown();
 	DrawShutdown();
 	AssetsShutdown();
@@ -419,33 +350,6 @@ void GameSendInput(const GameInput* input)
 {
 	memcpy(&GGame.LastInput, &GGame.Input, sizeof(GameInput));
 	memcpy(&GGame.Input, input, sizeof(GameInput));
-}
-
-void GameProcessEvent(const SDL_Event* event)
-{
-	switch (event->type) {
-		case SDL_EVENT_KEY_DOWN:
-			switch (event->key.scancode) {
-				case SDL_SCANCODE_F1: GGame.DebugDrawEnabled = !GGame.DebugDrawEnabled; break;
-				case SDL_SCANCODE_F4:
-					ColorGradientExportToImageFile(
-						"assets/heat_color_ramp.generated.png",
-						GGame.ParticleRenderConfig.HeatRampColors,
-						arrlenu(GGame.ParticleRenderConfig.HeatRampColors));
-					break;
-				case SDL_SCANCODE_F:
-					if (EntityIdIsValid(GGame.World, GGame.PlayerEntity)) {
-						DestroyEntity(GGame.World, GGame.PlayerEntity);
-						LogError("DELETED!");
-					}
-					break;
-				case SDL_SCANCODE_R: ParticleSandboxReset(); break;
-				case SDL_SCANCODE_S: ParticleSandboxToggleSpawnersEnabled(); break;
-				default: break;
-			}
-			break;
-		default: break;
-	}
 }
 
 static inline bool InputKey(int Scancode)
@@ -499,8 +403,6 @@ void GameUpdate(const GameTime* gameTime)
 	FrameAllocatorNextFrame();
 	DebugNextFrame();
 
-	CheckConfigFileChanges();
-
 	// ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
 	// MovementSystemUpdate(GGame.World, gameTime);
 
@@ -524,30 +426,29 @@ void GameUpdate(const GameTime* gameTime)
 	// 	}
 	// 	QueryFree(Query);
 	// }
-	
+
 	// DamageSystemUpdate(GGame.World, gameTime);
 	// LifetimeSystemUpdate(GGame.World, gameTime);
-	
+
 	// if (GGame.Frame == 1 && false) {
-		// 	const float32 SpacingX = 16.0f;
-		// 	const float32 SpacingY = 12.0f;
-		// 	PhysicsConfig Config = *PhysicsGetConfig();
-		// 	for (float32 y = Config.Bounds.Y + Config.CellSize + 84.0f; y < Config.Bounds.W - Config.CellSize; y +=
-		// 																									   SpacingX)
-		// 	{
-			// 		for (float32 x = Config.Bounds.X + Config.CellSize; x < Config.Bounds.Z - Config.CellSize; x += SpacingY) {
-				// 			PhysicsAddObject(&(PhysicsObject){
-					// 				.Position = V2(x, y),
-					// 				.Radius = 3.0f,
-					// 				.Heat = rnd_pcg_nextf(&GGame.RandomGen),
-					// 				.Acceleration = V2(10000 * (rnd_pcg_nextf(&GGame.RandomGen) < 0.5f ? -1.0f : 1.0f), 0),
-					// 			});
-					// 		}
-					// 	}
-					// }
-					
-	// ParticleSandboxUpdate(1.0f / 60.0f);
-	VideoDecoderUpdate(GGame.VidDecoder, gameTime->DeltaTimeF);
+	// 	const float32 SpacingX = 16.0f;
+	// 	const float32 SpacingY = 12.0f;
+	// 	PhysicsConfig Config = *PhysicsGetConfig();
+	// 	for (float32 y = Config.Bounds.Y + Config.CellSize + 84.0f; y < Config.Bounds.W - Config.CellSize; y +=
+	// 																									   SpacingX)
+	// 	{
+	// 		for (float32 x = Config.Bounds.X + Config.CellSize; x < Config.Bounds.Z - Config.CellSize; x += SpacingY) {
+	// 			PhysicsAddObject(&(PhysicsObject){
+	// 				.Position = V2(x, y),
+	// 				.Radius = 3.0f,
+	// 				.Heat = rnd_pcg_nextf(&GGame.RandomGen),
+	// 				.Acceleration = V2(10000 * (rnd_pcg_nextf(&GGame.RandomGen) < 0.5f ? -1.0f : 1.0f), 0),
+	// 			});
+	// 		}
+	// 	}
+	// }
+
+	ParticleSandboxUpdate(1.0f / 60.0f);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -558,7 +459,6 @@ void GameUpdate(const GameTime* gameTime)
 	}
 	DebugPrintf("FPS: %d, SIM: %0.3fms, DRAW: %06.3fms", GGame.LastFPS, gameTime->SimTimeMS, gameTime->RenderTimeMS);
 	// DebugPrintf("Entities: %d", WorldEntityCount(GGame.World));
-	DebugPrintf("Objects: %d/%d", PhysicsGetObjectCount(), PhysicsGetConfig()->MaxPhysicsObjects);
 	static bool ShowComponentCounts = false;
 	if (ShowComponentCounts) {
 		int32 ComponentCounts[ComponentType_Count];
@@ -567,7 +467,6 @@ void GameUpdate(const GameTime* gameTime)
 			DebugPrintf(" %s: %d", ComponentTypeName(Index), ComponentCounts[Index]);
 		}
 	}
-
 
 	GGame.Frame++;
 }
@@ -586,11 +485,6 @@ void GameRender(const GameTime* gameTime)
 
 	// SpriteSystemRender(GGame.World);
 	// ColliderSystemDebugRender(GGame.World);
-	SDL_RenderTexture(GGame.Renderer, VideoDecoderRenderNextFrame(GGame.VidDecoder, GGame.Renderer, gameTime), NULL, NULL);
-
-	ParticlePhysicsRender(GGame.Renderer, &GGame.ParticleRenderConfig);
-
-	SDL_SetRenderTarget(GGame.Renderer, GGame.ParticleRenderTexture);
 
 	SDL_SetRenderDrawColor(GGame.Renderer, 0, 0, 0, 0);
 	SDL_RenderClear(GGame.Renderer);
@@ -598,27 +492,12 @@ void GameRender(const GameTime* gameTime)
 	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
 
-	SDL_SetRenderTarget(GGame.Renderer, NULL);
-
-	SDL_RenderTexture(GGame.Renderer, GGame.ParticleRenderTexture, NULL, NULL);
-
+	ParticleSandboxRender(GGame.Renderer);
 
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
-
-		int WindowWidth, WindowHeight;
-		SDL_GetCurrentRenderOutputSize(GGame.Renderer, &WindowWidth, &WindowHeight);
-
-		uint32 ColorCount = arrlenu(GGame.ParticleRenderConfig.HeatRampColors);
-		for (uint32 x = 0; x < ColorCount; x++) {
-			ColorU8 C = GGame.ParticleRenderConfig.HeatRampColors[x];
-			SDL_SetRenderDrawColor(GGame.Renderer, C.R, C.G, C.B, C.A);
-			SDL_RenderRect(
-				GGame.Renderer,
-				&(SDL_FRect){.x = WindowWidth - ColorCount + x, .y = 0, .w = 1.0f, .h = 4.0f});
-		}
+		ParticleSandboxDebugDraw(GGame.Renderer);
 	}
-
 
 	SDL_RenderPresent(GGame.Renderer);
 }
@@ -631,6 +510,33 @@ bool GameIsRunning(void)
 void GameRequestShutdown(void)
 {
 	GGame.IsRunning = false;
+}
+
+bool GameHandleSdlEvent(const SDL_Event* Event, void* Context)
+{
+	bool Handled = false;
+
+	switch (Event->type) {
+		case SDL_EVENT_KEY_DOWN:
+			switch (Event->key.scancode) {
+				case SDL_SCANCODE_F1:
+					GGame.DebugDrawEnabled = !GGame.DebugDrawEnabled;
+					Handled = true;
+					break;
+				case SDL_SCANCODE_F:
+					if (EntityIdIsValid(GGame.World, GGame.PlayerEntity)) {
+						DestroyEntity(GGame.World, GGame.PlayerEntity);
+						LogError("DELETED!");
+					}
+					Handled = true;
+					break;
+				default: break;
+			}
+			break;
+		default: break;
+	}
+
+	return Handled;
 }
 
 void ApplyPlayerControl(GameWorld* World, const GameTime* Time, EntityId Entity)
@@ -813,346 +719,4 @@ void ColliderSystemDebugRender(GameWorld* World)
 		}
 	}
 	QueryFree(Query);
-}
-
-int PhysicsObjectDrawOrderCompare(const void* A, const void* B)
-{
-	const PhysicsObject* ObjA = (const PhysicsObject*)A;
-	const PhysicsObject* ObjB = (const PhysicsObject*)B;
-
-	if (ObjA->Position.Y < ObjB->Position.Y) {
-		return -1;
-	} else if (ObjA->Position.Y > ObjB->Position.Y) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-void ParticlePhysicsRender(SDL_Renderer* Renderer, const ParticlePhysicsRenderConfig* Config)
-{
-	const PhysicsObject* Objects = PhysicsGetObjects();
-	for (size_t Index = 0; Index < PhysicsGetObjectCount(); Index++) {
-		const PhysicsObject* Object = &Objects[Index];
-		Vec2 Pos = Object->Position;
-		float32 Radius = Object->Radius;
-		SDL_FRect PosRect = {Pos.X - Radius, Pos.Y - Radius, Radius * 2 + 1, Radius * 2 + 1};
-		ColorU8 TintColor;
-		if ((Object->Flags & 1) != 0) {
-			TintColor = Object->Tint;
-		} else {
-			ptrdiff_t len = arrlen(Config->HeatRampColors);
-			if (len > 0) {
-				int32 Index = (int32)(MIN(Object->Heat, 1.0f - KEpsilonFloat32) * len);
-				TintColor = Config->HeatRampColors[Index];
-			} else {
-				TintColor = Object->Tint;
-			}
-		}
-
-		float32 SpriteScale = GGame.SandboxConfig->Rendering.SpriteScale;
-		float32 HeatScale = GGame.SandboxConfig->Rendering.HeatScale;
-		float32 ExtraRadius = GGame.SandboxConfig->Rendering.ExtraRadius;
-		float32 Scale = (Radius + Object->Heat * HeatScale + ExtraRadius) * SpriteScale;
-		float32 Layer = GGame.SandboxConfig->Rendering.UseHeatAsLayer
-						  ? ((GGame.SandboxConfig->Rendering.InvertLayer) ? 1.0f - Object->Heat : Object->Heat)
-						  : 0;
-
-		// DrawCircle(Pos, Scale, TintColor);
-		DrawSprite(&(SpriteDraw){
-			.SpriteId = GGame.ParticleRenderConfig.ParticleSpriteId,
-			.Position = Pos,
-			.Scale = V2(Scale, Scale),
-			.UseTint = true,
-			.TintColor = TintColor,
-			.Layer = Layer,
-		});
-		// SDL_SetRenderDrawColor(GGame.Renderer, R, G, B, A);
-		// SDL_RenderFillRect(GGame.Renderer, &PosRect);
-	}
-}
-
-// Allocates new buffer to read file into, returns true if succesfully read file and *OutFileData will point to the
-// allocated buffer. The caller is responsible for freeing this buffer!
-bool ReadFileToNewBuffer(const char* FileName, char** OutFileData)
-{
-	FILE* File = fopen(FileName, "r");
-	*OutFileData = NULL;
-
-	if (!File) {
-		return false;
-	}
-
-	fseek(File, 0, SEEK_END);
-	long FileLength = ftell(File);
-	fseek(File, 0, SEEK_SET);
-
-	char* FileData = (char*)calloc(FileLength + 1, sizeof(char));
-
-	if (!FileData) {
-		fclose(File);
-		return false;
-	}
-
-	size_t BytesRead = fread(FileData, sizeof(char), FileLength, File);
-	fclose(File);
-
-	*OutFileData = FileData;
-	return true;
-}
-
-bool IniHasSection(ini_t* Ini, const char* Section)
-{
-	return ini_find_section(Ini, Section, 0) != INI_NOT_FOUND;
-}
-
-bool IniHasProperty(ini_t* Ini, int Section, const char* Property)
-{
-	return ini_find_property(Ini, Section, Property, 0) != INI_NOT_FOUND;
-}
-
-const char* IniReadString(ini_t* Ini, int Section, const char* Property, const char* Default)
-{
-	const char* Result = Default;
-	int PropertyIndex = ini_find_property(Ini, Section, Property, 0);
-	if (PropertyIndex != INI_NOT_FOUND) {
-		Result = ini_property_value(Ini, Section, PropertyIndex);
-	}
-	return Result;
-}
-
-StringId IniReadStringId(ini_t* Ini, int Section, const char* Property, StringId Default)
-{
-	StringId Result = KInvalidStringId;
-	const char* StringValue = IniReadString(Ini, Section, Property, NULL);
-	if (StringValue) {
-		Result = GetStringId(StringValue);
-	}
-	return Result;
-}
-
-int IniReadInt(ini_t* Ini, int Section, const char* Property, int Default)
-{
-	int Result = Default;
-
-	const char* Value = IniReadString(Ini, Section, Property, NULL);
-	if (Value) {
-		Result = strtol(Value, NULL, 10);
-	}
-	return Result;
-}
-
-double IniReadFloat(ini_t* Ini, int Section, const char* Property, double Default)
-{
-	double Result = Default;
-
-	const char* Value = IniReadString(Ini, Section, Property, NULL);
-	if (Value) {
-		Result = strtod(Value, NULL);
-	}
-	return Result;
-}
-
-bool IniReadBool(ini_t* Ini, int Section, const char* Property, bool Default)
-{
-	bool Result = Default;
-
-	const char* Value = IniReadString(Ini, Section, Property, NULL);
-	if (Value) {
-		Result = Value[0] == 't' || Value[0] == 'T';
-	}
-	return Result;
-}
-
-bool ReadConfigFile(const char* FileName, ParticlePhysicsConfigFile* ConfigOut)
-{
-	char* FileData;
-	if (ReadFileToNewBuffer(FileName, &FileData)) {
-		ini_t* Ini = ini_load(FileData, NULL);
-		free(FileData);
-
-		if (!Ini) {
-			return false;
-		}
-
-		ConfigOut->Meta.FileName = FileName;
-		ParticleSandboxConfig* Sandbox = &ConfigOut->Config;
-
-		if (ConfigOut->Meta.LastModified == 0) {
-			SDL_PathInfo PathInfo;
-			SDL_Time LastModifiedTime = 0;
-			if (SDL_GetPathInfo(FileName, &PathInfo)) {
-				LastModifiedTime = PathInfo.modify_time;
-			}
-			ConfigOut->Meta.LastModified = LastModifiedTime;
-		}
-
-		{
-			int Section = ini_find_section(Ini, "Rendering", 0);
-
-			Sandbox->Rendering.Width = IniReadInt(Ini, Section, "Width", 360);
-			Sandbox->Rendering.Height = IniReadInt(Ini, Section, "Height", 80);
-			Sandbox->Rendering.RenderDriver = IniReadStringId(Ini, Section, "RenderDriver", KInvalidStringId);
-			Sandbox->Rendering.HeatColorsImageFileName =
-				IniReadStringId(Ini, Section, "HeatColorsImage", KInvalidStringId);
-			Sandbox->Rendering.SpriteScale = IniReadFloat(Ini, Section, "SpriteScale", 1.0);
-			Sandbox->Rendering.HeatScale = IniReadFloat(Ini, Section, "HeatScale", 0.0);
-			Sandbox->Rendering.ExtraRadius = IniReadFloat(Ini, Section, "ExtraRadius", 0.0);
-			Sandbox->Rendering.ParticleSpriteName =
-				IniReadStringId(Ini, Section, "ParticleSprite", GetStringId("explosion-01"));
-			Sandbox->Rendering.ParticleSpriteSheetName =
-				IniReadStringId(Ini, Section, "ParticleSpriteSheet", KInvalidStringId);
-			Sandbox->Rendering.ParticleSpriteIndex = IniReadInt(Ini, Section, "ParticleSpriteIndex", 0);
-			Sandbox->Rendering.UseSpriteIndex = IniReadBool(Ini, Section, "UseSpriteIndex", false);
-			Sandbox->Rendering.UseHeatAsLayer = IniReadBool(Ini, Section, "UseHeatAsLayer", true);
-			Sandbox->Rendering.InvertLayer = IniReadBool(Ini, Section, "InvertLayer", false);
-		}
-
-		{
-			int Section = ini_find_section(Ini, "Spawners", 0);
-
-			Sandbox->Spawners.Offset.X = IniReadFloat(Ini, Section, "OffsetX", 0.0);
-			Sandbox->Spawners.Offset.Y = IniReadFloat(Ini, Section, "OffsetY", 0.0);
-			Sandbox->Spawners.Interval = IniReadFloat(Ini, Section, "Interval", 0.0);
-			Sandbox->Spawners.Spacing = IniReadFloat(Ini, Section, "Spacing", 32.0);
-			Sandbox->Spawners.ObjectRadius = IniReadFloat(Ini, Section, "ObjectRadius", 1.0);
-		}
-
-		{
-			int Section = ini_find_section(Ini, "Physics", 0);
-			Sandbox->Physics.MaxPhysicsObjects = IniReadInt(Ini, Section, "MaxObjectCount", 128);
-
-			Sandbox->Physics.Bounds.X = IniReadFloat(Ini, Section, "BoundsOffsetX", 0.0);
-			Sandbox->Physics.Bounds.Y = IniReadFloat(Ini, Section, "BoundsOffsetY", 0.0);
-
-			float32 BoundsWidth = IniReadFloat(Ini, Section, "BoundsWidth", GGame.GameResWidth);
-			float32 BoundsHeight = IniReadFloat(Ini, Section, "BoundsHeight", GGame.GameResHeight);
-			if (BoundsWidth < KEpsilonFloat32) {
-				BoundsWidth = GGame.GameResWidth;
-			};
-			if (BoundsWidth < KEpsilonFloat32) {
-				BoundsHeight = GGame.GameResHeight;
-			};
-
-			Sandbox->Physics.Bounds.Z = Sandbox->Physics.Bounds.X + BoundsWidth;
-			Sandbox->Physics.Bounds.W = Sandbox->Physics.Bounds.Y + BoundsHeight;
-
-			Sandbox->Physics.CellSize = IniReadFloat(Ini, Section, "CellSize", 8.0);
-
-			Sandbox->Physics.Gravity.X = IniReadFloat(Ini, Section, "GravityX", 0.0);
-			Sandbox->Physics.Gravity.Y = IniReadFloat(Ini, Section, "GravityY", 100.0);
-
-			Sandbox->Physics.HeatForce.X = IniReadFloat(Ini, Section, "HeatForceX", 0.0);
-			Sandbox->Physics.HeatForce.Y = IniReadFloat(Ini, Section, "HeatForceY", -160.0);
-
-			Sandbox->Physics.HeatTransferRate = IniReadFloat(Ini, Section, "HeatTransferRate", 0.0);
-
-			Sandbox->Physics.HeatDecay = IniReadFloat(Ini, Section, "HeatDecay", 0.0);
-			Sandbox->Physics.HeaterZoneSize = IniReadFloat(Ini, Section, "HeaterZoneSize", 0.0);
-			Sandbox->Physics.HeaterHeatDelta = IniReadFloat(Ini, Section, "HeaterHeatDelta", 0.0);
-			Sandbox->Physics.CoolerZoneSize = IniReadFloat(Ini, Section, "CoolerZoneSize", 0.0);
-			Sandbox->Physics.CoolerHeatDelta = IniReadFloat(Ini, Section, "CoolerHeatDelta", 0.0);
-
-			Sandbox->Physics.SquishZoneSize = IniReadFloat(Ini, Section, "SquishZoneSize", 0.0);
-			Sandbox->Physics.SquishZoneForceMin = IniReadFloat(Ini, Section, "SquishZoneForceMin", 0.0);
-			Sandbox->Physics.SquishZoneForceMax =
-				IniReadFloat(Ini, Section, "SquishZoneForceMax", Sandbox->Physics.SquishZoneForceMin);
-
-			Sandbox->Physics.SurfaceTensionScalar = IniReadFloat(Ini, Section, "SurfaceTension", 0.0);
-			Sandbox->Physics.SurfaceTensionExtraRadius = IniReadFloat(Ini, Section, "SurfaceTensionExtraRadius", 0.0);
-		}
-
-		ini_destroy(Ini);
-	}
-
-	return true;
-}
-
-void ApplyConfigFileChanges(const ParticlePhysicsConfigFile* Old, const ParticlePhysicsConfigFile* New)
-{
-	if (SDL_memcmp(&Old->Config.Physics, &New->Config.Physics, sizeof(Old->Config.Physics)) != 0) {
-		if (Old->Config.Physics.MaxPhysicsObjects != New->Config.Physics.MaxPhysicsObjects) {
-			if (New->Config.Physics.MaxPhysicsObjects < Old->Config.Physics.MaxPhysicsObjects) {
-				PhysicsClearAllObjects();
-			}
-			ParticleSandboxSetSpawnersEnabled(true);
-		}
-
-		PhysicsReconfigure(&New->Config.Physics);
-	}
-
-	if (!StringIdEq(Old->Config.Rendering.HeatColorsImageFileName, New->Config.Rendering.HeatColorsImageFileName)) {
-		LoadHeatRamp(StringIdCStr(New->Config.Rendering.HeatColorsImageFileName));
-	}
-
-	if (!StringIdEq(Old->Config.Rendering.ParticleSpriteName, New->Config.Rendering.ParticleSpriteName) ||
-		!StringIdEq(Old->Config.Rendering.ParticleSpriteSheetName, New->Config.Rendering.ParticleSpriteSheetName) ||
-		Old->Config.Rendering.ParticleSpriteIndex != New->Config.Rendering.ParticleSpriteIndex)
-	{
-		UpdateParticleSpriteId();
-	}
-
-	if (SDL_memcmp(&Old->Config.Physics.Bounds, &New->Config.Physics.Bounds, sizeof(Old->Config.Physics.Bounds)) != 0 ||
-		SDL_memcmp(&Old->Config.Spawners, &New->Config.Spawners, sizeof(Old->Config.Spawners)) != 0)
-	{
-		// CreateSpawners();
-	}
-}
-
-bool CheckConfigFileChanges()
-{
-	SDL_PathInfo PathInfo;
-	SDL_Time LastModifiedTime = 0;
-	if (SDL_GetPathInfo(GGame.ParticlePhysicsConfigFile.Meta.FileName, &PathInfo)) {
-		LastModifiedTime = PathInfo.modify_time;
-	}
-
-	if (LastModifiedTime > GGame.ParticlePhysicsConfigFile.Meta.LastModified) {
-		ParticlePhysicsConfigFile OldConfig = GGame.ParticlePhysicsConfigFile;
-
-		ReadConfigFile(GGame.ParticlePhysicsConfigFile.Meta.FileName, &GGame.ParticlePhysicsConfigFile);
-		GGame.ParticlePhysicsConfigFile.Meta.LastModified = LastModifiedTime;
-
-		ApplyConfigFileChanges(&OldConfig, &GGame.ParticlePhysicsConfigFile);
-	}
-}
-
-void LoadHeatRamp(const char* HeatRampFileName)
-{
-	ImageAsset* HeatRampImage = (ImageAsset*)LoadAsset(AssetType_Image, HeatRampFileName);
-	if (HeatRampImage) {
-		arrsetlen(GGame.ParticleRenderConfig.HeatRampColors, 0);
-
-		const SDL_PixelFormatDetails* FormatDetails = SDL_GetPixelFormatDetails(HeatRampImage->Data->Surface->format);
-
-		for (uint8* Pixel = HeatRampImage->Data->Pixels;
-			 Pixel != HeatRampImage->Data->Pixels + (HeatRampImage->Data->Width * HeatRampImage->Data->BytesPerPixel);
-			 Pixel += HeatRampImage->Data->BytesPerPixel)
-		{
-			ColorU8 Color;
-			SDL_GetRGBA(*((uint32*)Pixel), FormatDetails, NULL, &Color.R, &Color.G, &Color.B, &Color.A);
-			arrput(GGame.ParticleRenderConfig.HeatRampColors, Color);
-		}
-	}
-}
-
-void UpdateParticleSpriteId()
-{
-	if (StringIdIsValid(GGame.SandboxConfig->Rendering.ParticleSpriteSheetName)) {
-		GGame.ParticleRenderConfig.ParticleSpriteSheetId =
-			SpriteSheetFindByName(GGame.SandboxConfig->Rendering.ParticleSpriteSheetName);
-
-		if (GGame.SandboxConfig->Rendering.UseSpriteIndex) {
-			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByIndex(
-				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
-				GGame.SandboxConfig->Rendering.ParticleSpriteIndex);
-		} else {
-			GGame.ParticleRenderConfig.ParticleSpriteId = SpriteSheetFindSpriteByNameId(
-				GGame.ParticleRenderConfig.ParticleSpriteSheetId,
-				GGame.SandboxConfig->Rendering.ParticleSpriteName);
-		}
-	} else {
-		GGame.ParticleRenderConfig.ParticleSpriteId =
-			SpriteFindByNameId(GGame.SandboxConfig->Rendering.ParticleSpriteName);
-	}
 }

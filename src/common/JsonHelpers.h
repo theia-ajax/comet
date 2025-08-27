@@ -5,7 +5,9 @@
 #include "Math2D.h"
 #include "StringId.h"
 
-struct json_value_s* JsonLoadFile(const char* fileName);
+struct json_value_s* JsonLoadFile(const char* FileName);
+struct json_object_s* JsonLoadFileAsObject(const char* FileName);
+struct json_array_s* JsonLoadFileAsArray(const char* FileName);
 bool JsonParseNumber(struct json_value_s* NumberValue, double* NumberOut);
 bool JsonParseBool(struct json_value_s* BoolValue, bool* BoolOut);
 bool JsonParseStringId(struct json_value_s* StringValue, StringId* StringIdOut);
