@@ -30,3 +30,9 @@ float32 RandomRangeF(float32 Min, float32 Max)
 	const float32 Range = ABS(Max - Min);
 	return MIN(Min, Max) + RandomNextF() * Range;
 }
+
+Vec2 RandomDirection()
+{
+	const float32 Angle = RandomNextF() * SDL_PI_F * 2.0f;
+	return V2(CosF(Angle), SinF(Angle));
+}

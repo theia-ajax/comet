@@ -233,7 +233,7 @@ bool GameInitialize(const GameInitParams* params)
 			.Bounds =
 				{
 					.MinBound = V2(0, 0),
-					.MaxBound = V2(200, 100),
+					.MaxBound = V2(640, 360),
 				},
 		},
 	});
@@ -474,8 +474,9 @@ void GameRender(const GameTime* gameTime)
 		BackgroundColor = *(SDL_Color*)&Color;
 	}
 
-	SpriteSystemRender(GGame.World);
-	ColliderSystemDebugRender(GGame.World);
+	// SpriteSystemRender(GGame.World);
+	// ColliderSystemDebugRender(GGame.World);
+	FluidSimRender(GGame.FluidSim, GGame.Renderer);
 
 	SDL_SetRenderDrawColor(GGame.Renderer, BackgroundColor.r, BackgroundColor.g, BackgroundColor.b, BackgroundColor.a);
 	SDL_RenderClear(GGame.Renderer);
@@ -483,7 +484,6 @@ void GameRender(const GameTime* gameTime)
 	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
 
-	FluidSimRender(GGame.FluidSim, GGame.Renderer);
 
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
