@@ -1,5 +1,6 @@
 #include "Math2D.h"
 #include "Algorithm.h"
+#include "Random.h"
 
 AABB AABBCreateCenterExtents(Vec2 Center, Vec2 Extents)
 {
@@ -158,6 +159,11 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 	Out->Fraction = TMin;
 	Out->Normal = Normal;
 	return true;
+}
+
+Vec2 AABBRandomPosition(AABB Self)
+{
+	return V2(RandomRangeF(Self.MinBound.X, Self.MaxBound.X), RandomRangeF(Self.MinBound.Y, Self.MaxBound.Y));
 }
 
 Vec2 R2(float32 Angle)

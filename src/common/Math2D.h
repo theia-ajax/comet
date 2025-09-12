@@ -98,6 +98,7 @@ AABB AABBCombine(AABB A, AABB B);
 bool AABBContains(AABB Self, AABB Other);
 bool AABBTestOverlap(AABB A, AABB B);
 bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out);
+Vec2 AABBRandomPosition(AABB Self);
 
 // Shape Utility Functions
 void CircleLocalize(const CircleShape* Self, Tform2 Transform, CircleShape* Out);

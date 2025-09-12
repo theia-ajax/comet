@@ -10,6 +10,7 @@
 #include "AssetTypes.h"
 #include "Debug.h"
 #include "Draw.h"
+#include "FluidSim.h"
 #include "FrameAllocator.h"
 #include "GameWorld.h"
 #include "JsonHelpers.h"
@@ -75,6 +76,7 @@ struct {
 	int32 LastFPS;
 	int32 FramesThisSecond;
 	bool DebugDrawEnabled;
+	FluidSim* FluidSim;
 } GGame;
 
 SpriteAnimationData GBossIdleAnimationData;
@@ -226,6 +228,15 @@ bool GameInitialize(const GameInitParams* params)
 
 	LogInfo("Game Initialization Complete");
 
+	GGame.FluidSim = CreateLagrangianFluidSim(&(LagrangianFluidSimConfig){
+		.Super = {
+			.Bounds =
+				{
+					.MinBound = V2(0, 0),
+					.MaxBound = V2(200, 100),
+				},
+		},
+	});
 	return true;
 }
 
@@ -325,6 +336,8 @@ static EntityId CreateEnemy(GameWorld* World, Vec2 Position)
 void GameShutdown(void)
 {
 	LogInfo(__FUNCTION__);
+
+	DestroyFluidSim(GGame.FluidSim);
 
 	ClearSdlEventHandlers();
 	SpriteDatabaseShutdown();
@@ -426,6 +439,8 @@ void GameUpdate(const GameTime* gameTime)
 	DamageSystemUpdate(GGame.World, gameTime);
 	LifetimeSystemUpdate(GGame.World, gameTime);
 
+	FluidSimUpdate(GGame.FluidSim, 1.0f / 60);
+
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
 	if (GGame.SecondTimer >= 1.0f) {
@@ -467,6 +482,8 @@ void GameRender(const GameTime* gameTime)
 
 	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
+
+	FluidSimRender(GGame.FluidSim, GGame.Renderer);
 
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
