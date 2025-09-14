@@ -86,7 +86,8 @@ Vec2 TransformV2(Tform2 Transform, Vec2 Point);
 Vec2 InvTransformV2(Tform2 Transform, Vec2 Point);
 
 /// @param Extents Half-Sizes
-AABB AABBCreateCenterExtents(Vec2 Center, Vec2 Extents);
+AABB AABBFromCenterExtents(Vec2 Center, Vec2 Extents);
+AABB AABBFromCenterRadius(Vec2 Center, float32 Radius);
 AABB AABBEnvelop(AABB Self, Vec2 Point);
 AABB AABBInflate(AABB Self, Vec2 HalfAdjust);
 AABB AABBTranslate(AABB Self, Vec2 Translation);
@@ -99,6 +100,7 @@ bool AABBContains(AABB Self, AABB Other);
 bool AABBTestOverlap(AABB A, AABB B);
 bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out);
 Vec2 AABBRandomPosition(AABB Self);
+void AABBGetVertices(AABB Self, Vec2 Verts[4]);
 
 // Shape Utility Functions
 void CircleLocalize(const CircleShape* Self, Tform2 Transform, CircleShape* Out);

@@ -33,6 +33,14 @@ float32 RandomRangeF(float32 Min, float32 Max)
 
 Vec2 RandomDirection()
 {
-	const float32 Angle = RandomNextF() * SDL_PI_F * 2.0f;
+	const float32 Angle = RandomNextF();
 	return V2(CosF(Angle), SinF(Angle));
+}
+
+Vec2 RandomPositionInBounds(AABB Bounds, float32 Margin)
+{
+	return (Vec2) {
+		.X = RandomRangeF(Bounds.MinBound.X + Margin, Bounds.MaxBound.X - Margin),
+		.Y = RandomRangeF(Bounds.MinBound.Y + Margin, Bounds.MaxBound.Y - Margin),
+	};
 }

@@ -107,7 +107,7 @@ static bool ParseSpriteSheetMetaData(struct json_value_s* MetaObjectValue, Sprit
 
 	DataOut->ImageNameId = JsonGetStringId(MetaObject, "image", KInvalidStringId);
 	DataOut->FormatNameId = JsonGetStringId(MetaObject, "format", KInvalidStringId);
-	DataOut->Scale = JsonGetNumber(MetaObject, "scale", 1.0);
+	DataOut->Scale = JsonGetFloat64(MetaObject, "scale", 1.0);
 	bool ParsedSize = JsonParseDimensions(JsonFindKeyValue(MetaObject, "size"), &DataOut->Size);
 
 	bool Success = StringIdIsValid(DataOut->ImageNameId) && StringIdIsValid(DataOut->FormatNameId) && ParsedSize;

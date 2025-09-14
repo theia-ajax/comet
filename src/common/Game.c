@@ -54,6 +54,9 @@ void BehaviorSystemUpdate(GameWorld* World, const GameTime* Time);
 void SpriteSystemRender(GameWorld* World);
 void ColliderSystemDebugRender(GameWorld* World);
 
+void ResetFluidSim(void);
+void ReconfigureFluidSim(void);
+
 bool GameHandleSdlEvent(const SDL_Event* Event, void* Context);
 
 struct {
@@ -125,9 +128,9 @@ bool GameInitialize(const GameInitParams* params)
 		.CanvasWidth = WindowWidth,
 		.CanvasHeight = WindowHeight,
 		.Renderer = GGame.Renderer,
-		.BackgroundColor = 0x4F10207F,
-		.ForegroundColor = 0xFF00CF7F,
-		.Margin = 8,
+		.BackgroundColor = 0xAFF0207F,
+		.ForegroundColor = 0xFFF0CF7F,
+		.Margin = 2,
 	});
 
 	AssetsInitialize(&(AssetsConfig){.TypeConfigs = {
@@ -228,15 +231,7 @@ bool GameInitialize(const GameInitParams* params)
 
 	LogInfo("Game Initialization Complete");
 
-	GGame.FluidSim = CreateLagrangianFluidSim(&(LagrangianFluidSimConfig){
-		.Super = {
-			.Bounds =
-				{
-					.MinBound = V2(0, 0),
-					.MaxBound = V2(640, 360),
-				},
-		},
-	});
+	ResetFluidSim();
 	return true;
 }
 
@@ -439,7 +434,7 @@ void GameUpdate(const GameTime* gameTime)
 	DamageSystemUpdate(GGame.World, gameTime);
 	LifetimeSystemUpdate(GGame.World, gameTime);
 
-	FluidSimUpdate(GGame.FluidSim, 1.0f / 60);
+	FluidSimUpdate(GGame.FluidSim, 1.0f / 120);
 
 	GGame.FramesThisSecond++;
 	GGame.SecondTimer += gameTime->DeltaTimeF;
@@ -484,10 +479,14 @@ void GameRender(const GameTime* gameTime)
 	// PhysicsDebugDraw(GGame.Renderer);
 	DrawRender();
 
-
+	Vec2 MousePos;
+	SDL_GetMouseState(&MousePos.X, &MousePos.Y);
+	// LagrangianFluidSimDebugRender((LagrangianFluidSim*)GGame.FluidSim, GGame.Renderer, MousePos);
+	
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
 	}
+
 
 	SDL_RenderPresent(GGame.Renderer);
 }
@@ -519,6 +518,13 @@ bool GameHandleSdlEvent(const SDL_Event* Event, void* Context)
 						LogError("DELETED!");
 					}
 					Handled = true;
+					break;
+				case SDL_SCANCODE_R:
+					if ((Event->key.mod & SDL_KMOD_SHIFT) != 0) {
+						ResetFluidSim();
+					} else {
+						ReconfigureFluidSim();
+					}
 					break;
 				default: break;
 			}
@@ -710,4 +716,29 @@ void ColliderSystemDebugRender(GameWorld* World)
 		}
 	}
 	QueryFree(Query);
+}
+
+void ResetFluidSim(void)
+{
+	if (GGame.FluidSim != NULL) {
+		DestroyFluidSim(GGame.FluidSim);
+		GGame.FluidSim = NULL;
+	}
+
+	LagrangianFluidSimConfig Config;
+
+	struct json_value_s* ConfigJson = JsonLoadFile("assets/data/fluid_sim_config.json");
+	if (JsonParseLagrangianFluidSimConfig(ConfigJson, &Config)) {
+		GGame.FluidSim = CreateLagrangianFluidSim(&Config);
+	}
+}
+
+void ReconfigureFluidSim(void)
+{
+	LagrangianFluidSimConfig Config;
+
+	struct json_value_s* ConfigJson = JsonLoadFile("assets/data/fluid_sim_config.json");
+	if (JsonParseLagrangianFluidSimConfig(ConfigJson, &Config)) {
+		FluidSimReconfig(GGame.FluidSim, (FluidSimConfig*)&Config);
+	}
 }

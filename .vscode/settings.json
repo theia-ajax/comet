@@ -80,7 +80,8 @@
         "avutil.h": "c",
         "ranges": "c",
         "span": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "algorithm.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

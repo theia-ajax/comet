@@ -28,13 +28,13 @@ struct json_array_s* JsonLoadFileAsArray(const char* FileName)
 	return json_value_as_array(JsonLoadFile(FileName));
 }
 
-bool JsonParseNumber(struct json_value_s* NumberValue, double* NumberOut)
+bool JsonParseNumber(struct json_value_s* NumberValue, float64* NumberOut)
 {
 	ASSERT(NumberOut);
 	*NumberOut = 0.0;
 
 	bool Success = false;
-	double Result = 0.0;
+	float64 Result = 0.0;
 	struct json_number_s* NumberObject = json_value_as_number(NumberValue);
 	if (NumberObject != NULL) {
 		Result = strtod(NumberObject->number, NULL);
@@ -151,6 +151,39 @@ bool JsonParseDimensions16(struct json_value_s* DimValue, Point16* DimOut)
 	return true;
 }
 
+bool JsonParseVec2(struct json_value_s* Vec2Value, Vec2* Vec2Out)
+{
+	ASSERT(Vec2Out != NULL);
+	ZERO_STRUCT(Vec2Out);
+
+	struct json_object_s* Vec2Object = json_value_as_object(Vec2Value);
+
+	if (Vec2Object == NULL) {
+		return false;
+	}
+
+	Vec2Out->X = JsonGetFloat64(Vec2Object, "x", 0.0);
+	Vec2Out->Y = JsonGetFloat64(Vec2Object, "y", 0.0);
+
+	return true;
+}
+
+bool JsonParseAABB(struct json_value_s* AABBValue, AABB* AABBOut)
+{
+	ASSERT(AABBOut != NULL);
+	ZERO_STRUCT(AABBOut);
+
+	struct json_object_s* AABBObject = json_value_as_object(AABBValue);
+
+	if (AABBObject == NULL) {
+		return false;
+	}
+
+	AABBOut->MinBound = JsonGetVec2(AABBObject, "min_bound", V2(0, 0));
+	AABBOut->MaxBound = JsonGetVec2(AABBObject, "max_bound", V2(0, 0));
+	return true;
+}
+
 struct json_value_s* JsonFindKeyValue(struct json_object_s* Object, const char* Key)
 {
 	if (Object == NULL) {
@@ -190,11 +223,22 @@ StringId JsonGetStringId(struct json_object_s* Object, const char* Key, StringId
 	return Default;
 }
 
-double JsonGetNumber(struct json_object_s* Object, const char* Key, double Default)
+float32 JsonGetFloat32(struct json_object_s* Object, const char* Key, float32 Default)
 {
 	struct json_value_s* NumberValue = JsonFindKeyValue(Object, Key);
 
-	double Result;
+	float64 Result;
+	if (JsonParseNumber(NumberValue, &Result)) {
+		return (float32)Result;
+	}
+	return Default;
+}
+
+float64 JsonGetFloat64(struct json_object_s* Object, const char* Key, float64 Default)
+{
+	struct json_value_s* NumberValue = JsonFindKeyValue(Object, Key);
+
+	float64 Result;
 	if (JsonParseNumber(NumberValue, &Result)) {
 		return Result;
 	}
@@ -219,6 +263,28 @@ int32 JsonGetInt32(struct json_object_s* Object, const char* Key, int32 Default)
 	double Result;
 	if (JsonParseNumber(NumberValue, &Result)) {
 		return (int32)Result;
+	}
+	return Default;
+}
+
+Vec2 JsonGetVec2(struct json_object_s* Object, const char* Key, Vec2 Default)
+{
+	struct json_value_s* Vec2Value = JsonFindKeyValue(Object, Key);
+
+	Vec2 Result;
+	if (JsonParseVec2(Vec2Value, &Result)) {
+		return Result;
+	}
+	return Default;
+}
+
+AABB JsonGetAABB(struct json_object_s* Object, const char* Key, AABB Default)
+{
+	struct json_value_s* AABBValue = JsonFindKeyValue(Object, Key);
+
+	AABB Result;
+	if (JsonParseAABB(AABBValue, &Result)) {
+		return Result;
 	}
 	return Default;
 }

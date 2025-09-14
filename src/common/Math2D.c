@@ -2,11 +2,20 @@
 #include "Algorithm.h"
 #include "Random.h"
 
-AABB AABBCreateCenterExtents(Vec2 Center, Vec2 Extents)
+AABB AABBFromCenterExtents(Vec2 Center, Vec2 Extents)
 {
 	return (AABB){
-		.MinBound = Sub(Center, Extents),
-		.MaxBound = Add(Center, Extents),
+		.MinBound = Sub(Center, Mul(Extents, 0.5f)),
+		.MaxBound = Add(Center, Mul(Extents, 0.5f)),
+	};
+}
+
+AABB AABBFromCenterRadius(Vec2 Center, float32 Radius)
+{
+	Vec2 Radius2 = V2(Radius, Radius);
+	return (AABB) {
+		.MinBound = Sub(Center, Radius2),
+		.MaxBound = Add(Center, Radius2),
 	};
 }
 
@@ -164,6 +173,14 @@ bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out)
 Vec2 AABBRandomPosition(AABB Self)
 {
 	return V2(RandomRangeF(Self.MinBound.X, Self.MaxBound.X), RandomRangeF(Self.MinBound.Y, Self.MaxBound.Y));
+}
+
+void AABBGetVertices(AABB Self, Vec2 Verts[4])
+{
+	Verts[0] = Self.MinBound;
+	Verts[1] = V2(Self.MaxBound.X, Self.MinBound.Y);
+	Verts[2] = Self.MaxBound;
+	Verts[3] = V2(Self.MinBound.X, Self.MaxBound.Y);
 }
 
 Vec2 R2(float32 Angle)

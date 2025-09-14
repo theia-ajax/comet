@@ -49,7 +49,7 @@ filter "configurations:release"
 project "comet"
 	kind "WindowedApp"
 	language "C"
-	cdialect "gnu17"
+	cdialect "gnu23"
 	toolset "gcc"
 	location "bin/comet"
 	files { 

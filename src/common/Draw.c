@@ -200,19 +200,19 @@ void DrawRender(void)
 					memcpy(Points, DrawCmd->PrimPolygon.Vertices, DrawCmd->PrimPolygon.VertexCount * sizeof(SDL_FPoint));
 					Points[DrawCmd->PrimPolygon.VertexCount] = Points[0];
 					const int32 Count = DrawCmd->PrimPolygon.VertexCount;
-					for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
-						float32 EdgeRatio = (float32)EdgeIndex / Count;
-						Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
-						ColorV4ToBytes(ColorF, &R, &G, &B, &A);
-						SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
-						SDL_RenderLine(
-							GDraw.Renderer,
-							Points[EdgeIndex].x,
-							Points[EdgeIndex].y,
-							Points[EdgeIndex + 1].x,
-							Points[EdgeIndex + 1].y);
-					}
-					// SDL_RenderLines(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
+					// for (int32 EdgeIndex = 0; EdgeIndex < Count; EdgeIndex++) {
+					// 	float32 EdgeRatio = (float32)EdgeIndex / Count;
+					// 	Vec4 ColorF = Lerp(ColorF0, ColorF1, EdgeRatio);
+					// 	ColorV4ToBytes(ColorF, &R, &G, &B, &A);
+					// 	SDL_SetRenderDrawColor(GDraw.Renderer, R, G, B, A);
+					// 	SDL_RenderLine(
+					// 		GDraw.Renderer,
+					// 		Points[EdgeIndex].x,
+					// 		Points[EdgeIndex].y,
+					// 		Points[EdgeIndex + 1].x,
+					// 		Points[EdgeIndex + 1].y);
+					// }
+					SDL_RenderLines(GDraw.Renderer, Points, DrawCmd->PrimPolygon.VertexCount + 1);
 				}
 				break;
 			default: break;

@@ -34,3 +34,31 @@ const char* SelectRenderDriver(const char* RequestedRenderDriver)
 
 	return SelectedRenderDriver;
 }
+
+void SDL_RenderAABB(SDL_Renderer* Renderer, const AABB Box)
+{
+	static_assert(sizeof(Vec2) == sizeof(SDL_FPoint));
+	Vec2 Verts[5];
+	AABBGetVertices(Box, Verts);
+	Verts[4] = Verts[0];
+	SDL_RenderLines(Renderer, (SDL_FPoint*)Verts, 5);
+}
+
+void SDL_RenderCircle(SDL_Renderer* Renderer, const Vec2 Center, const float32 Radius)
+{
+	static_assert(sizeof(Vec2) == sizeof(SDL_FPoint));
+	enum { KCircleSegments = 15 };
+
+	Vec2 Points[KCircleSegments + 1];
+
+	for (int32 Index = 0; Index < KCircleSegments; Index++)
+	{
+		float32 Angle = (float32)Index / KCircleSegments;
+		Points[Index].X = CosF(Angle) * Radius + Center.X;
+		Points[Index].Y = SinF(Angle) * Radius + Center.Y;
+	}
+
+	Points[KCircleSegments] = Points[0];
+
+	SDL_RenderLines(Renderer, (SDL_FPoint*)Points, KCircleSegments + 1);
+}

@@ -115,3 +115,4 @@ void AssociativeQuickSort(
 
 void ApplyAssociativeIndices(void* Data, size_t ElementSize, size_t Count, int32* Indices);
 
+#define SDL_zeroarr(arr) SDL_memset(arr, 0, arrlenu(arr) * sizeof(arr[0]))
