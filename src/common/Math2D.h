@@ -88,6 +88,7 @@ Vec2 InvTransformV2(Tform2 Transform, Vec2 Point);
 /// @param Extents Half-Sizes
 AABB AABBFromCenterExtents(Vec2 Center, Vec2 Extents);
 AABB AABBFromCenterRadius(Vec2 Center, float32 Radius);
+AABB AABBFromTopLeftSize(Vec2 TopLeft, Vec2 Size);
 AABB AABBEnvelop(AABB Self, Vec2 Point);
 AABB AABBInflate(AABB Self, Vec2 HalfAdjust);
 AABB AABBTranslate(AABB Self, Vec2 Translation);

@@ -13,9 +13,17 @@ AABB AABBFromCenterExtents(Vec2 Center, Vec2 Extents)
 AABB AABBFromCenterRadius(Vec2 Center, float32 Radius)
 {
 	Vec2 Radius2 = V2(Radius, Radius);
-	return (AABB) {
+	return (AABB){
 		.MinBound = Sub(Center, Radius2),
 		.MaxBound = Add(Center, Radius2),
+	};
+}
+
+AABB AABBFromTopLeftSize(Vec2 TopLeft, Vec2 Size)
+{
+	return (AABB){
+		.MinBound = TopLeft,
+		.MaxBound = Add(TopLeft, Size),
 	};
 }
 

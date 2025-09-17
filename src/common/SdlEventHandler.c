@@ -8,8 +8,8 @@ struct {
 
 bool HandleSdlEvent(const SDL_Event* Event)
 {
-	for (int HandlerIndex = 0, HandlerCount = arrlen(GEventHandler.Handlers); HandlerIndex < HandlerCount;
-		 HandlerIndex++)
+	for (int HandlerCount = arrlen(GEventHandler.Handlers), HandlerIndex = HandlerCount - 1; HandlerIndex >= 0;
+		 HandlerIndex--)
 	{
 		const SdlEventHandler* Handler = &GEventHandler.Handlers[HandlerIndex];
 		if (Handler->Handler(Event, Handler->Context)) {

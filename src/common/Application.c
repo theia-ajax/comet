@@ -52,6 +52,8 @@ Application* ApplicationInitialize(const ApplicationConfig* Config)
 
 	stm_setup();
 
+	AddSdlEventHandler(ApplicationHandleSdlEvent, App);
+
 	SDL_Window* Window = SDL_CreateWindow("Comet", 1920, 1080, SDL_WINDOW_RESIZABLE);
 	App->Window = Window;
 
@@ -97,8 +99,6 @@ void ApplicationRun(Application* App)
 	uint64 SimTimeTicks = 0;
 	uint64 RenderTimeTicks = 0;
 	double ElapsedSeconds = 0.0;
-
-	AddSdlEventHandler(ApplicationHandleSdlEvent, App);
 
 	while (GameIsRunning()) {
 		uint64 FrameStartTicks = stm_now();
