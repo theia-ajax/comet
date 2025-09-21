@@ -68,7 +68,7 @@ bool JsonParseStringId(struct json_value_s* StringValue, StringId* StringIdOut)
 	ASSERT(StringIdOut);
 	ZERO_STRUCT(StringIdOut);
 
-	struct json_string_s* StringObject = json_value_as_string(StringValue);
+	struct json_string_s* StringObject = (StringValue) ? json_value_as_string(StringValue) : NULL;
 
 	if (StringObject == NULL) {
 		return false;

@@ -81,7 +81,8 @@
         "ranges": "c",
         "span": "c",
         "xutility": "c",
-        "algorithm.h": "c"
+        "algorithm.h": "c",
+        "log.h": "c"
     },
     "game_target": "comet",
     "cmake.configureOnOpen": false,

@@ -9,6 +9,7 @@ typedef struct TGuiContext TGuiContext;
 
 typedef struct TGuiConfig {
 	int32 Width, Height;
+	SDL_Renderer *Renderer;
 } TGuiConfig;
 
 
@@ -21,4 +22,4 @@ bool TGuiButton(TGuiContext* Ctx, const char* Label, float32 X, float32 Y, float
 
 void TGuiNextFrame(TGuiContext* Ctx);
 bool TGuiProcessEvent(TGuiContext* Ctx, const SDL_Event *Event);
-void TGuiRender(TGuiContext* Ctx, SDL_Renderer* Renderer);
+void TGuiRender(TGuiContext* Ctx);

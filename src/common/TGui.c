@@ -24,6 +24,7 @@ typedef struct TGuiContext {
 	TGuiWindow* WindowMap;
 	TGuiWindow* ActiveWindow;
 	TGuiWindow* FocusedWindow;
+	SDL_Renderer* Renderer;
 } TGuiContext;
 
 typedef struct TGuiWindow {
@@ -47,9 +48,16 @@ typedef struct TGuiWidget {
 	TGuiRenderCallback OnRender;
 } TGuiWidget;
 
+typedef enum TGuiButtonVisualState {
+	TGuiButtonVisualState_Idle,
+	TGuiButtonVisualState_Hover,
+	TGuiButtonVisualState_Pressed,
+} TGuiButtonVisualState;
+
 typedef struct TGuiButtonWidget {
 	bool IsDown;
-	bool WasDown;
+	bool IsClicked;
+	TGuiButtonVisualState VisualState;
 } TGuiButtonWidget;
 
 // static data
@@ -80,6 +88,8 @@ TGuiContext* CreateTGui(const TGuiConfig* Config)
 		((TGuiWindow){
 			.Key = KInvalidStringId,
 		}));
+
+	Ctx->Renderer = Config->Renderer;
 
 	return Ctx;
 }
@@ -151,7 +161,9 @@ bool TGuiButton(TGuiContext* Ctx, const char* Label, float32 X, float32 Y, float
 	Super->Size = V2(Width, Height);
 
 	TGuiButtonWidget* Self = TGUI_WIDGET_CAST(TGuiButtonWidget, Super);
-	return Self->WasDown && !Self->IsDown;
+	bool Result = Self->IsClicked;
+	Self->IsClicked = false;
+	return Result;
 }
 
 void TGuiNextFrame(TGuiContext* Ctx)
@@ -185,8 +197,10 @@ bool TGuiProcessEvent(TGuiContext* Ctx, const SDL_Event* Event)
 	return false;
 }
 
-void TGuiRender(TGuiContext* Ctx, SDL_Renderer* Renderer)
+void TGuiRender(TGuiContext* Ctx)
 {
+	SDL_Renderer* Renderer = Ctx->Renderer;
+
 	for (int32 WindowIndex = 0, WindowCount = hmlen(Ctx->WindowMap); WindowIndex < WindowCount; WindowIndex++) {
 		TGuiWindow* Window = &Ctx->WindowMap[WindowIndex];
 
@@ -197,10 +211,8 @@ void TGuiRender(TGuiContext* Ctx, SDL_Renderer* Renderer)
 			.h = Window->Size.Y,
 		};
 
-		SDL_SetRenderDrawColor(Renderer, 0, 0, 255, 255);
+		SDL_SetRenderDrawColor(Renderer, 63, 63, 63, 255);
 		SDL_RenderFillRect(Renderer, &WindowRect);
-		SDL_SetRenderDrawColor(Renderer, 255, 255, 255, 255);
-		SDL_RenderRect(Renderer, &WindowRect);
 
 		for (int32 WidgetIndex = 0, WidgetCount = hmlen(Window->WidgetMap); WidgetIndex < WidgetCount; WidgetIndex++) {
 			TGuiWidget* Widget = &Window->WidgetMap[WidgetIndex];
@@ -243,30 +255,37 @@ void TGuiButtonDestroy(TGuiContext* Ctx, TGuiWidget* Super)
 void TGuiButtonNextFrame(TGuiContext* Ctx, TGuiWidget* Super)
 {
 	TGuiButtonWidget* Self = TGUI_WIDGET_CAST(TGuiButtonWidget, Super);
-	Self->WasDown = Self->IsDown;
 }
 
 bool TGuiButtonProcessEvent(TGuiContext* Ctx, TGuiWidget* Super, const SDL_Event* Event)
 {
 	bool Result = false;
 
-	if (Event->type == SDL_EVENT_MOUSE_BUTTON_DOWN || Event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
-		if (Event->button.button == 1) {
-			TGuiButtonWidget* Self = TGUI_WIDGET_CAST(TGuiButtonWidget, Super);
-			AABB ButtonBox = AABBFromTopLeftSize(Super->Position, Super->Size);
-			Vec2 EventPos = V2(Event->button.x, Event->button.y);
+	const bool IsButtonEvent = Event->type == SDL_EVENT_MOUSE_BUTTON_DOWN || Event->type == SDL_EVENT_MOUSE_BUTTON_UP;
+	if (Event->type == SDL_EVENT_MOUSE_MOTION || IsButtonEvent) {
+		TGuiButtonWidget* Self = TGUI_WIDGET_CAST(TGuiButtonWidget, Super);
+		AABB ButtonBox = AABBFromTopLeftSize(Super->Position, Super->Size);
+
+		Vec2 EventPos, MousePos;
+		SDL_GetMouseState(&EventPos.X, &EventPos.Y);
+		SDL_RenderCoordinatesFromWindow(Ctx->Renderer, EventPos.X, EventPos.Y, &MousePos.X, &MousePos.Y);
+
+		const bool MouseContainsPoint = AABBContainsPoint(ButtonBox, MousePos);
+
+		if (IsButtonEvent && Event->button.button == 1) {
 			if (Event->button.down) {
-				if (AABBContainsPoint(ButtonBox, EventPos)) {
-					Self->IsDown = true;
-					Result = true;
-				}
-			} else {
-				Self->IsDown = true;
-				if (AABBContainsPoint(ButtonBox, EventPos)) {
-					Result = true;
-				}
+				Self->IsDown = MouseContainsPoint;
+				Result = MouseContainsPoint;
+			} else if (Self->IsDown) {
+				Self->IsDown = false;
+				Self->IsClicked = MouseContainsPoint;
+				Result = MouseContainsPoint;
 			}
 		}
+
+		Self->VisualState = (Self->IsDown)		 ? TGuiButtonVisualState_Pressed
+						  : (MouseContainsPoint) ? TGuiButtonVisualState_Hover
+												 : TGuiButtonVisualState_Idle;
 	}
 
 	return Result;
@@ -276,11 +295,14 @@ void TGuiButtonRender(TGuiContext* Ctx, TGuiWidget* Super, SDL_Renderer* Rendere
 {
 	TGuiButtonWidget* Self = TGUI_WIDGET_CAST(TGuiButtonWidget, Super);
 
-	if (Self->IsDown) {
-		SDL_SetRenderDrawColor(Renderer, 0, 200, 255, 255);
-	} else {
-		SDL_SetRenderDrawColor(Renderer, 0, 0, 255, 255);
+	ColorU8 Color;
+	switch (Self->VisualState) {
+		default:
+		case TGuiButtonVisualState_Idle: Color = (ColorU8){0, 0, 255, 255}; break;
+		case TGuiButtonVisualState_Hover: Color = (ColorU8){0, 127, 255, 255}; break;
+		case TGuiButtonVisualState_Pressed: Color = (ColorU8){0, 0, 127, 255}; break;
 	}
+	SDL_SetRenderDrawColor(Renderer, Color.R, Color.G, Color.B, Color.A);
 
 	Vec2 GlobalPos = Add(Super->OwningWindow->Position, Super->Position);
 

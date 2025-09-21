@@ -22,6 +22,7 @@
 #include "SdlEventHandler.h"
 #include "SpriteDatabase.h"
 #include "StringId.h"
+#include "TGui.h"
 
 enum {
 	Group_Friendly,
@@ -80,6 +81,7 @@ struct {
 	int32 FramesThisSecond;
 	bool DebugDrawEnabled;
 	FluidSim* FluidSim;
+	TGuiContext* TGui;
 } GGame;
 
 SpriteAnimationData GBossIdleAnimationData;
@@ -229,6 +231,13 @@ bool GameInitialize(const GameInitParams* params)
 	AddComponent(SpriteComponent, GGame.World, GBossEntity);
 	AddComponent(TimerComponent, GGame.World, GBossEntity);
 
+	
+	GGame.TGui = CreateTGui(&(TGuiConfig){
+		.Width = 300,
+		.Height = 200,
+		.Renderer = GGame.Renderer,
+	});
+
 	LogInfo("Game Initialization Complete");
 
 	ResetFluidSim();
@@ -300,6 +309,7 @@ static EntityId CreatePlayerShip(GameWorld* World, Vec2 Position)
 	AddComponent(SpriteComponent, World, TurretEntity)->SpriteId = SpriteFindByName("tankcannon-01A");
 	AddComponent(BehaviorComponent, World, TurretEntity);
 
+
 	return Entity;
 }
 
@@ -331,6 +341,8 @@ static EntityId CreateEnemy(GameWorld* World, Vec2 Position)
 void GameShutdown(void)
 {
 	LogInfo(__FUNCTION__);
+
+	DestroyTGui(GGame.TGui);
 
 	DestroyFluidSim(GGame.FluidSim);
 
@@ -406,6 +418,7 @@ void GameUpdate(const GameTime* gameTime)
 {
 	FrameAllocatorNextFrame();
 	DebugNextFrame();
+	TGuiNextFrame(GGame.TGui);
 
 	ApplyPlayerControl(GGame.World, gameTime, GGame.PlayerEntity);
 	MovementSystemUpdate(GGame.World, gameTime);
@@ -454,6 +467,12 @@ void GameUpdate(const GameTime* gameTime)
 		}
 	}
 
+	TGuiBeginWindow(GGame.TGui, "gradient", 200.0f, 100.0f);
+	if (TGuiButton(GGame.TGui, "X", 2.0f, 2.0f, 20.0f, 20.0f)) {
+		LogInfo("Button click!");
+	}
+	TGuiEndWindow(GGame.TGui);
+
 	GGame.Frame++;
 }
 
@@ -482,11 +501,12 @@ void GameRender(const GameTime* gameTime)
 	Vec2 MousePos;
 	SDL_GetMouseState(&MousePos.X, &MousePos.Y);
 	// LagrangianFluidSimDebugRender((LagrangianFluidSim*)GGame.FluidSim, GGame.Renderer, MousePos);
-	
+
 	if (GGame.DebugDrawEnabled) {
 		DebugDraw(GGame.Renderer);
 	}
 
+	TGuiRender(GGame.TGui);
 
 	SDL_RenderPresent(GGame.Renderer);
 }
@@ -531,6 +551,8 @@ bool GameHandleSdlEvent(const SDL_Event* Event, void* Context)
 			break;
 		default: break;
 	}
+
+	Handled |= TGuiProcessEvent(GGame.TGui, Event);
 
 	return Handled;
 }

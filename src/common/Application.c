@@ -131,6 +131,10 @@ void ApplicationRun(Application* App)
 		RenderTimeTicks = stm_since(RenderStartTicks);
 
 		while (KTargetFramesPerSecond != 0 && stm_sec(stm_since(FrameStartTicks)) < KTargetFrameRateSeconds) {
+			const double TilNextFrameMS = stm_ms(stm_since(FrameStartTicks));
+			if (TilNextFrameMS > 1000) {
+				// SDL_DelayNS(TilNextFrameMS);
+			}
 			// Do nothing...
 		};
 	}
