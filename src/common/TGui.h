@@ -15,10 +15,9 @@ typedef struct TGuiConfig {
 TGuiContext* CreateTGui(const TGuiConfig *Config);
 void DestroyTGui(TGuiContext* Ctx);
 
-bool TGuiBeginWindow(TGuiContext* Ctx, const char* Title, int Width, int Height);
+bool TGuiBeginWindow(TGuiContext* Ctx, const char* Title, float32 Width, float32 Height);
 void TGuiEndWindow(TGuiContext* Ctx);
-void TGuiLabel(TGuiContext* Ctx, const char* String, int X, int Y);
-bool TGuiButton(TGuiContext* Ctx, const char* Label, int X, int Y, int Width, int Height);
+bool TGuiButton(TGuiContext* Ctx, const char* Label, float32 X, float32 Y, float32 Width, float32 Height);
 
 void TGuiNextFrame(TGuiContext* Ctx);
 bool TGuiProcessEvent(TGuiContext* Ctx, const SDL_Event *Event);

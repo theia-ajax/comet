@@ -98,6 +98,7 @@ Vec2 AABBExtents(AABB Self);
 float32 AABBPerimeter(AABB Self);
 AABB AABBCombine(AABB A, AABB B);
 bool AABBContains(AABB Self, AABB Other);
+bool AABBContainsPoint(AABB Self, Vec2 Point);
 bool AABBTestOverlap(AABB A, AABB B);
 bool AABBRaycast(AABB Self, const RaycastIn* In, RaycastOut* Out);
 Vec2 AABBRandomPosition(AABB Self);

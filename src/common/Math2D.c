@@ -92,6 +92,13 @@ bool AABBContains(AABB Self, AABB Other)
 	return Result;
 }
 
+bool AABBContainsPoint(AABB Self, Vec2 Point)
+{
+	bool Result = Point.X >= Self.MinBound.X && Point.X <= Self.MaxBound.X && Point.Y >= Self.MinBound.Y &&
+				  Point.Y <= Self.MaxBound.Y;
+	return Result;
+}
+
 bool AABBTestOverlap(AABB A, AABB B)
 {
 	Vec2 D1 = Sub(B.MinBound, A.MaxBound);
